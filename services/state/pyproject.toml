@@ -1,0 +1,16 @@
+[project]
+name = "metis-state"
+version = "0.1.0"
+description = "Metis authoritative state: SQLite (local) and DynamoDB (cloud) adapters"
+requires-python = ">=3.12"
+dependencies = ["metis-contracts"]
+
+[project.optional-dependencies]
+cloud = ["boto3>=1.35"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/metis_state"]
