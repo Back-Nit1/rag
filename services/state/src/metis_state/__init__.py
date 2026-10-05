@@ -6,9 +6,27 @@ from typing import Any
 
 from metis_contracts import Mode, settings
 
+from .object_store import (
+    LocalSourceStore,
+    S3SourceStore,
+    build_key,
+    build_source_store,
+    extension_for,
+    owner_prefix,
+)
 from .sqlite_store import PLANNING_RELEVANT_KINDS, SqliteStateStore
 
-__all__ = ["PLANNING_RELEVANT_KINDS", "SqliteStateStore", "build_state_store"]
+__all__ = [
+    "PLANNING_RELEVANT_KINDS",
+    "LocalSourceStore",
+    "S3SourceStore",
+    "SqliteStateStore",
+    "build_key",
+    "build_source_store",
+    "build_state_store",
+    "extension_for",
+    "owner_prefix",
+]
 
 
 def build_state_store(clock: Any | None = None) -> Any:
