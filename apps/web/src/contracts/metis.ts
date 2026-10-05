@@ -209,7 +209,7 @@ export const EVENT_TYPES = [
 ] as const;
 export type EventTypeName = (typeof EVENT_TYPES)[number];
 
-export const HTTP_STATUS_BY_ERROR: Record<string, number> = {
+export const HTTP_STATUS_BY_ERROR: { [key: string]: number } = {
   "ambiguous_target": 409,
   "budget_exceeded": 402,
   "dependency_cycle": 422,
@@ -439,7 +439,7 @@ export interface ErrorBody {
   correlation_id?: string | null;
   current_revision?: number | null;
   retry_after_seconds?: number | null;
-  details?: Record<string, string>;
+  details?: { [key: string]: string };
 }
 
 /** A duration estimate that always declares where it came from. */
@@ -486,7 +486,7 @@ export interface EventEnvelope {
   target_id?: string | null;
   target_revision?: number | null;
   idempotency_key: string;
-  payload?: Record<string, unknown>;
+  payload?: { [key: string]: unknown };
 }
 
 /** One retrieved, source-backed justification shown to the user. */
@@ -558,7 +558,7 @@ export interface ExtractionRequestedPayload {
 export interface HealthResponse {
   status: "ok" | "degraded";
   mode: string;
-  adapters: Record<string, string>;
+  adapters: { [key: string]: string };
   contract_version: number;
   build?: string | null;
 }
@@ -588,11 +588,11 @@ export interface Job {
   lease_expires_at?: string | null;
   failure?: FailureCategory | null;
   error_message?: string | null;
-  result_refs?: Record<string, string>;
+  result_refs?: { [key: string]: string };
   adapter_mode?: AdapterMode;
   started_at?: string | null;
   finished_at?: string | null;
-  metrics?: Record<string, number>;
+  metrics?: { [key: string]: number };
 }
 
 export interface JobAccepted {
@@ -688,7 +688,7 @@ export interface OutboxEvent {
   target_revision?: number | null;
   correlation_id: string;
   idempotency_key: string;
-  payload?: Record<string, unknown>;
+  payload?: { [key: string]: unknown };
   state?: OutboxState;
   attempts?: number;
   available_at: string;
@@ -698,37 +698,37 @@ export interface OutboxEvent {
   error_message?: string | null;
 }
 
-export interface Page[Event] {
+export interface EventPage {
   items: Event[];
   next_cursor?: string | null;
   complete?: boolean;
 }
 
-export interface Page[Notification] {
+export interface NotificationPage {
   items: Notification[];
   next_cursor?: string | null;
   complete?: boolean;
 }
 
-export interface Page[Project] {
+export interface ProjectPage {
   items: Project[];
   next_cursor?: string | null;
   complete?: boolean;
 }
 
-export interface Page[Reminder] {
+export interface ReminderPage {
   items: Reminder[];
   next_cursor?: string | null;
   complete?: boolean;
 }
 
-export interface Page[SourceArtifact] {
+export interface CapturePage {
   items: SourceArtifact[];
   next_cursor?: string | null;
   complete?: boolean;
 }
 
-export interface Page[Task] {
+export interface TaskPage {
   items: Task[];
   next_cursor?: string | null;
   complete?: boolean;
@@ -802,7 +802,7 @@ export interface Plan {
   local_date: string;
   timezone: string;
   planning_epoch: number;
-  input_revisions?: Record<string, number>;
+  input_revisions?: { [key: string]: number };
   time_budget_minutes: number;
   status?: PlanStatus;
   blocks?: PlanBlock[];
@@ -1205,8 +1205,8 @@ export interface TranscriptionJobResult {
 export interface UploadInstructions {
   url: string;
   method?: "PUT" | "POST";
-  fields?: Record<string, string>;
-  headers?: Record<string, string>;
+  fields?: { [key: string]: string };
+  headers?: { [key: string]: string };
   object_key: string;
   expires_at: string;
   max_bytes: number;
@@ -1267,7 +1267,7 @@ export interface WorkPacket {
   completion_criterion: string;
   estimate?: Estimate | null;
   evidence?: Evidence[];
-  input_revisions?: Record<string, number>;
+  input_revisions?: { [key: string]: number };
   adapter_mode?: AdapterMode;
   generated_at: string;
 }

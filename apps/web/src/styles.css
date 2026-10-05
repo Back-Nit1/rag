@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* A calm, compact workspace: one neutral ramp, one accent, deliberate spacing.
+   Both themes are defined here so status never depends on colour alone. */
+@theme {
+  --font-sans: "Inter var", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-canvas: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-raised: #f0f0ee;
+  --color-line: #dedddA;
+  --color-ink: #16181b;
+  --color-muted: #5f6368;
+  --color-accent: #0f7a52;
+  --color-accent-soft: #e4f3ec;
+  --color-warn: #8a5a00;
+  --color-warn-soft: #fbf1dc;
+  --color-bad: #a32020;
+  --color-bad-soft: #fbe6e6;
+}
+
+/* Tailwind's @theme only lives at the top level; the dark ramp overrides the
+   same custom properties on :root, which is what the utilities read. */
+@media (prefers-color-scheme: dark) {
+  :root {
+  --color-canvas: #0e1013;
+  --color-surface: #161a1f;
+  --color-raised: #1d2228;
+  --color-line: #2a3038;
+  --color-ink: #e8eaed;
+  --color-muted: #9aa3ad;
+  --color-accent: #7dd3a0;
+  --color-accent-soft: #15291f;
+  --color-warn: #e9b949;
+  --color-warn-soft: #2a2316;
+  --color-bad: #f08a8a;
+  --color-bad-soft: #2b1818;
+  }
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible focus everywhere, never removed. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.pulse {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
