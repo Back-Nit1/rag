@@ -16,9 +16,12 @@ import hashlib
 import shutil
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from metis_contracts import AdapterMode, ErrorCode, MetisError, ObjectRef, SystemClock, settings
+
+if TYPE_CHECKING:  # pragma: no cover
+    from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 
 
 def owner_prefix(user_id: str) -> str:
@@ -244,7 +247,9 @@ class S3SourceStore:
         if cursor:
             kwargs["ContinuationToken"] = cursor
         resp = self._s3.list_objects_v2(**kwargs)
-        keys = [{"Key": o["Key"]} for o in resp.get("Contents", [])]
+        keys: list[ObjectIdentifierTypeDef] = [
+            {"Key": o["Key"]} for o in resp.get("Contents", []) if "Key" in o
+        ]
         if keys:
             self._s3.delete_objects(Bucket=self.bucket, Delete={"Objects": keys, "Quiet": True})
         return len(keys), resp.get("NextContinuationToken")

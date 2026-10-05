@@ -40,6 +40,7 @@ from metis_contracts import (
     new_id,
     settings,
 )
+from metis_contracts.common import Record
 from metis_contracts.entities import ENTITY_MODELS, AvailabilityBlock, Job, Notification, Reminder
 
 SCHEMA = (Path(__file__).parent / "schema.sql").read_text()
@@ -75,7 +76,7 @@ class _Tx:
         self.epoch_bumped = False
         self.written: list[tuple[str, str, int]] = []
 
-    def put(self, kind: str, record: Any, *, expected_revision: int | None = None) -> Any:
+    def put[R: Record](self, kind: str, record: R, *, expected_revision: int | None = None) -> R:
         """Insert or update one record. Returns the stored record with its new
         revision. ``expected_revision=None`` means "must not already exist"."""
         if record.user_id != self.user_id:
@@ -142,9 +143,9 @@ class SqliteStateStore:
     # writes
     # ------------------------------------------------------------------ #
 
-    def _put_locked(
-        self, conn: sqlite3.Connection, kind: str, record: Any, expected_revision: int | None
-    ) -> Any:
+    def _put_locked[R: Record](
+        self, conn: sqlite3.Connection, kind: str, record: R, expected_revision: int | None
+    ) -> R:
         if kind not in ENTITY_MODELS:
             raise MetisError(ErrorCode.VALIDATION_FAILED, f"unknown record kind {kind!r}")
         now = self._clock.now()
@@ -426,7 +427,7 @@ class SqliteStateStore:
 
     def get_preferences(self, user_id: str) -> Preferences:
         existing = self.get(user_id, "preferences", f"pref_{user_id}")
-        if existing is not None:
+        if isinstance(existing, Preferences):
             return existing
         now = self._clock.now()
         # Editable defaults — availability is never invented from note wording.
@@ -565,7 +566,7 @@ class SqliteStateStore:
         """Lease a job. Returns None when another worker holds a live lease."""
         now = self._clock.now()
         job = self.get(user_id, "job", job_id)
-        if job is None:
+        if not isinstance(job, Job):
             return None
         if job.lease_expires_at and job.lease_expires_at > now and job.lease_owner != owner:
             return None
@@ -587,7 +588,7 @@ class SqliteStateStore:
         metrics: dict[str, float] | None = None,
     ) -> Job:
         job = self.get(user_id, "job", job_id)
-        if job is None:
+        if not isinstance(job, Job):
             raise MetisError(ErrorCode.NOT_FOUND, f"job {job_id} not found")
         now = self._clock.now()
         update: dict[str, Any] = {"state": state}

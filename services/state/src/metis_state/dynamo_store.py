@@ -52,14 +52,28 @@ from metis_contracts import (
     new_id,
     settings,
 )
+from metis_contracts.common import Record
 from metis_contracts.entities import ENTITY_MODELS, AvailabilityBlock, Job, Notification, Reminder
 
 from .sqlite_store import PLANNING_RELEVANT_KINDS
 
 if TYPE_CHECKING:  # pragma: no cover
     from mypy_boto3_dynamodb.service_resource import Table
+    from mypy_boto3_dynamodb.type_defs import PutTypeDef, TransactWriteItemTypeDef
 
 MAX_TRANSACT_ITEMS = 100  # DynamoDB TransactWriteItems hard limit
+
+
+def _as_str(value: object) -> str:
+    """A DynamoDB resource read is typed as a wide union. Key and sort
+    attributes are stored as strings, so this narrows without inventing a
+    conversion."""
+    return value if isinstance(value, str) else str(value)
+
+
+def _as_int(value: object) -> int:
+    """Numeric attributes come back as Decimal from the resource API."""
+    return int(Decimal(_as_str(value)))
 
 
 def _pk(user_id: str) -> str:
@@ -95,11 +109,11 @@ class _Tx:
     def __init__(self, store: DynamoStateStore, user_id: str) -> None:
         self._store = store
         self.user_id = user_id
-        self.items: list[dict[str, Any]] = []
+        self.items: list[TransactWriteItemTypeDef] = []
         self._epoch_bumped = False
         self._results: list[tuple[str, Any]] = []
 
-    def put(self, kind: str, record: Any, *, expected_revision: int | None = None) -> Any:
+    def put[R: Record](self, kind: str, record: R, *, expected_revision: int | None = None) -> R:
         if record.user_id != self.user_id:
             raise MetisError(ErrorCode.FORBIDDEN, "record owner does not match the transaction owner")
         now = self._store._clock.now()
@@ -132,16 +146,14 @@ class _Tx:
             condition = "revision = :expected AND attribute_not_exists(tombstoned_at)"
             values = {":expected": expected_revision}
 
-        self.items.append(
-            {
-                "Put": {
-                    "TableName": self._store.table_name,
-                    "Item": item,
-                    "ConditionExpression": condition,
-                    **({"ExpressionAttributeValues": values} if values else {}),
-                }
-            }
-        )
+        put: PutTypeDef = {
+            "TableName": self._store.table_name,
+            "Item": item,
+            "ConditionExpression": condition,
+        }
+        if values:
+            put["ExpressionAttributeValues"] = values
+        self.items.append({"Put": put})
         # Immutable revision-log entry, written in the same transaction.
         self.items.append(
             {
@@ -329,7 +341,7 @@ class DynamoStateStore:
             pages += 1
             if not start_key or len(items) >= bounded or pages >= budget:
                 break
-        next_cursor = start_key["sk"] if start_key else None
+        next_cursor = _as_str(start_key["sk"]) if start_key else None
         complete = start_key is None
         return items[:bounded], next_cursor, complete
 
@@ -399,7 +411,7 @@ class DynamoStateStore:
 
     def get_preferences(self, user_id: str) -> Preferences:
         existing = self.get(user_id, "preferences", f"pref_{user_id}")
-        if existing is not None:
+        if isinstance(existing, Preferences):
             return existing
         now = self._clock.now()
         return Preferences(
@@ -413,7 +425,7 @@ class DynamoStateStore:
     def get_planning_epoch(self, user_id: str) -> int:
         resp = self._table.get_item(Key={"pk": _pk(user_id), "sk": "META"}, ConsistentRead=True)
         item = resp.get("Item") or {}
-        return int(item.get("planning_epoch", 0))
+        return _as_int(item.get("planning_epoch", 0))
 
     def get_revisions(self, user_id: str, kind: str, entity_id: str) -> list[dict[str, Any]]:
         resp = self._table.query(
@@ -423,7 +435,7 @@ class DynamoStateStore:
             Limit=50,
         )
         return [
-            {"revision": int(i["sk"].rsplit("#", 1)[-1]), "recorded_at": i["recorded_at"]}
+            {"revision": _as_int(_as_str(i["sk"]).rsplit("#", 1)[-1]), "recorded_at": i["recorded_at"]}
             for i in resp.get("Items", [])
         ]
 
@@ -526,7 +538,7 @@ class DynamoStateStore:
 
     def claim_job(self, job_id: str, *, user_id: str, owner: str, lease_seconds: int) -> Job | None:
         job = self.get(user_id, "job", job_id)
-        if job is None:
+        if not isinstance(job, Job):
             return None
         now = self._clock.now()
         if job.lease_expires_at and job.lease_expires_at > now and job.lease_owner != owner:
@@ -554,7 +566,7 @@ class DynamoStateStore:
         metrics: dict[str, float] | None = None,
     ) -> Job:
         job = self.get(user_id, "job", job_id)
-        if job is None:
+        if not isinstance(job, Job):
             raise MetisError(ErrorCode.NOT_FOUND, f"job {job_id} not found")
         now = self._clock.now()
         update: dict[str, Any] = {"state": state}
@@ -682,7 +694,7 @@ class DynamoStateStore:
         item = resp.get("Item")
         if not item or item.get("state") != "reserved":
             return  # idempotent
-        reserved = int(item["reserved_micro_usd"])
+        reserved = _as_int(item["reserved_micro_usd"])
         if uncertain:
             state, charge = "retained_uncertain", reserved
         elif actual_micro_usd is None:
@@ -710,7 +722,7 @@ class DynamoStateStore:
         except self._client.exceptions.ConditionalCheckFailedException:
             return  # someone else settled it first
         self._table.update_item(
-            Key={"pk": _pk(user_id), "sk": f"USAGE#{item['local_date']}"},
+            Key={"pk": _pk(user_id), "sk": f"USAGE#{_as_str(item['local_date'])}"},
             UpdateExpression="ADD reserved_micro_usd :neg, settled_micro_usd :charge SET updated_at = :now",
             ExpressionAttributeValues={
                 ":neg": -reserved,
