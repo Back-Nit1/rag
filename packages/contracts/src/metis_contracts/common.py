@@ -16,7 +16,7 @@ from typing import Annotated, Any, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION: Literal[1] = 1
 
 # An IANA timezone identifier, e.g. "America/New_York". Validated at the
 # application boundary against zoneinfo, not by regex alone.

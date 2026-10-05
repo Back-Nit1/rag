@@ -216,9 +216,9 @@ def main() -> int:
 
     SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
     TS_DIR.mkdir(parents=True, exist_ok=True)
-    for stale in SCHEMA_DIR.glob("*.json"):
-        if stale.name not in {p.name for p in artifacts}:
-            stale.unlink()
+    for orphan in SCHEMA_DIR.glob("*.json"):
+        if orphan.name not in {p.name for p in artifacts}:
+            orphan.unlink()
     for path, body in artifacts.items():
         path.write_text(body)
     print(

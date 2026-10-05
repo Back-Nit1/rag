@@ -18,6 +18,7 @@ Rules that are easier to state once here than to re-derive per adapter:
 from __future__ import annotations
 
 from collections.abc import Sequence
+from contextlib import AbstractContextManager
 from datetime import date, datetime
 from typing import Any, Literal, Protocol, runtime_checkable
 
@@ -56,7 +57,10 @@ class Clock(Protocol):
 class Transaction(Protocol):
     """A unit of work spanning entity writes, outbox appends and epoch bumps."""
 
-    def put(self, kind: str, record: Any, *, expected_revision: int | None = None) -> Any: ...
+    def put[R](self, kind: str, record: R, *, expected_revision: int | None = None) -> R:
+        """Store ``record`` and return the stored version of the same entity
+        type, with ``revision`` and ``updated_at`` advanced."""
+        ...
 
     def append_outbox(self, event: OutboxEvent) -> None: ...
 
@@ -69,8 +73,8 @@ class StateStore(Protocol):
 
     mode: AdapterMode
 
-    def transaction(self, user_id: str) -> Any:
-        """Context manager yielding a :class:`Transaction`."""
+    def transaction(self, user_id: str) -> AbstractContextManager[Transaction]:
+        """Entity writes, outbox appends and epoch bumps, committed together."""
         ...
 
     # --- reads -------------------------------------------------------------

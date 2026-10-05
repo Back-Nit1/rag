@@ -18,7 +18,7 @@ import os
 from dataclasses import dataclass, field
 from enum import StrEnum
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, cast
 
 
 class Mode(StrEnum):
@@ -52,6 +52,22 @@ def _env_bool(name: str, default: bool) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+ENVIRONMENTS = ("dev", "staging", "prod")
+
+
+def _env_environment() -> Literal["dev", "staging", "prod"]:
+    """METIS_ENV, rejected rather than coerced when it is not a known value.
+
+    Deployment checks key off ``environment == "prod"`` (fixture identity is
+    refused there), so a typo must fail loudly at startup instead of silently
+    landing in a non-prod branch.
+    """
+    value = (_env("METIS_ENV", "dev") or "dev").strip()
+    if value not in ENVIRONMENTS:
+        raise ValueError(f"METIS_ENV must be one of {ENVIRONMENTS}; got {value!r}")
+    return cast(Literal["dev", "staging", "prod"], value)
 
 
 @dataclass(frozen=True)
@@ -196,9 +212,7 @@ class AwsConfig:
 @dataclass(frozen=True)
 class Settings:
     mode: Mode = field(default_factory=lambda: Mode(_env("METIS_MODE", "local") or "local"))
-    environment: Literal["dev", "staging", "prod"] = field(
-        default_factory=lambda: _env("METIS_ENV", "dev")  # type: ignore[return-value]
-    )
+    environment: Literal["dev", "staging", "prod"] = field(default_factory=_env_environment)
     allow_fixture_identity: bool = field(
         default_factory=lambda: _env_bool("METIS_ALLOW_FIXTURE_IDENTITY", True)
     )

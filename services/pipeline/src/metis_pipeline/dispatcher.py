@@ -103,6 +103,7 @@ def classify(exc: BaseException) -> FailureCategory:
             ErrorCode.SEMANTIC_VALIDATION_FAILED: FailureCategory.VALIDATION,
             ErrorCode.UNSUPPORTED_MEDIA: FailureCategory.UNSUPPORTED_MEDIA,
             ErrorCode.UPLOAD_TOO_LARGE: FailureCategory.LIMIT_EXCEEDED,
+            ErrorCode.LIMIT_EXCEEDED: FailureCategory.LIMIT_EXCEEDED,
             ErrorCode.BUDGET_EXCEEDED: FailureCategory.BUDGET_EXCEEDED,
             ErrorCode.PROVIDER_UNAVAILABLE: FailureCategory.PROVIDER_UNAVAILABLE,
             ErrorCode.RATE_LIMITED: FailureCategory.THROTTLED,

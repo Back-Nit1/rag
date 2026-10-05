@@ -2931,6 +2931,7 @@
             "dependency_cycle",
             "invalid_state_transition",
             "upload_too_large",
+            "limit_exceeded",
             "unsupported_media",
             "object_missing",
             "rate_limited",

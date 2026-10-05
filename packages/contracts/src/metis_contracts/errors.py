@@ -22,6 +22,10 @@ class ErrorCode(StrEnum):
     DEPENDENCY_CYCLE = "dependency_cycle"
     INVALID_STATE_TRANSITION = "invalid_state_transition"
     UPLOAD_TOO_LARGE = "upload_too_large"
+    LIMIT_EXCEEDED = "limit_exceeded"
+    """A declared server-side limit was exceeded: audio duration, decoded
+    sample count or model input tokens. Distinct from UPLOAD_TOO_LARGE,
+    which is about stored bytes."""
     UNSUPPORTED_MEDIA = "unsupported_media"
     OBJECT_MISSING = "object_missing"
     RATE_LIMITED = "rate_limited"
@@ -45,6 +49,7 @@ HTTP_STATUS: dict[ErrorCode, int] = {
     ErrorCode.DEPENDENCY_CYCLE: 422,
     ErrorCode.INVALID_STATE_TRANSITION: 422,
     ErrorCode.UPLOAD_TOO_LARGE: 413,
+    ErrorCode.LIMIT_EXCEEDED: 413,
     ErrorCode.UNSUPPORTED_MEDIA: 415,
     ErrorCode.OBJECT_MISSING: 409,
     ErrorCode.RATE_LIMITED: 429,
