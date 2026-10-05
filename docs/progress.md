@@ -8,7 +8,7 @@ Last updated: 2026-10-05 by `coordinator-01`.
 ## Frozen base for parallel work
 
 ```
-BASE_SHA: <set in the following doc-only commit; see "Base SHA" below>
+BASE_SHA: cec682def180077a5fdde5fa844df9dfcd3f32bd
 CONTRACT_VERSION: 1  (metis_contracts, schema_version 1)
 ```
 
@@ -86,7 +86,7 @@ owner. Contract changes go only through the coordinator.
 | DynamoDB / S3 adapter boundaries typed | coordinator | `66a87b6` | |
 | Production `mypy --strict` clean; remaining port drift reconciled | coordinator | `2f6c675` | |
 | `pnpm-lock.yaml`, infra typecheck fix, honest outbox batch contract | coordinator | `265196e` | |
-| README, this ledger, ADR 0003 | coordinator | this commit | |
+| README, this ledger, ADR 0003, frozen base | coordinator | `cec682d` | |
 
 ## ready
 
@@ -157,6 +157,12 @@ Stated so no worker mistakes a fixture for a feature.
 
 ## Base SHA
 
-`make check`, `make test` and `make dev` were verified at the commit that adds
-this file. That commit's SHA is the frozen base and is recorded in the
-following doc-only commit, because a commit cannot contain its own hash.
+```
+BASE_SHA = cec682def180077a5fdde5fa844df9dfcd3f32bd
+```
+
+That is the commit `docs: README, progress ledger and ADR 0003; freeze the
+agent base`. Every gate in the table above was run at it. This line was added
+in the immediately following doc-only commit, because a commit cannot contain
+its own hash — branch from `cec682d`, not from the commit that records it,
+although either tree is byte-identical outside this file.
