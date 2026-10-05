@@ -32,10 +32,14 @@ from metis_contracts import (
 from metis_contracts.api import ClarificationRequest, ResolveProposalRequest, ResolveProposalResponse
 from metis_pipeline.timeref import to_instant
 
+from .deps import RequestContext
+
 log = logging.getLogger("metis.api.proposals")
 
 
-def resolve_proposal(ctx: Any, proposal_id: str, request: ResolveProposalRequest) -> ResolveProposalResponse:
+def resolve_proposal(
+    ctx: RequestContext, proposal_id: str, request: ResolveProposalRequest
+) -> ResolveProposalResponse:
     proposal = ctx.state.get(ctx.user_id, "proposal", proposal_id)
     if proposal is None:
         raise MetisError(ErrorCode.NOT_FOUND, f"proposal {proposal_id} not found")
@@ -68,8 +72,18 @@ def resolve_proposal(ctx: Any, proposal_id: str, request: ResolveProposalRequest
             raise MetisError(ErrorCode.VALIDATION_FAILED, f"no item at index {decision.item_index}")
         if decision.action == "dismiss":
             continue
-        item = decision.edited if decision.action == "edit" else proposal.items[decision.item_index]
+        item: ExtractedItem = proposal.items[decision.item_index]
         if decision.action == "edit":
+            # ItemDecision's validator requires `edited` for action=edit, so a
+            # missing payload means the contract was bypassed, not that the
+            # user sent an empty edit. Reject it here rather than dereference
+            # None and return a 500.
+            if decision.edited is None:
+                raise MetisError(
+                    ErrorCode.VALIDATION_FAILED,
+                    f"decision for item {decision.item_index} is an edit with no edited item",
+                )
+            item = decision.edited
             edited = True
 
         if item.kind is ExtractedItemKind.TASK:
@@ -86,8 +100,8 @@ def resolve_proposal(ctx: Any, proposal_id: str, request: ResolveProposalRequest
         elif item.kind is ExtractedItemKind.EVENT_INTENT:
             event = _event_from(ctx, item, source, now)
             with ctx.state.transaction(ctx.user_id) as tx:
-                stored = tx.put("event", event)
-            created_events.append(stored.id)
+                stored_event = tx.put("event", event)
+            created_events.append(stored_event.id)
             if RequestedAction.REMIND_TO_REGISTER in item.requested_actions:
                 registration_task = Task(
                     id=new_id("task"),
@@ -126,7 +140,7 @@ def resolve_proposal(ctx: Any, proposal_id: str, request: ResolveProposalRequest
                     ClarificationRequest(
                         clarification_id=new_id("clar"),
                         source_id=source.id,
-                        target_id=stored.id,
+                        target_id=stored_event.id,
                         question=_question_for(item.missing_fields, item.title),
                         missing_fields=list(item.missing_fields),
                         blocking=False,
@@ -181,7 +195,7 @@ def _ref(item: ExtractedItem, source: Any) -> SourceRef:
     )
 
 
-def _task_from(ctx: Any, item: ExtractedItem, source: Any, now: datetime) -> Task:
+def _task_from(ctx: RequestContext, item: ExtractedItem, source: Any, now: datetime) -> Task:
     return Task(
         id=new_id("task"),
         user_id=ctx.user_id,
@@ -200,7 +214,7 @@ def _task_from(ctx: Any, item: ExtractedItem, source: Any, now: datetime) -> Tas
     )
 
 
-def _event_from(ctx: Any, item: ExtractedItem, source: Any, now: datetime) -> Event:
+def _event_from(ctx: RequestContext, item: ExtractedItem, source: Any, now: datetime) -> Event:
     return Event(
         id=new_id("event"),
         user_id=ctx.user_id,
@@ -221,7 +235,7 @@ def _event_from(ctx: Any, item: ExtractedItem, source: Any, now: datetime) -> Ev
 
 
 def _maybe_reminder(
-    ctx: Any, item: ExtractedItem, target: Any, *, kind: str
+    ctx: RequestContext, item: ExtractedItem, target: Any, *, kind: str
 ) -> tuple[str | None, ClarificationRequest | None]:
     """Create a reminder only when its local date AND time actually resolve."""
     from metis_scheduler import request_reminder
@@ -284,7 +298,7 @@ def _maybe_reminder(
     return reminder.id, None
 
 
-def _record_memory(ctx: Any, item: ExtractedItem, source: Any, now: datetime) -> None:
+def _record_memory(ctx: RequestContext, item: ExtractedItem, source: Any, now: datetime) -> None:
     """Persist a thought/decision/work log as memory and request indexing."""
     from metis_contracts import Memory, OutboxEvent
     from metis_retrieval import KIND_MAP, content_hash

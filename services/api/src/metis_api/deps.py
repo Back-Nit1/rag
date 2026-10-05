@@ -15,6 +15,18 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Header, Request
 from metis_contracts import ErrorCode, MetisError, SystemClock, new_id, settings
+from metis_contracts.common import Record
+from metis_contracts.ports import (
+    Clock,
+    Embedder,
+    InferenceClient,
+    MemoryStore,
+    NotificationTransport,
+    ScheduleStore,
+    SourceStore,
+    SpeechTranscriber,
+    StateStore,
+)
 
 from .auth import Principal, principal_from_header
 
@@ -23,17 +35,22 @@ log = logging.getLogger("metis.api.deps")
 
 @dataclass
 class Adapters:
-    """Everything the routes are allowed to touch."""
+    """Everything the routes are allowed to touch.
 
-    clock: Any
-    state_store: Any
-    source_store: Any
-    inference: Any
-    transcriber: Any | None = None
-    schedule_store: Any | None = None
-    memory_store: Any | None = None
-    embedder: Any | None = None
-    notification_transports: dict[str, Any] = field(default_factory=dict)
+    Typed against the port protocols in `metis_contracts.ports`, so an adapter
+    that drifts from its published interface fails the typecheck here instead
+    of at runtime in a route.
+    """
+
+    clock: Clock
+    state_store: StateStore
+    source_store: SourceStore
+    inference: InferenceClient
+    transcriber: SpeechTranscriber | None = None
+    schedule_store: ScheduleStore | None = None
+    memory_store: MemoryStore | None = None
+    embedder: Embedder | None = None
+    notification_transports: dict[str, NotificationTransport] = field(default_factory=dict)
 
     @property
     def retrieval(self) -> Any:
@@ -153,8 +170,25 @@ class RequestContext:
         return self.principal.user_id
 
     @property
-    def state(self) -> Any:
+    def state(self) -> StateStore:
         return self.adapters.state_store
+
+    def require[R: Record](self, kind: str, entity_id: str, model: type[R]) -> R:
+        """Load an owned entity or raise 404.
+
+        The kind-to-model mapping is the store's, so the isinstance check is
+        real: a kind that resolves to the wrong model is a storage defect, not
+        a client error.
+        """
+        record = self.state.get(self.user_id, kind, entity_id)
+        if record is None:
+            raise MetisError(ErrorCode.NOT_FOUND, f"{kind} {entity_id} not found")
+        if not isinstance(record, model):
+            raise MetisError(
+                ErrorCode.INTERNAL,
+                f"{kind} {entity_id} is stored as {type(record).__name__}, not {model.__name__}",
+            )
+        return record
 
     def require_idempotency_key(self) -> str:
         if not self.idempotency_key:
@@ -177,7 +211,7 @@ class RequestContext:
 
 def get_adapters(request: Request) -> Adapters:
     adapters = getattr(request.app.state, "adapters", None)
-    if adapters is None:
+    if not isinstance(adapters, Adapters):
         raise MetisError(ErrorCode.INTERNAL, "the application adapters are not initialised")
     return adapters
 

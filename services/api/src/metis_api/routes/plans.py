@@ -99,10 +99,7 @@ def create_plan(body: CreatePlanRequest, ctx: Context) -> CreatePlanResponse:
 
 @router.get("/plans/{plan_id}", response_model=Plan)
 def get_plan(plan_id: str, ctx: Context) -> Plan:
-    plan = ctx.state.get(ctx.user_id, "plan", plan_id)
-    if plan is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"plan {plan_id} not found")
-    return plan
+    return ctx.require("plan", plan_id, Plan)
 
 
 @router.post("/plans/{plan_id}/accept", response_model=Plan)
@@ -112,9 +109,7 @@ def accept_plan(plan_id: str, body: AcceptPlanRequest, ctx: Context) -> Plan:
     The epoch check is the important part: a commitment added after generation
     invalidates the plan even when it was never among the retrieved task ids.
     """
-    plan = ctx.state.get(ctx.user_id, "plan", plan_id)
-    if plan is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"plan {plan_id} not found")
+    plan = ctx.require("plan", plan_id, Plan)
     if plan.revision != body.expected_revision:
         raise MetisError(
             ErrorCode.REVISION_CONFLICT,
@@ -158,9 +153,7 @@ def patch_plan(plan_id: str, body: PatchPlanRequest, ctx: Context) -> Plan:
     """
     from metis_planner import assemble, validate
 
-    plan = ctx.state.get(ctx.user_id, "plan", plan_id)
-    if plan is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"plan {plan_id} not found")
+    plan = ctx.require("plan", plan_id, Plan)
     if plan.revision != body.expected_revision:
         raise MetisError(
             ErrorCode.REVISION_CONFLICT,

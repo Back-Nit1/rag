@@ -8,6 +8,7 @@ which is what keeps the local and cloud paths honest about each other.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -43,14 +44,17 @@ from metis_contracts.api import (
     TodayResponse,
     UploadInstructions,
 )
-from metis_contracts.entities import Job, TranscriptRevision
+from metis_contracts.common import Page
+from metis_contracts.entities import ExtractionProposal, Job, TranscriptRevision
 from metis_contracts.enums import TASK_OPEN_STATES
+
+from .deps import RequestContext
 
 log = logging.getLogger("metis.api.services")
 
 
 def _outbox(
-    ctx: Any,
+    ctx: RequestContext,
     *,
     event_type: str,
     payload: dict[str, Any],
@@ -74,7 +78,9 @@ def _outbox(
     )
 
 
-def _job(ctx: Any, *, job_type: str, target_id: str, target_revision: int, idempotency_key: str) -> Job:
+def _job(
+    ctx: RequestContext, *, job_type: str, target_id: str, target_revision: int, idempotency_key: str
+) -> Job:
     now = ctx.adapters.clock.now()
     return Job(
         id=new_id("job"),
@@ -87,7 +93,7 @@ def _job(ctx: Any, *, job_type: str, target_id: str, target_revision: int, idemp
         target_revision=target_revision,
         correlation_id=ctx.correlation_id,
         idempotency_key=idempotency_key,
-        adapter_mode=getattr(ctx.adapters.inference, "mode", None) or JobState.QUEUED,
+        adapter_mode=ctx.adapters.inference.mode,
     )
 
 
@@ -96,7 +102,7 @@ def _job(ctx: Any, *, job_type: str, target_id: str, target_revision: int, idemp
 # --------------------------------------------------------------------------- #
 
 
-def create_capture(ctx: Any, request: CreateCaptureRequest) -> CreateCaptureResponse:
+def create_capture(ctx: RequestContext, request: CreateCaptureRequest) -> CreateCaptureResponse:
     """Save the source immediately. Audio additionally gets an upload target.
 
     A text capture is complete on arrival and goes straight to extraction. An
@@ -207,8 +213,11 @@ def create_capture(ctx: Any, request: CreateCaptureRequest) -> CreateCaptureResp
     return CreateCaptureResponse(capture_id=stored.id, revision=stored.revision, upload=upload)
 
 
-def _find_by_client_id(ctx: Any, client_capture_id: str) -> SourceArtifact | None:
-    lister = getattr(ctx.state, "_page", None)
+def _find_by_client_id(ctx: RequestContext, client_capture_id: str) -> SourceArtifact | None:
+    # ponytail: no public "find a source by client capture id" read exists on
+    # StateStore yet, so this uses the store's private pager. Promote it to a
+    # port method when a second caller needs it.
+    lister: Callable[..., Page[SourceArtifact]] | None = getattr(ctx.state, "_page", None)
     if lister is None:
         return None
     cursor = None
@@ -222,7 +231,9 @@ def _find_by_client_id(ctx: Any, client_capture_id: str) -> SourceArtifact | Non
         cursor = page.next_cursor
 
 
-def complete_capture(ctx: Any, capture_id: str, request: CompleteCaptureRequest) -> CompleteCaptureResponse:
+def complete_capture(
+    ctx: RequestContext, capture_id: str, request: CompleteCaptureRequest
+) -> CompleteCaptureResponse:
     """Verify the stored object, then enqueue exactly one transcription job.
 
     A duplicate completion call returns the first job: the stored idempotent
@@ -282,7 +293,7 @@ def complete_capture(ctx: Any, capture_id: str, request: CompleteCaptureRequest)
     )
 
 
-def patch_transcript(ctx: Any, capture_id: str, request: PatchTranscriptRequest) -> CaptureDetail:
+def patch_transcript(ctx: RequestContext, capture_id: str, request: PatchTranscriptRequest) -> CaptureDetail:
     """Create a corrected transcript revision and supersede downstream work.
 
     Pending proposals from the previous version are marked superseded, and
@@ -358,7 +369,7 @@ def patch_transcript(ctx: Any, capture_id: str, request: PatchTranscriptRequest)
     return get_capture(ctx, capture_id)
 
 
-def _supersede_proposals(ctx: Any, source_id: str, old_version: int) -> list[dict[str, Any]]:
+def _supersede_proposals(ctx: RequestContext, source_id: str, old_version: int) -> list[dict[str, Any]]:
     from metis_contracts import ProposalDisposition
 
     lister = getattr(ctx.state, "_page", None)
@@ -386,7 +397,9 @@ def _supersede_proposals(ctx: Any, source_id: str, old_version: int) -> list[dic
     return out
 
 
-def _suspend_dependent_reminders(ctx: Any, source_id: str, previous_text: str, new_text: str) -> list[str]:
+def _suspend_dependent_reminders(
+    ctx: RequestContext, source_id: str, previous_text: str, new_text: str
+) -> list[str]:
     """Hold reminders whose critical date may have been misheard.
 
     Only not-yet-dispatched reminders are suspended, and only when the
@@ -423,13 +436,13 @@ def _suspend_dependent_reminders(ctx: Any, source_id: str, previous_text: str, n
     return suspended
 
 
-def get_capture(ctx: Any, capture_id: str) -> CaptureDetail:
+def get_capture(ctx: RequestContext, capture_id: str) -> CaptureDetail:
     source = ctx.state.get(ctx.user_id, "source", capture_id)
     if source is None:
         raise MetisError(ErrorCode.NOT_FOUND, f"capture {capture_id} not found")
     current = next((t for t in source.transcripts if t.source_version == source.current_version), None)
-    proposals = []
-    lister = getattr(ctx.state, "_page", None)
+    proposals: list[ExtractionProposal] = []
+    lister: Callable[..., Page[ExtractionProposal]] | None = getattr(ctx.state, "_page", None)
     if lister is not None:
         cursor = None
         while True:
@@ -459,7 +472,9 @@ def get_capture(ctx: Any, capture_id: str) -> CaptureDetail:
     )
 
 
-def delete_capture(ctx: Any, capture_id: str, *, delete_commitments: bool | None = None) -> dict[str, Any]:
+def delete_capture(
+    ctx: RequestContext, capture_id: str, *, delete_commitments: bool | None = None
+) -> dict[str, Any]:
     """Tombstone now; purge derived data asynchronously and resumably."""
     source = ctx.state.get(ctx.user_id, "source", capture_id)
     if source is None:
@@ -497,13 +512,11 @@ def delete_capture(ctx: Any, capture_id: str, *, delete_commitments: bool | None
 # --------------------------------------------------------------------------- #
 
 
-def patch_task(ctx: Any, task_id: str, request: PatchTaskRequest) -> Task:
+def patch_task(ctx: RequestContext, task_id: str, request: PatchTaskRequest) -> Task:
     """Apply a validated patch. Omitted fields are unchanged; null clears."""
     from metis_contracts import TASK_TRANSITIONS
 
-    task = ctx.state.get(ctx.user_id, "task", task_id)
-    if task is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"task {task_id} not found")
+    task = ctx.require("task", task_id, Task)
     if task.revision != request.expected_revision:
         raise MetisError(
             ErrorCode.REVISION_CONFLICT,
@@ -555,7 +568,7 @@ def patch_task(ctx: Any, task_id: str, request: PatchTaskRequest) -> Task:
     return stored
 
 
-def _reject_cycles(ctx: Any, task_id: str, dependencies: list[str]) -> None:
+def _reject_cycles(ctx: RequestContext, task_id: str, dependencies: list[str]) -> None:
     """A dependency graph change must not create a cycle."""
     seen: set[str] = set()
     frontier = list(dependencies)
@@ -571,10 +584,8 @@ def _reject_cycles(ctx: Any, task_id: str, dependencies: list[str]) -> None:
             frontier.extend(other.depends_on)
 
 
-def patch_event(ctx: Any, event_id: str, request: PatchEventRequest) -> Event:
-    event = ctx.state.get(ctx.user_id, "event", event_id)
-    if event is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"event {event_id} not found")
+def patch_event(ctx: RequestContext, event_id: str, request: PatchEventRequest) -> Event:
+    event = ctx.require("event", event_id, Event)
     if event.revision != request.expected_revision:
         raise MetisError(
             ErrorCode.REVISION_CONFLICT,
@@ -603,7 +614,7 @@ def patch_event(ctx: Any, event_id: str, request: PatchEventRequest) -> Event:
     return stored
 
 
-def _reconcile_reminders_for_target(ctx: Any, target: Any, *, kind: str) -> None:
+def _reconcile_reminders_for_target(ctx: RequestContext, target: Any, *, kind: str) -> None:
     """Re-point or cancel reminders after their target changed.
 
     A completed task or canceled event cancels its pending reminders; a moved
@@ -638,7 +649,7 @@ def _reconcile_reminders_for_target(ctx: Any, target: Any, *, kind: str) -> None
             )
 
 
-def _invalidate_plans(ctx: Any) -> None:
+def _invalidate_plans(ctx: RequestContext) -> None:
     """Mark proposed plans stale once their inputs moved."""
     lister = getattr(ctx.state, "_page", None)
     if lister is None:
@@ -670,7 +681,7 @@ def _invalidate_plans(ctx: Any) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def get_today(ctx: Any, local_date: date | None = None) -> TodayResponse:
+def get_today(ctx: RequestContext, local_date: date | None = None) -> TodayResponse:
     """The deterministic authoritative view. No model, no vector store.
 
     This endpoint must keep working during any provider outage, which is why it
@@ -714,7 +725,7 @@ def get_today(ctx: Any, local_date: date | None = None) -> TodayResponse:
     )
 
 
-def _latest_plan(ctx: Any, day: date) -> Plan | None:
+def _latest_plan(ctx: RequestContext, day: date) -> Plan | None:
     lister = getattr(ctx.state, "_page", None)
     if lister is None:
         return None
@@ -733,7 +744,7 @@ def _latest_plan(ctx: Any, day: date) -> Plan | None:
     return best
 
 
-def patch_preferences(ctx: Any, request: PatchPreferencesRequest) -> Preferences:
+def patch_preferences(ctx: RequestContext, request: PatchPreferencesRequest) -> Preferences:
     current = ctx.state.get_preferences(ctx.user_id)
     if current.revision != request.expected_revision:
         raise MetisError(

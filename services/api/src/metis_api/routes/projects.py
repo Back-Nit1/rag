@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Query, status
 from metis_contracts import ErrorCode, MetisError, Project, new_id
 from metis_contracts.api import (
@@ -158,7 +160,7 @@ def search(body: SearchRequest, ctx: Context) -> SearchResponse:
 
 
 @router.post("/projects/{project_id}/resume")
-def resume_project(project_id: str, body: ResumeProjectRequest, ctx: Context) -> dict:
+def resume_project(project_id: str, body: ResumeProjectRequest, ctx: Context) -> dict[str, Any]:
     """Assemble a work packet: objective, attempts, blocker, next action.
 
     Any inferred file path or command is a suggestion, which is why the

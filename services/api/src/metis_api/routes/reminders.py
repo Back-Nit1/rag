@@ -87,10 +87,7 @@ def create_reminder(body: CreateReminderRequest, ctx: Context) -> Reminder:
 
 @router.get("/reminders/{reminder_id}", response_model=Reminder)
 def get_reminder(reminder_id: str, ctx: Context) -> Reminder:
-    reminder = ctx.state.get(ctx.user_id, "reminder", reminder_id)
-    if reminder is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"reminder {reminder_id} not found")
-    return reminder
+    return ctx.require("reminder", reminder_id, Reminder)
 
 
 @router.delete("/reminders/{reminder_id}", response_model=Reminder)
@@ -142,9 +139,7 @@ def list_notifications(
 @router.post("/notifications/{notification_id}/read", response_model=Notification)
 def mark_read(notification_id: str, ctx: Context) -> Notification:
     """Record a read receipt. This is a separate fact from transport acceptance."""
-    notification = ctx.state.get(ctx.user_id, "notification", notification_id)
-    if notification is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"notification {notification_id} not found")
+    notification = ctx.require("notification", notification_id, Notification)
     with ctx.state.transaction(ctx.user_id) as tx:
         return tx.put(
             "notification",

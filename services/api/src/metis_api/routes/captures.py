@@ -70,10 +70,7 @@ def resolve(proposal_id: str, body: ResolveProposalRequest, ctx: Context) -> Res
 
 @router.get("/jobs/{job_id}", response_model=Job)
 def get_job(job_id: str, ctx: Context) -> Job:
-    job = ctx.state.get(ctx.user_id, "job", job_id)
-    if job is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"job {job_id} not found")
-    return job
+    return ctx.require("job", job_id, Job)
 
 
 @router.put("/local-uploads/{capture_id}", status_code=status.HTTP_204_NO_CONTENT)

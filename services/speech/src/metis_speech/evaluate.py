@@ -29,7 +29,9 @@ from pathlib import Path
 _PUNCT = re.compile(r"[^\w\s'\-]", re.UNICODE)
 _SPACE = re.compile(r"\s+")
 
-NEGATION_TOKENS = frozenset({"not", "no", "never", "without", "dont", "don't", "cannot", "cant", "isnt", "wasnt"})
+NEGATION_TOKENS = frozenset(
+    {"not", "no", "never", "without", "dont", "don't", "cannot", "cant", "isnt", "wasnt"}
+)
 DATE_PATTERN = re.compile(
     r"\b("
     r"\d{1,2}(?:st|nd|rd|th)?|"
@@ -67,8 +69,8 @@ def edit_distance(a: list[str], b: list[str]) -> int:
         for j, token_b in enumerate(b, start=1):
             current.append(
                 min(
-                    previous[j] + 1,          # deletion
-                    current[j - 1] + 1,       # insertion
+                    previous[j] + 1,  # deletion
+                    current[j - 1] + 1,  # insertion
                     previous[j - 1] + (token_a != token_b),  # substitution
                 )
             )

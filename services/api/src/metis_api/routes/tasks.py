@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 from fastapi import APIRouter, Query, status
 from metis_contracts import (
     AvailabilityBlock,
-    ErrorCode,
     Event,
-    MetisError,
     Preferences,
     Task,
     TaskState,
@@ -71,10 +70,7 @@ def create_task(body: CreateTaskRequest, ctx: Context) -> Task:
 
 @router.get("/tasks/{task_id}", response_model=Task)
 def get_task(task_id: str, ctx: Context) -> Task:
-    task = ctx.state.get(ctx.user_id, "task", task_id)
-    if task is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"task {task_id} not found")
-    return task
+    return ctx.require("task", task_id, Task)
 
 
 @router.patch("/tasks/{task_id}", response_model=Task)
@@ -83,10 +79,9 @@ def patch_task(task_id: str, body: PatchTaskRequest, ctx: Context) -> Task:
 
 
 @router.get("/tasks/{task_id}/revisions")
-def task_revisions(task_id: str, ctx: Context) -> list[dict]:
+def task_revisions(task_id: str, ctx: Context) -> list[dict[str, Any]]:
     """Source-linked change history, newest first."""
-    reader = getattr(ctx.state, "get_revisions", None)
-    return reader(ctx.user_id, "task", task_id) if reader else []
+    return ctx.state.get_revisions(ctx.user_id, "task", task_id)
 
 
 @router.get("/events", response_model=EventPage)
@@ -120,10 +115,7 @@ def create_event(body: CreateEventRequest, ctx: Context) -> Event:
 
 @router.get("/events/{event_id}", response_model=Event)
 def get_event(event_id: str, ctx: Context) -> Event:
-    event = ctx.state.get(ctx.user_id, "event", event_id)
-    if event is None:
-        raise MetisError(ErrorCode.NOT_FOUND, f"event {event_id} not found")
-    return event
+    return ctx.require("event", event_id, Event)
 
 
 @router.patch("/events/{event_id}", response_model=Event)

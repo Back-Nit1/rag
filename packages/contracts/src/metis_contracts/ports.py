@@ -35,6 +35,7 @@ from .entities import (
     Plan,
     Preferences,
     Project,
+    PushSubscription,
     Reminder,
     SourceArtifact,
     Task,
@@ -108,6 +109,29 @@ class StateStore(Protocol):
     ) -> Page[Notification]: ...
 
     def list_reminders_for_target(self, user_id: str, target_id: str) -> list[Reminder]: ...
+
+    def list_projects(
+        self, user_id: str, *, cursor: str | None = None, limit: int = 100
+    ) -> Page[Project]: ...
+
+    def list_push_subscriptions(self, user_id: str) -> list[PushSubscription]: ...
+
+    def list_memories(
+        self, user_id: str, *, project_id: str | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Memory]: ...
+
+    def get_revisions(self, user_id: str, kind: str, entity_id: str) -> list[dict[str, Any]]:
+        """Source-linked change history, newest first."""
+        ...
+
+    def tombstone(self, user_id: str, kind: str, entity_id: str) -> None:
+        """Revoke application access now. Object and vector purge is a
+        separate resumable job."""
+        ...
+
+    def list_dead_letters(self, limit: int = 50) -> list[OutboxEvent]:
+        """Operator read path for events that exhausted their retries."""
+        ...
 
     def get_preferences(self, user_id: str) -> Preferences: ...
 

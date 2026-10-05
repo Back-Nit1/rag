@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Request, status
 from metis_contracts import CONTRACT_VERSION, JobState, new_id, settings
 from metis_contracts.api import CreateExportRequest, HealthResponse, JobAccepted
@@ -28,7 +30,7 @@ def health(request: Request) -> HealthResponse:
 
 
 @router.get("/limits")
-def limits(request: Request) -> dict:
+def limits(request: Request) -> dict[str, Any]:
     """The server's own limits, so the browser enforces the same numbers."""
     limits = settings().limits
     return {

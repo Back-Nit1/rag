@@ -62,7 +62,9 @@ def run(job: TranscriptionJobInput, *, source_store: Any, transcriber: Any) -> T
         raise MetisError(ErrorCode.OBJECT_MISSING, f"recording {job.recording_id} is not stored")
     limit = settings().limits.max_upload_bytes
     if (head.size_bytes or 0) > limit:
-        raise MetisError(ErrorCode.UPLOAD_TOO_LARGE, f"stored object is {head.size_bytes} bytes, over {limit}")
+        raise MetisError(
+            ErrorCode.UPLOAD_TOO_LARGE, f"stored object is {head.size_bytes} bytes, over {limit}"
+        )
 
     body = source_store.get_bytes(ref)
     text, segments, meta = transcriber.transcribe(
@@ -153,7 +155,11 @@ def main(argv: list[str] | None = None) -> int:
         print(failure.model_dump_json(), file=sys.stderr)
         # Exit code distinguishes a permanent rejection from a retryable fault,
         # so the state machine does not retry an unsupported file forever.
-        return 3 if exc.code in (ErrorCode.UNSUPPORTED_MEDIA, ErrorCode.UPLOAD_TOO_LARGE, ErrorCode.FORBIDDEN) else 1
+        return (
+            3
+            if exc.code in (ErrorCode.UNSUPPORTED_MEDIA, ErrorCode.UPLOAD_TOO_LARGE, ErrorCode.FORBIDDEN)
+            else 1
+        )
     print(result.model_dump_json())
     return 0
 
