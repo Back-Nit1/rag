@@ -132,7 +132,10 @@ def _fixture_extraction(user_content: str) -> dict[str, Any]:
     proposal -> commitment slice is demonstrable offline, not to be an
     extraction engine.
     """
-    text = user_content.strip()
+    # The prompt carries a bounded header before the note; evidence offsets
+    # must be relative to the note itself, which is what the span validator
+    # checks against the immutable source text.
+    text = user_content.split("NOTE:\n", 1)[-1].strip()
     lowered = text.lower()
     end = len(text)
     items: list[dict[str, Any]] = []
