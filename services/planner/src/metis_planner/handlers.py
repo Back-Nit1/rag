@@ -31,6 +31,11 @@ def handle_plan_requested(envelope: EventEnvelope, context: DispatchContext) -> 
     if existing.status in (PlanStatus.ACCEPTED, PlanStatus.INVALIDATED):
         raise MetisError(ErrorCode.REVISION_CONFLICT, f"the plan is already {existing.status.value}")
 
+    if context.memory_store is None or context.embedder is None:
+        raise MetisError(
+            ErrorCode.PROVIDER_UNAVAILABLE,
+            "planning needs memory retrieval, and the retrieval adapters are not configured",
+        )
     retrieval = RetrievalService(
         state_store=state,
         memory_store=context.memory_store,

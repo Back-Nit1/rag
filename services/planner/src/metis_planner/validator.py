@@ -177,7 +177,7 @@ def validate(
     )
 
 
-def blocks_with_index(blocks: list[PlanBlock]):
+def blocks_with_index(blocks: list[PlanBlock]) -> list[tuple[int, PlanBlock]]:
     return list(enumerate(blocks))
 
 

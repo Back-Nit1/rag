@@ -37,6 +37,7 @@ from metis_contracts import (
     resolve_timezone,
 )
 from metis_contracts.events import ReminderDuePayload, ReminderSyncPayload
+from metis_contracts.ports import Clock, StateStore
 
 log = logging.getLogger("metis.scheduler.service")
 
@@ -92,7 +93,7 @@ def next_allowed_time(instant: datetime, *, timezone_name: str, windows: list[An
 
 
 def request_reminder(
-    state: Any,
+    state: StateStore,
     *,
     user_id: str,
     target_id: str,
@@ -102,7 +103,7 @@ def request_reminder(
     timezone_name: str,
     channel: DeliveryChannel = DeliveryChannel.IN_APP,
     requires_generation: bool = False,
-    clock: Any,
+    clock: Clock,
     correlation_id: str,
 ) -> Reminder:
     """Persist a reminder as ``pending_schedule`` and request the sync.
@@ -144,12 +145,12 @@ def request_reminder(
 
 
 def retarget_reminder(
-    state: Any,
+    state: StateStore,
     reminder: Reminder,
     *,
     trigger_at: datetime,
     target_revision: int,
-    clock: Any,
+    clock: Clock,
     correlation_id: str,
 ) -> Reminder:
     """A date change: supersede the old occurrence and request a new schedule.
@@ -184,7 +185,7 @@ def retarget_reminder(
 
 
 def cancel_reminder(
-    state: Any, reminder: Reminder, *, clock: Any, correlation_id: str, reason: str = "canceled"
+    state: StateStore, reminder: Reminder, *, clock: Clock, correlation_id: str, reason: str = "canceled"
 ) -> Reminder:
     """Cancel and request schedule deletion.
 
@@ -211,7 +212,7 @@ def cancel_reminder(
     return stored
 
 
-def suspend_reminder(state: Any, reminder: Reminder, *, reason: str, clock: Any) -> Reminder:
+def suspend_reminder(state: StateStore, reminder: Reminder, *, reason: str, clock: Clock) -> Reminder:
     """Hold a not-yet-dispatched reminder while a disputed date is clarified."""
     if reminder.state not in REMINDER_ACTIVE_STATES:
         return reminder
@@ -221,7 +222,7 @@ def suspend_reminder(state: Any, reminder: Reminder, *, reason: str, clock: Any)
 
 
 def snooze_reminder(
-    state: Any, reminder: Reminder, *, minutes: int, clock: Any, correlation_id: str
+    state: StateStore, reminder: Reminder, *, minutes: int, clock: Clock, correlation_id: str
 ) -> Reminder:
     assert_transition(reminder.state, ReminderState.SNOOZED)
     trigger_at = clock.now() + timedelta(minutes=minutes)
@@ -248,7 +249,7 @@ def snooze_reminder(
 
 
 def _sync_event(
-    reminder: Reminder, *, action: str, clock: Any, correlation_id: str, event_type: str
+    reminder: Reminder, *, action: str, clock: Clock, correlation_id: str, event_type: str
 ) -> OutboxEvent:
     now = clock.now()
     return OutboxEvent(
@@ -273,7 +274,7 @@ def _sync_event(
     )
 
 
-def raise_due_event(state: Any, *, user_id: str, reminder_id: str, clock: Any) -> bool:
+def raise_due_event(state: StateStore, *, user_id: str, reminder_id: str, clock: Clock) -> bool:
     """Enqueue a due event for a reminder whose trigger has passed.
 
     Local-mode timer entry point. Returns False when the reminder is no longer
@@ -325,7 +326,7 @@ class DueDecision:
     defer_until: datetime | None = None
 
 
-def evaluate_due(state: Any, reminder: Reminder, *, occurrence: str, clock: Any) -> DueDecision:
+def evaluate_due(state: StateStore, reminder: Reminder, *, occurrence: str, clock: Clock) -> DueDecision:
     """Every suppression check, in one place, before any dispatch decision."""
     if reminder.occurrence_key != occurrence:
         return DueDecision(False, "a newer occurrence supersedes this one")
@@ -369,7 +370,7 @@ def evaluate_due(state: Any, reminder: Reminder, *, occurrence: str, clock: Any)
 
 
 def build_notification(
-    reminder: Reminder, target: Any, *, clock: Any, body: str | None = None, generated: bool = False
+    reminder: Reminder, target: Any, *, clock: Clock, body: str | None = None, generated: bool = False
 ) -> Notification:
     """Template a notification. An ordinary reminder makes zero model calls."""
     title = getattr(target, "title", "Reminder")

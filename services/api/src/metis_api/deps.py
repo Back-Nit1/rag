@@ -56,6 +56,11 @@ class Adapters:
     def retrieval(self) -> Any:
         from metis_retrieval import RetrievalService
 
+        if self.memory_store is None or self.embedder is None:
+            raise MetisError(
+                ErrorCode.PROVIDER_UNAVAILABLE,
+                "memory retrieval is unavailable: the retrieval adapters are not configured",
+            )
         return RetrievalService(
             state_store=self.state_store,
             memory_store=self.memory_store,

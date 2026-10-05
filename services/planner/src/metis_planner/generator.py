@@ -22,6 +22,7 @@ from metis_contracts import (
     Plan,
     PlanBlock,
     PlanStatus,
+    Task,
     new_id,
     settings,
 )
@@ -74,7 +75,7 @@ def plan_schema() -> dict[str, Any]:
     }
 
 
-def estimate_for(task: Any) -> Estimate:
+def estimate_for(task: Task) -> Estimate:
     """A visible default when no estimate exists — labelled as a default."""
     if task.duration_estimate is not None:
         return task.duration_estimate

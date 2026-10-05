@@ -21,7 +21,6 @@ import socket
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
 
 from metis_contracts import (
     RETRYABLE_FAILURES,
@@ -31,6 +30,17 @@ from metis_contracts import (
     MetisError,
     OutboxEvent,
     settings,
+)
+from metis_contracts.ports import (
+    Clock,
+    Embedder,
+    InferenceClient,
+    MemoryStore,
+    NotificationTransport,
+    ScheduleStore,
+    SourceStore,
+    SpeechTranscriber,
+    StateStore,
 )
 
 log = logging.getLogger("metis.pipeline.dispatcher")
@@ -49,15 +59,15 @@ class DispatchContext:
     the whole pipeline testable with a FixedClock and fixture adapters.
     """
 
-    state_store: Any
-    source_store: Any
-    clock: Any
-    inference: Any | None = None
-    transcriber: Any | None = None
-    schedule_store: Any | None = None
-    notification_transports: dict[str, Any] = field(default_factory=dict)
-    memory_store: Any | None = None
-    embedder: Any | None = None
+    state_store: StateStore
+    source_store: SourceStore
+    clock: Clock
+    inference: InferenceClient | None = None
+    transcriber: SpeechTranscriber | None = None
+    schedule_store: ScheduleStore | None = None
+    notification_transports: dict[str, NotificationTransport] = field(default_factory=dict)
+    memory_store: MemoryStore | None = None
+    embedder: Embedder | None = None
     worker_id: str = field(default_factory=lambda: f"{socket.gethostname()}:{int(time.time())}")
 
 

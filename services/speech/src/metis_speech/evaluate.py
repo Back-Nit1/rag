@@ -23,6 +23,7 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TypedDict
 
 # The normalisation rule, stated once so a score is reproducible: NFKC, casefold,
 # strip punctuation except intra-word apostrophes and hyphens, collapse spaces.
@@ -110,6 +111,25 @@ def _negation_recall(reference: str, hypothesis: str) -> tuple[int, int]:
     return kept, len(expected)
 
 
+class SplitReport(TypedDict):
+    """One split's aggregate. A fidelity ratio is None when the split has no
+    instance of that phenomenon -- 0.0 would read as a failure."""
+
+    items: int
+    mean_wer: float | None
+    name_fidelity: float | None
+    date_fidelity: float | None
+    negation_fidelity: float | None
+    per_item: list[dict[str, object]]
+
+
+class EvalReport(TypedDict):
+    splits: dict[str, SplitReport]
+    missing_hypotheses: list[str]
+    normalization: str
+    caveat: str
+
+
 @dataclass
 class Totals:
     count: int = 0
@@ -139,7 +159,7 @@ class Totals:
             }
         )
 
-    def report(self) -> dict[str, object]:
+    def report(self) -> SplitReport:
         def ratio(pair: tuple[int, int]) -> float | None:
             return round(pair[0] / pair[1], 4) if pair[1] else None
 
@@ -158,7 +178,12 @@ def load_set(path: Path) -> list[dict[str, object]]:
     return list(data["items"])
 
 
-def evaluate(items: list[dict[str, object]], hypotheses: dict[str, str]) -> dict[str, object]:
+def _str_list(value: object) -> list[str]:
+    """Fixture fields are JSON, so a missing or malformed list is possible."""
+    return [str(v) for v in value] if isinstance(value, list) else []
+
+
+def evaluate(items: list[dict[str, object]], hypotheses: dict[str, str]) -> EvalReport:
     splits: dict[str, Totals] = {"dev": Totals(), "heldout": Totals()}
     missing: list[str] = []
     for item in items:
@@ -172,7 +197,7 @@ def evaluate(items: list[dict[str, object]], hypotheses: dict[str, str]) -> dict
             item_id,
             str(item["reference"]),
             hypothesis,
-            [str(n) for n in item.get("names", [])],
+            _str_list(item.get("names")),
         )
     return {
         "splits": {name: totals.report() for name, totals in splits.items() if totals.count},
@@ -214,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps(report, indent=2))
         return 0
-    for split, totals in report["splits"].items():  # type: ignore[union-attr]
+    for split, totals in report["splits"].items():
         print(f"\n[{split}] items={totals['items']} mean_wer={totals['mean_wer']}")
         print(
             f"  name_fidelity={totals['name_fidelity']} "

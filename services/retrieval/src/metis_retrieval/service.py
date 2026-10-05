@@ -17,7 +17,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
-from typing import Any
 
 from metis_contracts import (
     Event,
@@ -27,7 +26,9 @@ from metis_contracts import (
     Task,
     settings,
 )
+from metis_contracts.entities import AvailabilityBlock
 from metis_contracts.enums import TASK_OPEN_STATES
+from metis_contracts.ports import Clock, Embedder, MemoryStore, StateStore
 
 log = logging.getLogger("metis.retrieval.service")
 
@@ -73,7 +74,14 @@ class EvidenceBudget:
 class RetrievalService:
     """Implements the planner-facing operations and nothing wider."""
 
-    def __init__(self, *, state_store: Any, memory_store: Any, embedder: Any, clock: Any) -> None:
+    def __init__(
+        self,
+        *,
+        state_store: StateStore,
+        memory_store: MemoryStore,
+        embedder: Embedder,
+        clock: Clock,
+    ) -> None:
         self._state = state_store
         self._memory = memory_store
         self._embedder = embedder
@@ -108,26 +116,27 @@ class RetrievalService:
 
         cursor = None
         while scan.pages_read < page_limit * 2:
-            page = self._state.list_events(user_id, cursor=cursor, limit=100)
+            event_page = self._state.list_events(user_id, cursor=cursor, limit=100)
             scan.pages_read += 1
             scan.events.extend(
                 e
-                for e in page.items
+                for e in event_page.items
                 if e.attendance_status.value not in ("canceled", "declined")
                 and (e.local_date is None or e.local_date <= horizon)
             )
-            if not page.next_cursor:
+            if not event_page.next_cursor:
                 break
-            cursor = page.next_cursor
+            cursor = event_page.next_cursor
         else:
             scan.complete = False
 
         return scan
 
     def get_current_task_state(self, user_id: str, task_id: str) -> Task | None:
-        return self._state.get(user_id, "task", task_id)
+        task = self._state.get(user_id, "task", task_id)
+        return task if isinstance(task, Task) else None
 
-    def get_availability(self, user_id: str, local_date: date) -> list[Any]:
+    def get_availability(self, user_id: str, local_date: date) -> list[AvailabilityBlock]:
         return self._state.list_availability(user_id, local_date)
 
     def lookup_identifier(self, user_id: str, identifier: str) -> list[Project]:

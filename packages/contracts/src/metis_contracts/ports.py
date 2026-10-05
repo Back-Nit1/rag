@@ -141,8 +141,23 @@ class StateStore(Protocol):
     def claim_outbox(self, *, owner: str, limit: int, lease_seconds: int) -> list[OutboxEvent]: ...
 
     def complete_outbox(
-        self, event_id: str, *, user_id: str, state: str, error: str | None = None
-    ) -> None: ...
+        self,
+        event_id: str,
+        *,
+        user_id: str,
+        state: str,
+        failure: str | None = None,
+        error: str | None = None,
+        retry_in_seconds: int | None = None,
+    ) -> None:
+        """``failure`` is a FailureCategory value, ``error`` the readable
+        detail, ``retry_in_seconds`` the delay before the next attempt."""
+        ...
+
+    def claim_once(self, user_id: str, claim_key: str, owner: str) -> bool:
+        """Single-winner conditional claim, e.g. one notification per
+        occurrence. False means another worker already owns it."""
+        ...
 
     def claim_job(self, job_id: str, *, user_id: str, owner: str, lease_seconds: int) -> Job | None: ...
 
@@ -187,6 +202,20 @@ class StateStore(Protocol):
         ...
 
     def get_usage(self, user_id: str, local_date: date) -> UsageDay: ...
+
+    def record_speech_usage(self, user_id: str, *, local_date: date, audio_seconds: float) -> None:
+        """Owned-ASR usage is measured in seconds, not model tokens."""
+        ...
+
+    # --- deletion and the local timer --------------------------------------
+    def purge(self, user_id: str, kind: str, entity_id: str) -> None:
+        """Hard delete, called by the purge job after ``tombstone``."""
+        ...
+
+    def due_reminder_ids(self, *, now: datetime, limit: int = 50) -> list[str]:
+        """Local-mode timer source. Cloud mode returns an empty list because
+        EventBridge Scheduler invokes the due handler directly."""
+        ...
 
 
 @runtime_checkable
@@ -297,10 +326,15 @@ class MemoryStore(Protocol):
         kinds: Sequence[str] = (),
         include_historical: bool = False,
         limit: int = 20,
-    ) -> list[tuple[Memory, float]]:
-        """Return (memory, score) pairs. Scores rank; they are not probabilities.
-        A result for another user is a bug and must be dropped before any
-        prompt is constructed."""
+    ) -> list[tuple[str, float, dict[str, Any]]]:
+        """Return ``(memory_id, score, metadata)``, highest score first.
+
+        The index returns identifiers, never stored copies: the caller
+        hydrates each hit from authoritative state and drops anything whose
+        owner or source version no longer matches, so a stale or
+        cross-tenant index entry cannot reach a prompt. Scores rank; they are
+        not probabilities.
+        """
         ...
 
     def delete(self, user_id: str, memory_ids: Sequence[str]) -> None: ...

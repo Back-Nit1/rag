@@ -13,6 +13,7 @@ from metis_contracts import (
     MetisError,
     ReminderState,
 )
+from metis_contracts.entities import Notification
 from metis_contracts.events import ReminderDuePayload, ReminderSyncPayload
 from metis_pipeline.dispatcher import DispatchContext, HandlerRegistry
 
@@ -152,6 +153,7 @@ def handle_reminder_due(envelope: EventEnvelope, context: DispatchContext) -> No
     transport = context.notification_transports.get(
         reminder.channel.value
     ) or context.notification_transports.get("in_app")
+    detail: str | None
     if transport is None:
         status, detail = DeliveryStatus.UNSUPPORTED, "no transport is configured"
     elif not transport.supported(envelope.user_id):
@@ -169,6 +171,12 @@ def handle_reminder_due(envelope: EventEnvelope, context: DispatchContext) -> No
     reminder_after = state.get(envelope.user_id, "reminder", reminder.id)
     with state.transaction(envelope.user_id) as tx:
         current = state.get(envelope.user_id, "notification", stored_notification.id)
+        if not isinstance(current, Notification):
+            # The feed record was deleted between dispatch and the receipt
+            # write. Nothing left to annotate; the delivery itself already
+            # happened and must not be retried.
+            log.warning("notification %s vanished before its receipt", stored_notification.id)
+            return
         tx.put(
             "notification",
             current.model_copy(

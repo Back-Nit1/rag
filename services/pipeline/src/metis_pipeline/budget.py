@@ -20,6 +20,7 @@ from datetime import date
 from typing import Any
 
 from metis_contracts import ErrorCode, MetisError, settings
+from metis_contracts.ports import StateStore
 
 log = logging.getLogger("metis.pipeline.budget")
 
@@ -120,7 +121,7 @@ def reserved(
         )
 
 
-def budget_available(state_store: Any, user_id: str, local_date: date) -> bool:
+def budget_available(state_store: StateStore, user_id: str, local_date: date) -> bool:
     """Cheap pre-check for UI and for deciding whether to defer optional work.
 
     Not a substitute for :func:`reserved` — only the atomic reservation is

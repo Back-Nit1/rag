@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from metis_contracts import AdapterMode, ErrorCode, MetisError, settings
+from metis_contracts.ports import Clock, StateStore
 
 log = logging.getLogger("metis.scheduler.store")
 
@@ -36,7 +37,7 @@ class LocalScheduleStore:
 
     mode = AdapterMode.LOCAL
 
-    def __init__(self, state_store: Any | None = None, clock: Any | None = None) -> None:
+    def __init__(self, state_store: StateStore | None = None, clock: Clock | None = None) -> None:
         self._state = state_store
         self._clock = clock
         self.created: dict[str, datetime] = {}
@@ -69,7 +70,7 @@ class EventBridgeScheduleStore:
 
     mode = AdapterMode.CLOUD
 
-    def __init__(self, clock: Any | None = None) -> None:
+    def __init__(self, clock: Clock | None = None) -> None:
         import boto3
 
         cfg = settings().aws
@@ -84,8 +85,11 @@ class EventBridgeScheduleStore:
             )
             if not value
         ]
-        if missing:
+        if missing or cfg.scheduler_group is None:
             raise ValueError(f"cloud scheduling requires: {', '.join(missing)}")
+        # Validated above, so the group name is a str from here on; the target
+        # and role arns are read straight off cfg where boto accepts None.
+        self._group: str = cfg.scheduler_group
         self._client = boto3.client("scheduler", region_name=cfg.region)
 
     def upsert_schedule(
@@ -93,10 +97,10 @@ class EventBridgeScheduleStore:
     ) -> str:
         name = schedule_name(reminder_id)
         # Scheduler expects a naive at() expression plus an explicit timezone.
-        at_expression = f"at({trigger_at.astimezone(_utc()).strftime('%Y-%m-%dT%H:%M:%S')})"
+        at_expression = f"at({trigger_at.astimezone(UTC).strftime('%Y-%m-%dT%H:%M:%S')})"
         request: dict[str, Any] = {
             "Name": name,
-            "GroupName": self._cfg.scheduler_group,
+            "GroupName": self._group,
             "ScheduleExpression": at_expression,
             "ScheduleExpressionTimezone": "UTC",
             "FlexibleTimeWindow": {"Mode": "OFF"},
@@ -115,11 +119,11 @@ class EventBridgeScheduleStore:
             self._client.update_schedule(**request)
         except Exception as exc:
             raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, f"could not create the schedule: {exc}") from exc
-        return f"arn:schedule:{self._cfg.scheduler_group}/{name}"
+        return f"arn:schedule:{self._group}/{name}"
 
     def delete_schedule(self, *, reminder_id: str, scheduler_ref: str | None) -> None:
         try:
-            self._client.delete_schedule(Name=schedule_name(reminder_id), GroupName=self._cfg.scheduler_group)
+            self._client.delete_schedule(Name=schedule_name(reminder_id), GroupName=self._group)
         except self._client.exceptions.ResourceNotFoundException:
             return  # already gone; deletion is idempotent
         except Exception as exc:
@@ -131,11 +135,6 @@ class EventBridgeScheduleStore:
     def list_due(self, *, now: datetime, limit: int = 50) -> list[str]:
         """Not applicable: EventBridge invokes the due handler directly."""
         return []
-
-
-def _utc():
-
-    return UTC
 
 
 def build_schedule_store(state_store: Any | None = None, clock: Any | None = None) -> Any:
