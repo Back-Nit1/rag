@@ -1,0 +1,29 @@
+{
+  "app": "npx ts-node --prefer-ts-exts bin/metis.ts",
+  "watch": { "include": ["**"], "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "**/*.js", "node_modules", "cdk.out"] },
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:validateSnapshotRemovalPolicy": true,
+    "@aws-cdk/aws-s3:createDefaultLoggingPolicy": true,
+    "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": true,
+    "@aws-cdk/aws-apigateway:requestValidatorUniqueId": true,
+    "@aws-cdk/core:enablePartitionLiterals": true,
+    "@aws-cdk/aws-ecs:reduceEc2FargateCloudWatchPermissions": true,
+    "metis:defaultRegion": "us-east-1",
+    "metis:alertEmail": "",
+    "metis:monthlyBudgetUsd": 25,
+    "metis:speechCpu": 2048,
+    "metis:speechMemoryMiB": 4096,
+    "metis:warmSpeechEc2": false,
+    "metis:speechModelId": "small.en",
+    "metis:speechModelRepo": "Systran/faster-whisper-small.en",
+    "metis:speechModelRevision": "main",
+    "metis:speechModelSha256": "",
+    "metis:extractionModelId": "amazon.nova-micro-v1:0",
+    "metis:planningModelId": "amazon.nova-lite-v1:0",
+    "metis:embeddingModelId": "amazon.titan-embed-text-v2:0",
+    "metis:embeddingDimensions": 512
+  }
+}

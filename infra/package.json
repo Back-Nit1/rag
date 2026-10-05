@@ -1,0 +1,26 @@
+{
+  "name": "@metis/infra",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Metis AWS infrastructure (CDK)",
+  "bin": { "metis": "bin/metis.ts" },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "synth": "cdk synth --all",
+    "diff": "cdk diff --all",
+    "deploy": "cdk deploy --all --require-approval broadening",
+    "destroy": "cdk destroy --all",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "aws-cdk": "^2.168.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.168.0",
+    "constructs": "^10.4.2"
+  }
+}
