@@ -51,7 +51,9 @@ web: ## run only the web client
 .PHONY: test
 test: ## python unit tests + web unit tests
 	$(UV) run pytest -m "not integration and not cloud"
-	$(PNPM) --filter @metis/web test --run
+	@# No-op while apps/web has no package.json (pnpm exits 0 on no match).
+	@# The web package's own `test` script must be non-watching.
+	$(PNPM) --filter @metis/web test
 
 .PHONY: test-integration
 test-integration: ## tests that need a container or real audio decoding

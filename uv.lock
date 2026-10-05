@@ -1073,6 +1073,7 @@ dependencies = [
     { name = "metis-planner" },
     { name = "metis-retrieval" },
     { name = "metis-scheduler" },
+    { name = "metis-speech" },
     { name = "metis-state" },
 ]
 
@@ -1094,6 +1095,7 @@ requires-dist = [
     { name = "metis-planner", editable = "services/planner" },
     { name = "metis-retrieval", editable = "services/retrieval" },
     { name = "metis-scheduler", editable = "services/scheduler" },
+    { name = "metis-speech", editable = "services/speech" },
     { name = "metis-state", editable = "services/state" },
 ]
 

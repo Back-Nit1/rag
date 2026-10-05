@@ -8,6 +8,9 @@ dependencies = [
   "metis-state",
   "metis-pipeline",
   "metis-scheduler",
+  # Heavy ASR wheels live in its `asr` extra, not here, so a local install
+  # stays small and the fixture transcriber is what runs.
+  "metis-speech",
   "metis-retrieval",
   "metis-planner",
   "metis-api",
