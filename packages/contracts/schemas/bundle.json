@@ -9676,6 +9676,20 @@
       "$id": "https://metis.local/schemas/v1/PlanRequestedPayload.json",
       "additionalProperties": false,
       "properties": {
+        "job_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Job Id"
+        },
         "local_date": {
           "title": "Local Date",
           "type": "string"

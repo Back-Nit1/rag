@@ -831,6 +831,7 @@ export interface PlanBlock {
 
 export interface PlanRequestedPayload {
   plan_id: string;
+  job_id?: string | null;
   local_date: string;
   timezone: string;
   time_budget_minutes: number;

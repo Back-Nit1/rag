@@ -161,6 +161,7 @@ class MemoryIndexPayload(StrictModel):
 
 class PlanRequestedPayload(StrictModel):
     plan_id: EntityId
+    job_id: EntityId | None = None
     local_date: str
     timezone: str
     time_budget_minutes: Annotated[int, Field(ge=0)]
