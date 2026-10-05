@@ -1,0 +1,85 @@
+[project]
+name = "metis"
+version = "0.1.0"
+description = "Metis — voice-first multimodal personal assistant (workspace root)"
+requires-python = ">=3.12"
+dependencies = [
+  "metis-contracts",
+  "metis-state",
+  "metis-pipeline",
+  "metis-scheduler",
+  "metis-retrieval",
+  "metis-planner",
+  "metis-api",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "httpx>=0.27",
+  "ruff>=0.7",
+  "mypy>=1.13",
+  "boto3-stubs[bedrock-runtime,dynamodb,s3,scheduler,sqs]>=1.35",
+]
+
+[tool.uv.sources]
+metis-contracts = { workspace = true }
+metis-state = { workspace = true }
+metis-pipeline = { workspace = true }
+metis-scheduler = { workspace = true }
+metis-speech = { workspace = true }
+metis-retrieval = { workspace = true }
+metis-planner = { workspace = true }
+metis-api = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+  "packages/contracts",
+  "services/state",
+  "services/pipeline",
+  "services/scheduler",
+  "services/speech",
+  "services/retrieval",
+  "services/planner",
+  "services/api",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["packages", "services", "tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "integration: needs a container, a local service or real audio decoding",
+  "cloud: needs authorized AWS credentials; skipped by default",
+]
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["packages/contracts/generated", "infra/cdk.out"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "DTZ", "T20", "SIM", "RUF"]
+ignore = [
+  "E501",    # line length is handled by the formatter
+  "B008",    # FastAPI Depends() in defaults is the documented pattern
+  "A003",    # shadowing a builtin as a *field* name is fine (id, type)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["T20", "DTZ"]
+"scripts/*" = ["T20"]
+"**/generate.py" = ["T20"]
+"**/local_worker.py" = ["T20"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+disallow_untyped_decorators = false
+exclude = "(cdk\\.out|node_modules|generated)"
+
+[[tool.mypy.overrides]]
+module = ["faster_whisper.*", "av.*", "mangum.*"]
+ignore_missing_imports = true
