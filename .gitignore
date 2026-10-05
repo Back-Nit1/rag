@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# CDK
+infra/cdk.out/
+cdk.out/
+.cdk.staging/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!*.pub
+
+# Local runtime state
+*.sqlite
+*.sqlite3
+*.db
+.metis/
+data/local/
+
+# Model artifacts & private media
+models/
+*.bin
+*.onnx
+*.ct2
+*.wav
+*.webm
+*.m4a
+*.mp3
+!tests/fixtures/audio/*.webm
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+coverage/
+.coverage
+htmlcov/
