@@ -382,6 +382,13 @@ class DynamoStateStore:
         items, next_cursor, complete = self._query_kind(user_id, "notification", cursor=cursor, limit=limit)
         return Page(items=items, next_cursor=next_cursor, complete=complete)
 
+    def list_memories(
+        self, user_id: str, *, project_id: str | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Any]:
+        items, next_cursor, complete = self._query_kind(user_id, "memory", cursor=cursor, limit=limit)
+        filtered = [m for m in items if project_id is None or m.project_id == project_id]
+        return Page(items=filtered, next_cursor=next_cursor, complete=complete)
+
     def list_reminders_for_target(self, user_id: str, target_id: str) -> list[Reminder]:
         items, _, _ = self._query_kind(user_id, "reminder", cursor=None, limit=200)
         return [r for r in items if r.target_id == target_id]
@@ -474,19 +481,27 @@ class DynamoStateStore:
         *,
         user_id: str,
         state: str,
+        failure: str | None = None,
         error: str | None = None,
         retry_in_seconds: int | None = None,
     ) -> None:
+        """``failure`` is a FailureCategory value; ``error`` is the readable detail."""
         now = self._clock.now()
         available_at = now + timedelta(seconds=retry_in_seconds or 0)
         self._table.update_item(
             Key={"pk": _pk(user_id), "sk": f"OBX#{event_id}"},
             UpdateExpression=(
-                "SET obx_state = :s, available_at = :avail, body.#st = :s, body.failure = :err, "
-                "body.error_message = :err REMOVE lease_owner, lease_expires_at"
+                "SET obx_state = :s, available_at = :avail, body.#st = :s, "
+                "body.failure = :cat, body.error_message = :err "
+                "REMOVE lease_owner, lease_expires_at"
             ),
             ExpressionAttributeNames={"#st": "state"},
-            ExpressionAttributeValues={":s": state, ":avail": available_at.isoformat(), ":err": error},
+            ExpressionAttributeValues={
+                ":s": state,
+                ":avail": available_at.isoformat(),
+                ":cat": failure,
+                ":err": error,
+            },
         )
 
     def list_dead_letters(self, limit: int = 50) -> list[OutboxEvent]:

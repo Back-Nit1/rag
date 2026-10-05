@@ -398,6 +398,12 @@ class SqliteStateStore:
     ) -> Page[Notification]:
         return self._page("notification", user_id, "", [], cursor=cursor, limit=limit)
 
+    def list_memories(
+        self, user_id: str, *, project_id: str | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Any]:
+        where, params = ("AND project_id = ?", [project_id]) if project_id else ("", [])
+        return self._page("memory", user_id, where, params, cursor=cursor, limit=limit)
+
     def list_reminders_for_target(self, user_id: str, target_id: str) -> list[Reminder]:
         with self._lock:
             rows = self._conn.execute(
@@ -510,10 +516,16 @@ class SqliteStateStore:
         *,
         user_id: str,
         state: str,
+        failure: str | None = None,
         error: str | None = None,
         retry_in_seconds: int | None = None,
     ) -> None:
-        """Mark a leased event done / failed / dead-lettered / superseded."""
+        """Mark a leased event done / failed / dead-lettered / superseded.
+
+        ``failure`` is a FailureCategory value (it drives retry policy);
+        ``error`` is the human-readable detail shown to the user. Keeping them
+        in separate columns is what lets the category stay a closed enum.
+        """
         now = self._clock.now()
         available_at = (now + timedelta(seconds=retry_in_seconds or 0)).isoformat()
         with self._lock:
@@ -521,7 +533,7 @@ class SqliteStateStore:
                 """UPDATE outbox SET state=?, failure=?, error_message=?, lease_owner=NULL,
                        lease_expires_at=NULL, available_at=?, updated_at=?
                    WHERE user_id=? AND id=?""",
-                (state, error, error, available_at, now.isoformat(), user_id, event_id),
+                (state, failure, error, available_at, now.isoformat(), user_id, event_id),
             )
 
     def list_dead_letters(self, limit: int = 50) -> list[OutboxEvent]:
