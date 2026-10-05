@@ -147,15 +147,11 @@ def compute_free_intervals(
         ends_at = event.ends_at
         if ends_at is None:
             ends_at = event.starts_at + timedelta(minutes=60)
-            assumptions.append(
-                f"'{event.title}' has no end time; 60 minutes is a visible default estimate."
-            )
+            assumptions.append(f"'{event.title}' has no end time; 60 minutes is a visible default estimate.")
         intervals = _subtract(intervals, Interval(event.starts_at, ends_at))
 
     # Nothing is scheduled in the past.
-    intervals = [
-        Interval(max(i.starts_at, now), i.ends_at) for i in intervals if i.ends_at > now
-    ]
+    intervals = [Interval(max(i.starts_at, now), i.ends_at) for i in intervals if i.ends_at > now]
     intervals = [i for i in intervals if i.minutes > 0]
     intervals.sort(key=lambda i: i.starts_at)
     return intervals, configured, assumptions
@@ -180,9 +176,7 @@ def rank_candidates(
             and is_overdue(task.deadline_local_date, task.timezone or timezone_name, now=now)
             else 1
         )
-        days_left = (
-            (task.deadline_local_date - local_date).days if task.deadline_local_date else 10_000
-        )
+        days_left = (task.deadline_local_date - local_date).days if task.deadline_local_date else 10_000
         return (overdue, max(0, days_left), -task.priority, task.id)
 
     eligible = [t for t in tasks if t.id not in blocked]
@@ -247,11 +241,7 @@ def _assemble_once(
     availability = retrieval.get_availability(user_id, local_date)
     now = clock.now()
 
-    fixed_events = [
-        e
-        for e in scan.events
-        if e.starts_at is not None and e.local_date == local_date
-    ]
+    fixed_events = [e for e in scan.events if e.starts_at is not None and e.local_date == local_date]
     day_end = end_of_local_day(local_date, timezone_name)
     relevant_tasks = [
         t

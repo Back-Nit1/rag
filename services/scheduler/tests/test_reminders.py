@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from metis_contracts import (
@@ -37,10 +37,10 @@ from metis_scheduler import (
 from metis_scheduler.handlers import registry as scheduler_registry
 from metis_state.sqlite_store import SqliteStateStore
 
-T0 = datetime(2026, 10, 5, 14, 0, tzinfo=timezone.utc)  # 10:00 in New York
+T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)  # 10:00 in New York
 NY = "America/New_York"
 USER = "user_a"
-DUE = datetime(2026, 10, 7, 13, 0, tzinfo=timezone.utc)  # 09:00 NY
+DUE = datetime(2026, 10, 7, 13, 0, tzinfo=UTC)  # 09:00 NY
 
 
 @pytest.fixture()
@@ -83,8 +83,13 @@ def context(store, clock):
 
 def make_task(store, clock, *, task_id="task_register", state=TaskState.READY, **kw) -> Task:
     task = Task(
-        id=task_id, user_id=USER, created_at=clock.now(), updated_at=clock.now(),
-        title="Register for the Bloomberg event", state=state, **kw,
+        id=task_id,
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        title="Register for the Bloomberg event",
+        state=state,
+        **kw,
     )
     with store.transaction(USER) as tx:
         return tx.put("task", task)
@@ -92,10 +97,15 @@ def make_task(store, clock, *, task_id="task_register", state=TaskState.READY, *
 
 def make_event(store, clock, **kw) -> Event:
     event = Event(
-        id=kw.pop("event_id", "event_bloomberg"), user_id=USER,
-        created_at=clock.now(), updated_at=clock.now(), title="Bloomberg event",
-        starts_at=datetime(2026, 10, 8, 22, 0, tzinfo=timezone.utc),
-        local_date=date(2026, 10, 8), timezone=NY, **kw,
+        id=kw.pop("event_id", "event_bloomberg"),
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        title="Bloomberg event",
+        starts_at=datetime(2026, 10, 8, 22, 0, tzinfo=UTC),
+        local_date=date(2026, 10, 8),
+        timezone=NY,
+        **kw,
     )
     with store.transaction(USER) as tx:
         return tx.put("event", event)
@@ -148,9 +158,12 @@ def test_a_scheduler_outage_leaves_the_data_saved_and_the_state_honest(store, cl
     reminder = add_reminder(store, clock, task)
     transport = FixtureTransport()
     broken = DispatchContext(
-        state_store=store, source_store=None, clock=clock,
+        state_store=store,
+        source_store=None,
+        clock=clock,
         schedule_store=_FlakyScheduleStore(fail_times=99),
-        notification_transports={"in_app": transport}, worker_id="w1",
+        notification_transports={"in_app": transport},
+        worker_id="w1",
     )
     OutboxDispatcher(scheduler_registry, broken).run_once()
     after = store.get(USER, "reminder", reminder.id)
@@ -164,8 +177,12 @@ def test_a_retry_after_an_outage_recovers_without_duplicating(store, clock):
     flaky = _FlakyScheduleStore(fail_times=1)
     transport = FixtureTransport()
     ctx = DispatchContext(
-        state_store=store, source_store=None, clock=clock, schedule_store=flaky,
-        notification_transports={"in_app": transport}, worker_id="w1",
+        state_store=store,
+        source_store=None,
+        clock=clock,
+        schedule_store=flaky,
+        notification_transports={"in_app": transport},
+        worker_id="w1",
     )
     dispatcher = OutboxDispatcher(scheduler_registry, ctx)
     dispatcher.run_once()
@@ -185,8 +202,12 @@ def test_moving_the_date_supersedes_the_old_occurrence(store, clock, context):
     drain(context)
     scheduled = store.get(USER, "reminder", reminder.id)
     moved = retarget_reminder(
-        store, scheduled, trigger_at=DUE + timedelta(days=1),
-        target_revision=task.revision, clock=clock, correlation_id="corr_2",
+        store,
+        scheduled,
+        trigger_at=DUE + timedelta(days=1),
+        target_revision=task.revision,
+        clock=clock,
+        correlation_id="corr_2",
     )
     assert moved.occurrence_key != scheduled.occurrence_key
     assert moved.state is ReminderState.PENDING_SCHEDULE
@@ -198,9 +219,12 @@ def test_an_old_schedule_firing_after_a_date_change_is_suppressed(store, clock, 
     drain(context)
     old_occurrence = store.get(USER, "reminder", reminder.id).occurrence_key
     retarget_reminder(
-        store, store.get(USER, "reminder", reminder.id),
-        trigger_at=DUE + timedelta(days=1), target_revision=task.revision,
-        clock=clock, correlation_id="corr_2",
+        store,
+        store.get(USER, "reminder", reminder.id),
+        trigger_at=DUE + timedelta(days=1),
+        target_revision=task.revision,
+        clock=clock,
+        correlation_id="corr_2",
     )
     clock.set(DUE)
     decision = evaluate_due(
@@ -247,8 +271,9 @@ def test_a_canceled_event_suppresses_its_reminder(store, clock, context):
     with store.transaction(USER) as tx:
         tx.put(
             "event",
-            event.model_copy(update={"attendance_status": AttendanceStatus.CANCELED,
-                                     "canceled_at": clock.now()}),
+            event.model_copy(
+                update={"attendance_status": AttendanceStatus.CANCELED, "canceled_at": clock.now()}
+            ),
             expected_revision=event.revision,
         )
     clock.set(DUE)
@@ -346,7 +371,9 @@ def test_an_unsupported_channel_still_leaves_the_in_app_record(store, clock):
             raise AssertionError("send must not be called when unsupported")
 
     ctx = DispatchContext(
-        state_store=store, source_store=None, clock=clock,
+        state_store=store,
+        source_store=None,
+        clock=clock,
         schedule_store=LocalScheduleStore(state_store=store, clock=clock),
         notification_transports={"web_push": _Unsupported(), "in_app": InAppTransport(store, clock)},
         worker_id="w1",
@@ -380,14 +407,14 @@ def test_an_ordinary_reminder_makes_no_model_calls(store, clock, context):
 
 def test_quiet_hours_wrap_past_midnight():
     windows = [TimeWindow(start="22:00", end="08:00")]
-    assert in_quiet_hours(datetime(2026, 10, 6, 3, 0, tzinfo=timezone.utc), timezone_name="UTC", windows=windows)
-    assert in_quiet_hours(datetime(2026, 10, 6, 23, 0, tzinfo=timezone.utc), timezone_name="UTC", windows=windows)
-    assert not in_quiet_hours(datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc), timezone_name="UTC", windows=windows)
+    assert in_quiet_hours(datetime(2026, 10, 6, 3, 0, tzinfo=UTC), timezone_name="UTC", windows=windows)
+    assert in_quiet_hours(datetime(2026, 10, 6, 23, 0, tzinfo=UTC), timezone_name="UTC", windows=windows)
+    assert not in_quiet_hours(datetime(2026, 10, 6, 12, 0, tzinfo=UTC), timezone_name="UTC", windows=windows)
 
 
 def test_a_quiet_hours_reminder_is_deferred_not_dropped(store, clock, context):
     task = make_task(store, clock)
-    quiet_trigger = datetime(2026, 10, 7, 5, 0, tzinfo=timezone.utc)  # 01:00 NY
+    quiet_trigger = datetime(2026, 10, 7, 5, 0, tzinfo=UTC)  # 01:00 NY
     reminder = add_reminder(store, clock, task, trigger_at=quiet_trigger)
     drain(context)
     clock.set(quiet_trigger)
@@ -399,9 +426,7 @@ def test_a_quiet_hours_reminder_is_deferred_not_dropped(store, clock, context):
 
 def test_next_allowed_time_lands_at_the_end_of_the_window():
     windows = [TimeWindow(start="22:00", end="08:00")]
-    moved = next_allowed_time(
-        datetime(2026, 10, 7, 5, 0, tzinfo=timezone.utc), timezone_name="UTC", windows=windows
-    )
+    moved = next_allowed_time(datetime(2026, 10, 7, 5, 0, tzinfo=UTC), timezone_name="UTC", windows=windows)
     assert moved.hour == 8
 
 

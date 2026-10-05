@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, model_validator
 
 from .common import (
     ConfidenceHint,
@@ -22,7 +22,6 @@ from .common import (
     SourceSpan,
     StrictModel,
     TimezoneName,
-    UserId,
 )
 from .enums import (
     AdapterMode,
@@ -132,9 +131,11 @@ class SourceArtifact(Record):
 
     @model_validator(mode="after")
     def _audio_needs_object(self) -> SourceArtifact:
-        if self.kind in (SourceKind.AUDIO, SourceKind.IMAGE, SourceKind.DOCUMENT):
-            if self.lifecycle not in (SourceLifecycle.PENDING_UPLOAD, SourceLifecycle.TOMBSTONED) and self.object_ref is None:
-                raise ValueError(f"{self.kind} source past upload must carry an object_ref")
+        if self.kind in (SourceKind.AUDIO, SourceKind.IMAGE, SourceKind.DOCUMENT) and (
+            self.lifecycle not in (SourceLifecycle.PENDING_UPLOAD, SourceLifecycle.TOMBSTONED)
+            and self.object_ref is None
+        ):
+            raise ValueError(f"{self.kind} source past upload must carry an object_ref")
         return self
 
 

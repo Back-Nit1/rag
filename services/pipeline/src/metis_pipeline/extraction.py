@@ -190,7 +190,9 @@ class ExtractionService:
         if not window.strip():
             # A silent or empty source creates nothing at all.
             return ExtractionOutcome(
-                proposal=self._empty_proposal(source, source_version, range_index, "no speech in this source"),
+                proposal=self._empty_proposal(
+                    source, source_version, range_index, "no speech in this source"
+                ),
                 usage={},
                 degraded_reason="empty_source",
             )
@@ -371,18 +373,18 @@ class ExtractionService:
                     cleaned["deadline_local_date"] = None
 
             # Semantic check: registration is never inferred from intent.
-            if cleaned.get("registration_status") == RegistrationStatus.REGISTERED.value:
-                if not any(p in lowered for p in ("registered", "signed up", "got a ticket", "booked")):
-                    issues.append(
-                        f"item {index}: registration_status=registered is unsupported by the note"
-                    )
-                    cleaned["registration_status"] = RegistrationStatus.UNKNOWN.value
+            if cleaned.get("registration_status") == RegistrationStatus.REGISTERED.value and not any(
+                p in lowered for p in ("registered", "signed up", "got a ticket", "booked")
+            ):
+                issues.append(f"item {index}: registration_status=registered is unsupported by the note")
+                cleaned["registration_status"] = RegistrationStatus.UNKNOWN.value
 
             # Semantic check: committing to attend needs an explicit statement.
-            if cleaned.get("attendance_status") == AttendanceStatus.COMMITTED.value:
-                if not any(p in lowered for p in ("i am going", "i'm going", "i will go", "confirmed", "i am attending")):
-                    issues.append(f"item {index}: attendance 'committed' downgraded to tentative")
-                    cleaned["attendance_status"] = AttendanceStatus.TENTATIVE.value
+            if cleaned.get("attendance_status") == AttendanceStatus.COMMITTED.value and not any(
+                p in lowered for p in ("i am going", "i'm going", "i will go", "confirmed", "i am attending")
+            ):
+                issues.append(f"item {index}: attendance 'committed' downgraded to tentative")
+                cleaned["attendance_status"] = AttendanceStatus.TENTATIVE.value
 
             # Semantic check: a resolved date on an event the note left open.
             if cleaned.get("local_date") and "event_date_time" in (cleaned.get("missing_fields") or []):
@@ -428,7 +430,9 @@ class ExtractionService:
                 start = int(raw["start_char"]) + offset
                 end = int(raw["end_char"]) + offset
             except (KeyError, TypeError, ValueError) as exc:
-                raise MetisError(ErrorCode.SEMANTIC_VALIDATION_FAILED, "evidence offsets are missing") from exc
+                raise MetisError(
+                    ErrorCode.SEMANTIC_VALIDATION_FAILED, "evidence offsets are missing"
+                ) from exc
             if not (0 <= start <= end <= len(text)):
                 raise MetisError(
                     ErrorCode.SEMANTIC_VALIDATION_FAILED,

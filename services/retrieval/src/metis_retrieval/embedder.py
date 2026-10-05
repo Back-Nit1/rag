@@ -102,9 +102,7 @@ class BedrockEmbedder:
                 response = self._client.invoke_model(modelId=self.model_id, body=body)
                 payload = json.loads(response["body"].read())
             except Exception as exc:
-                raise MetisError(
-                    ErrorCode.PROVIDER_UNAVAILABLE, f"embedding call failed: {exc}"
-                ) from exc
+                raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, f"embedding call failed: {exc}") from exc
             vector = payload.get("embedding")
             if not isinstance(vector, list) or len(vector) != self.dimensions:
                 raise MetisError(

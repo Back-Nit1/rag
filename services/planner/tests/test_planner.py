@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from metis_contracts import (
@@ -23,7 +23,6 @@ from metis_planner import (
     Interval,
     PlannerService,
     assemble,
-    compute_free_intervals,
     pack,
     rank_candidates,
     validate,
@@ -35,7 +34,7 @@ NY = "America/New_York"
 USER = "user_a"
 DAY = date(2026, 10, 6)
 # 2026-10-06 12:00 UTC == 08:00 New York, before the 09:00 work-hours start.
-T0 = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 
 
 @pytest.fixture()
@@ -54,8 +53,10 @@ def store(tmp_path, clock, monkeypatch) -> SqliteStateStore:
 @pytest.fixture()
 def retrieval(store, clock) -> RetrievalService:
     return RetrievalService(
-        state_store=store, memory_store=SqliteMemoryStore(":memory:"),
-        embedder=FixtureEmbedder(), clock=clock,
+        state_store=store,
+        memory_store=SqliteMemoryStore(":memory:"),
+        embedder=FixtureEmbedder(),
+        clock=clock,
     )
 
 
@@ -69,9 +70,15 @@ def planner(store, retrieval, clock) -> PlannerService:
 def add_task(store, clock, *, task_id, title="Task", minutes=None, **kw) -> Task:
     estimate = Estimate(minutes=minutes, provenance="user") if minutes else None
     task = Task(
-        id=task_id, user_id=USER, created_at=clock.now(), updated_at=clock.now(),
-        title=title, state=kw.pop("state", TaskState.READY), duration_estimate=estimate,
-        timezone=NY, **kw,
+        id=task_id,
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        title=title,
+        state=kw.pop("state", TaskState.READY),
+        duration_estimate=estimate,
+        timezone=NY,
+        **kw,
     )
     with store.transaction(USER) as tx:
         return tx.put("task", task)
@@ -79,10 +86,16 @@ def add_task(store, clock, *, task_id, title="Task", minutes=None, **kw) -> Task
 
 def add_event(store, clock, *, event_id, title, start_hour_utc, end_hour_utc=None) -> Event:
     event = Event(
-        id=event_id, user_id=USER, created_at=clock.now(), updated_at=clock.now(), title=title,
-        starts_at=datetime(2026, 10, 6, start_hour_utc, 0, tzinfo=timezone.utc),
-        ends_at=datetime(2026, 10, 6, end_hour_utc, 0, tzinfo=timezone.utc) if end_hour_utc else None,
-        local_date=DAY, timezone=NY, attendance_status="committed",
+        id=event_id,
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        title=title,
+        starts_at=datetime(2026, 10, 6, start_hour_utc, 0, tzinfo=UTC),
+        ends_at=datetime(2026, 10, 6, end_hour_utc, 0, tzinfo=UTC) if end_hour_utc else None,
+        local_date=DAY,
+        timezone=NY,
+        attendance_status="committed",
     )
     with store.transaction(USER) as tx:
         return tx.put("event", event)
@@ -90,9 +103,14 @@ def add_event(store, clock, *, event_id, title, start_hour_utc, end_hour_utc=Non
 
 def add_availability(store, clock, *, start, end, kind="available", block_id=None) -> AvailabilityBlock:
     block = AvailabilityBlock(
-        id=block_id or f"avail_{start}_{kind}", user_id=USER, created_at=clock.now(),
-        updated_at=clock.now(), local_date=DAY, timezone=NY,
-        window=TimeWindow(start=start, end=end), kind=kind,
+        id=block_id or f"avail_{start}_{kind}",
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        local_date=DAY,
+        timezone=NY,
+        window=TimeWindow(start=start, end=end),
+        kind=kind,
     )
     with store.transaction(USER) as tx:
         return tx.put("availability", block)
@@ -100,8 +118,12 @@ def add_availability(store, clock, *, start, end, kind="available", block_id=Non
 
 def snapshot_for(store, retrieval, clock):
     return assemble(
-        state_store=store, retrieval=retrieval, clock=clock,
-        user_id=USER, local_date=DAY, timezone_name=NY,
+        state_store=store,
+        retrieval=retrieval,
+        clock=clock,
+        user_id=USER,
+        local_date=DAY,
+        timezone_name=NY,
     )
 
 
@@ -134,10 +156,13 @@ def test_a_fixed_event_is_carved_out_of_free_time(store, retrieval, clock):
     add_event(store, clock, event_id="ev_1", title="Standup", start_hour_utc=14, end_hour_utc=15)
     snapshot = snapshot_for(store, retrieval, clock)
     assert snapshot.capacity_minutes == 7 * 60
-    assert all(not Interval(
-        datetime(2026, 10, 6, 14, 0, tzinfo=timezone.utc),
-        datetime(2026, 10, 6, 15, 0, tzinfo=timezone.utc),
-    ).overlaps(i) for i in snapshot.free_intervals)
+    assert all(
+        not Interval(
+            datetime(2026, 10, 6, 14, 0, tzinfo=UTC),
+            datetime(2026, 10, 6, 15, 0, tzinfo=UTC),
+        ).overlaps(i)
+        for i in snapshot.free_intervals
+    )
 
 
 def test_an_event_without_an_end_uses_a_visible_default_estimate(store, retrieval, clock):
@@ -149,7 +174,7 @@ def test_an_event_without_an_end_uses_a_visible_default_estimate(store, retrieva
 
 def test_past_time_is_never_offered_as_capacity(store, retrieval, clock):
     add_availability(store, clock, start="09:00", end="17:00", block_id="avail_day")
-    clock.set(datetime(2026, 10, 6, 18, 0, tzinfo=timezone.utc))  # 14:00 NY
+    clock.set(datetime(2026, 10, 6, 18, 0, tzinfo=UTC))  # 14:00 NY
     snapshot = snapshot_for(store, retrieval, clock)
     assert all(i.starts_at >= clock.now() for i in snapshot.free_intervals)
     assert snapshot.capacity_minutes == 3 * 60
@@ -161,22 +186,40 @@ def test_past_time_is_never_offered_as_capacity(store, retrieval, clock):
 def test_overdue_and_near_deadlines_rank_first(store, clock):
     tasks = [
         Task(id="task_someday", user_id=USER, created_at=T0, updated_at=T0, title="Someday"),
-        Task(id="task_overdue", user_id=USER, created_at=T0, updated_at=T0, title="Overdue",
-             deadline_local_date=date(2026, 10, 1), timezone=NY),
-        Task(id="task_soon", user_id=USER, created_at=T0, updated_at=T0, title="Soon",
-             deadline_local_date=date(2026, 10, 7), timezone=NY),
+        Task(
+            id="task_overdue",
+            user_id=USER,
+            created_at=T0,
+            updated_at=T0,
+            title="Overdue",
+            deadline_local_date=date(2026, 10, 1),
+            timezone=NY,
+        ),
+        Task(
+            id="task_soon",
+            user_id=USER,
+            created_at=T0,
+            updated_at=T0,
+            title="Soon",
+            deadline_local_date=date(2026, 10, 7),
+            timezone=NY,
+        ),
     ]
-    candidates, remainder = rank_candidates(
-        tasks, local_date=DAY, timezone_name=NY, now=T0, limit=2
-    )
+    candidates, remainder = rank_candidates(tasks, local_date=DAY, timezone_name=NY, now=T0, limit=2)
     assert [t.id for t in candidates] == ["task_overdue", "task_soon"]
     assert [t.id for t in remainder] == ["task_someday"]
 
 
 def test_a_blocked_task_is_deferred_not_dropped(store, clock):
     tasks = [
-        Task(id="task_blocked", user_id=USER, created_at=T0, updated_at=T0, title="Blocked",
-             depends_on=["task_prereq"]),
+        Task(
+            id="task_blocked",
+            user_id=USER,
+            created_at=T0,
+            updated_at=T0,
+            title="Blocked",
+            depends_on=["task_prereq"],
+        ),
         Task(id="task_free", user_id=USER, created_at=T0, updated_at=T0, title="Free"),
     ]
     candidates, remainder = rank_candidates(tasks, local_date=DAY, timezone_name=NY, now=T0, limit=5)
@@ -226,8 +269,9 @@ def test_fixed_appointments_appear_at_their_real_time(store, retrieval, clock):
 
 def test_rationales_are_grounded_in_deadline_or_priority(store, retrieval, clock):
     add_availability(store, clock, start="09:00", end="17:00", block_id="avail_day")
-    add_task(store, clock, task_id="task_due", title="Due soon",
-             deadline_local_date=date(2026, 10, 7), minutes=30)
+    add_task(
+        store, clock, task_id="task_due", title="Due soon", deadline_local_date=date(2026, 10, 7), minutes=30
+    )
     snapshot = snapshot_for(store, retrieval, clock)
     blocks, _ = pack(snapshot)
     block = next(b for b in blocks if b.task_id == "task_due")
@@ -254,10 +298,14 @@ def test_the_validator_rejects_work_outside_availability(store, retrieval, clock
     add_task(store, clock, task_id="task_a", title="A", minutes=30)
     snapshot = snapshot_for(store, retrieval, clock)
     blocks, _ = pack(snapshot)
-    moved = [blocks[0].model_copy(update={
-        "starts_at": blocks[0].starts_at + timedelta(hours=8),
-        "ends_at": blocks[0].ends_at + timedelta(hours=8),
-    })]
+    moved = [
+        blocks[0].model_copy(
+            update={
+                "starts_at": blocks[0].starts_at + timedelta(hours=8),
+                "ends_at": blocks[0].ends_at + timedelta(hours=8),
+            }
+        )
+    ]
     result = validate(moved, snapshot, overflow_ids=[])
     assert any(i.code == "outside_availability" for i in result.issues)
 
@@ -283,38 +331,42 @@ def test_the_validator_enforces_dependency_order(store, retrieval, clock):
 
     add_availability(store, clock, start="09:00", end="17:00", block_id="avail_day")
     prereq = add_task(store, clock, task_id="task_prereq", title="Prereq", minutes=30)
-    after = add_task(store, clock, task_id="task_after", title="After", minutes=30,
-                     depends_on=["task_prereq"])
+    after = add_task(
+        store, clock, task_id="task_after", title="After", minutes=30, depends_on=["task_prereq"]
+    )
     snapshot = snapshot_for(store, retrieval, clock)
     # rank_candidates defers a blocked task, so the dependent pair is placed by
     # hand here: this test is about the validator, not the packer.
     snapshot.candidate_tasks = [prereq, after]
     first = snapshot.free_intervals[0].starts_at
     swapped = [
-        PlanBlock(task_id="task_after", starts_at=first,
-                  ends_at=first + timedelta(minutes=30), title="After"),
-        PlanBlock(task_id="task_prereq", starts_at=first + timedelta(minutes=30),
-                  ends_at=first + timedelta(minutes=60), title="Prereq"),
+        PlanBlock(
+            task_id="task_after", starts_at=first, ends_at=first + timedelta(minutes=30), title="After"
+        ),
+        PlanBlock(
+            task_id="task_prereq",
+            starts_at=first + timedelta(minutes=30),
+            ends_at=first + timedelta(minutes=60),
+            title="Prereq",
+        ),
     ]
     result = validate(swapped, snapshot, overflow_ids=[])
     assert any(i.code == "dependency_order" for i in result.issues)
 
 
-def test_the_validator_flags_a_dependency_that_is_neither_done_nor_scheduled(
-    store, retrieval, clock
-):
+def test_the_validator_flags_a_dependency_that_is_neither_done_nor_scheduled(store, retrieval, clock):
     from metis_contracts import PlanBlock
 
     add_availability(store, clock, start="09:00", end="17:00", block_id="avail_day")
     prereq = add_task(store, clock, task_id="task_prereq", title="Prereq", minutes=30)
-    after = add_task(store, clock, task_id="task_after", title="After", minutes=30,
-                     depends_on=["task_prereq"])
+    after = add_task(
+        store, clock, task_id="task_after", title="After", minutes=30, depends_on=["task_prereq"]
+    )
     snapshot = snapshot_for(store, retrieval, clock)
     snapshot.candidate_tasks = [prereq, after]
     first = snapshot.free_intervals[0].starts_at
     lone = [
-        PlanBlock(task_id="task_after", starts_at=first,
-                  ends_at=first + timedelta(minutes=30), title="After")
+        PlanBlock(task_id="task_after", starts_at=first, ends_at=first + timedelta(minutes=30), title="After")
     ]
     result = validate(lone, snapshot, overflow_ids=[])
     assert any(i.code == "unmet_dependency" for i in result.issues)
@@ -334,8 +386,9 @@ def test_the_validator_rejects_a_done_task_in_a_plan(store, retrieval, clock):
 
 def test_the_validator_rejects_scheduling_after_a_deadline(store, retrieval, clock):
     add_availability(store, clock, start="09:00", end="17:00", block_id="avail_day")
-    add_task(store, clock, task_id="task_late", title="Late", minutes=30,
-             deadline_local_date=date(2026, 10, 5))
+    add_task(
+        store, clock, task_id="task_late", title="Late", minutes=30, deadline_local_date=date(2026, 10, 5)
+    )
     snapshot = snapshot_for(store, retrieval, clock)
     blocks, _ = pack(snapshot)
     result = validate(blocks, snapshot, overflow_ids=[])
@@ -354,7 +407,7 @@ def test_validation_is_always_attributed_to_the_application(store, retrieval, cl
 def test_overflow_and_assumed_availability_are_reported_as_warnings(store, retrieval, clock):
     add_task(store, clock, task_id="task_a", title="A", minutes=30)
     snapshot = snapshot_for(store, retrieval, clock)
-    blocks, overflow = pack(snapshot)
+    blocks, _overflow = pack(snapshot)
     result = validate(blocks, snapshot, overflow_ids=["task_z"])
     codes = {i.code for i in result.issues}
     assert "overflow_present" in codes and "availability_assumed" in codes
@@ -401,9 +454,7 @@ def test_a_plan_is_still_produced_with_no_inference_client(store, retrieval, clo
     assert plan.model_id is None
 
 
-def test_an_exhausted_budget_falls_back_to_the_deterministic_outline(
-    store, retrieval, clock, monkeypatch
-):
+def test_an_exhausted_budget_falls_back_to_the_deterministic_outline(store, retrieval, clock, monkeypatch):
     monkeypatch.setenv("METIS_DAILY_MICRO_USD", "1")
     reset_settings_cache()
     add_availability(store, clock, start="09:00", end="17:00", block_id="avail_day")

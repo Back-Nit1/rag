@@ -8,7 +8,7 @@ which is what keeps the local and cloud paths honest about each other.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from typing import Any
 
 from metis_contracts import (
@@ -17,7 +17,6 @@ from metis_contracts import (
     EventType,
     JobState,
     MetisError,
-    ObjectRef,
     OutboxEvent,
     Plan,
     PlanStatus,
@@ -25,7 +24,6 @@ from metis_contracts import (
     SourceArtifact,
     SourceKind,
     SourceLifecycle,
-    SourceRef,
     SourceSpan,
     Task,
     TaskState,
@@ -147,7 +145,9 @@ def create_capture(ctx: Any, request: CreateCaptureRequest) -> CreateCaptureResp
         created_at=now,
         updated_at=now,
         kind=request.kind,
-        lifecycle=SourceLifecycle.PENDING_UPLOAD if request.kind is SourceKind.AUDIO else SourceLifecycle.READY,
+        lifecycle=SourceLifecycle.PENDING_UPLOAD
+        if request.kind is SourceKind.AUDIO
+        else SourceLifecycle.READY,
         capture_timezone=request.capture_timezone,
         captured_at=request.captured_at,
         duration_seconds=request.duration_seconds,
@@ -263,9 +263,7 @@ def complete_capture(ctx: Any, capture_id: str, request: CompleteCaptureRequest)
         target_revision=source.current_version,
         idempotency_key=idempotency_key,
     )
-    updated = source.model_copy(
-        update={"lifecycle": SourceLifecycle.PROCESSING, "object_ref": stored_object}
-    )
+    updated = source.model_copy(update={"lifecycle": SourceLifecycle.PROCESSING, "object_ref": stored_object})
     with ctx.state.transaction(ctx.user_id) as tx:
         stored_source = tx.put("source", updated, expected_revision=source.revision)
         stored_job = tx.put("job", job)
@@ -378,9 +376,7 @@ def _supersede_proposals(ctx: Any, source_id: str, old_version: int) -> list[dic
             ):
                 out.append(
                     {
-                        "record": proposal.model_copy(
-                            update={"disposition": ProposalDisposition.SUPERSEDED}
-                        ),
+                        "record": proposal.model_copy(update={"disposition": ProposalDisposition.SUPERSEDED}),
                         "revision": proposal.revision,
                     }
                 )
@@ -390,9 +386,7 @@ def _supersede_proposals(ctx: Any, source_id: str, old_version: int) -> list[dic
     return out
 
 
-def _suspend_dependent_reminders(
-    ctx: Any, source_id: str, previous_text: str, new_text: str
-) -> list[str]:
+def _suspend_dependent_reminders(ctx: Any, source_id: str, previous_text: str, new_text: str) -> list[str]:
     """Hold reminders whose critical date may have been misheard.
 
     Only not-yet-dispatched reminders are suspended, and only when the
@@ -433,9 +427,7 @@ def get_capture(ctx: Any, capture_id: str) -> CaptureDetail:
     source = ctx.state.get(ctx.user_id, "source", capture_id)
     if source is None:
         raise MetisError(ErrorCode.NOT_FOUND, f"capture {capture_id} not found")
-    current = next(
-        (t for t in source.transcripts if t.source_version == source.current_version), None
-    )
+    current = next((t for t in source.transcripts if t.source_version == source.current_version), None)
     proposals = []
     lister = getattr(ctx.state, "_page", None)
     if lister is not None:
@@ -473,9 +465,7 @@ def delete_capture(ctx: Any, capture_id: str, *, delete_commitments: bool | None
     if source is None:
         raise MetisError(ErrorCode.NOT_FOUND, f"capture {capture_id} not found")
     preferences = ctx.state.get_preferences(ctx.user_id)
-    cascade = (
-        preferences.delete_commitments_with_source if delete_commitments is None else delete_commitments
-    )
+    cascade = preferences.delete_commitments_with_source if delete_commitments is None else delete_commitments
     purge_job = _job(
         ctx,
         job_type="purge_capture",
@@ -540,7 +530,7 @@ def patch_task(ctx: Any, task_id: str, request: PatchTaskRequest) -> Task:
         elif task.state is TaskState.CANCELED:
             patch["canceled_at"] = None
 
-    if "depends_on" in patch and patch["depends_on"]:
+    if patch.get("depends_on"):
         _reject_cycles(ctx, task_id, list(patch["depends_on"]))
 
     # Fields the user edits explicitly are protected from later automatic
@@ -698,8 +688,7 @@ def get_today(ctx: Any, local_date: date | None = None) -> TodayResponse:
     overdue = [
         t
         for t in scan.tasks
-        if t.deadline_local_date
-        and is_overdue(t.deadline_local_date, t.timezone or timezone_name, now=now)
+        if t.deadline_local_date and is_overdue(t.deadline_local_date, t.timezone or timezone_name, now=now)
     ]
     overdue_ids = {t.id for t in overdue}
     open_tasks = [t for t in scan.tasks if t.state in TASK_OPEN_STATES and t.id not in overdue_ids]
@@ -718,9 +707,7 @@ def get_today(ctx: Any, local_date: date | None = None) -> TodayResponse:
         availability=availability,
         plan=plan,
         plan_stale=stale,
-        plan_stale_reason=(
-            "Your commitments changed after this outline was generated." if stale else None
-        ),
+        plan_stale_reason=("Your commitments changed after this outline was generated." if stale else None),
         planning_epoch=epoch,
         inputs_complete=scan.complete,
         availability_configured=bool([b for b in availability if b.kind == "available"]),
@@ -755,13 +742,11 @@ def patch_preferences(ctx: Any, request: PatchPreferencesRequest) -> Preferences
             current_revision=current.revision,
         )
     patch = request.model_dump(exclude_unset=True, exclude={"expected_revision"})
-    if "timezone" in patch and patch["timezone"]:
+    if patch.get("timezone"):
         from metis_contracts import resolve_timezone
 
         resolve_timezone(patch["timezone"])  # raises on an unknown identifier
     existing = ctx.state.get(ctx.user_id, "preferences", current.id)
     updated = current.model_copy(update=patch)
     with ctx.state.transaction(ctx.user_id) as tx:
-        return tx.put(
-            "preferences", updated, expected_revision=current.revision if existing else None
-        )
+        return tx.put("preferences", updated, expected_revision=current.revision if existing else None)

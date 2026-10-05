@@ -74,7 +74,10 @@ def handle_plan_requested(envelope: EventEnvelope, context: DispatchContext) -> 
         )
     log.info(
         "plan %s status=%s blocks=%d overflow=%d valid=%s complete_inputs=%s",
-        plan.id, plan.status.value, len(plan.blocks), len(plan.overflow_task_ids),
+        plan.id,
+        plan.status.value,
+        len(plan.blocks),
+        len(plan.overflow_task_ids),
         plan.validation.valid if plan.validation else None,
         plan.validation.inputs_complete if plan.validation else None,
     )

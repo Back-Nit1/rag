@@ -32,7 +32,6 @@ from metis_contracts import (
     OutboxEvent,
     settings,
 )
-from metis_contracts.events import REVISION_SENSITIVE
 
 log = logging.getLogger("metis.pipeline.dispatcher")
 
@@ -94,7 +93,7 @@ class HandlerRegistry:
 def backoff_seconds(attempt: int, *, base: int = 5, cap: int = 900) -> int:
     """Exponential backoff with jitter, capped. Never unbounded."""
     ceiling = min(cap, base * (2 ** max(0, attempt - 1)))
-    return int(random.uniform(ceiling / 2, ceiling))  # noqa: S311 - jitter, not crypto
+    return int(random.uniform(ceiling / 2, ceiling))
 
 
 def classify(exc: BaseException) -> FailureCategory:
@@ -241,7 +240,12 @@ class OutboxDispatcher:
             delay = backoff_seconds(attempts)
             log.warning(
                 "event %s failed (%s), retry %d/%d in %ds: %s",
-                envelope.event_id, category.value, attempts, max_attempts, delay, message,
+                envelope.event_id,
+                category.value,
+                attempts,
+                max_attempts,
+                delay,
+                message,
             )
             state.complete_outbox(
                 envelope.event_id,
@@ -255,7 +259,10 @@ class OutboxDispatcher:
             return
         log.error(
             "event %s dead-lettered after %d attempts (%s): %s",
-            envelope.event_id, attempts, category.value, message,
+            envelope.event_id,
+            attempts,
+            category.value,
+            message,
         )
         state.complete_outbox(
             envelope.event_id,

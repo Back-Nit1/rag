@@ -42,8 +42,12 @@ def list_tasks(
     limit: int = Query(default=100, ge=1, le=200),
 ) -> TaskPage:
     return ctx.state.list_tasks(
-        ctx.user_id, states=state, project_id=project_id, due_before=due_before,
-        cursor=cursor, limit=limit,
+        ctx.user_id,
+        states=state,
+        project_id=project_id,
+        due_before=due_before,
+        cursor=cursor,
+        limit=limit,
     )
 
 
@@ -53,7 +57,10 @@ def create_task(body: CreateTaskRequest, ctx: Context) -> Task:
         return Task.model_validate(replayed)
     now = ctx.adapters.clock.now()
     task = Task(
-        id=new_id("task"), user_id=ctx.user_id, created_at=now, updated_at=now,
+        id=new_id("task"),
+        user_id=ctx.user_id,
+        created_at=now,
+        updated_at=now,
         **body.model_dump(),
     )
     with ctx.state.transaction(ctx.user_id) as tx:
@@ -90,9 +97,7 @@ def list_events(
     cursor: str | None = None,
     limit: int = Query(default=100, ge=1, le=200),
 ) -> EventPage:
-    return ctx.state.list_events(
-        ctx.user_id, local_date=local_date, until=until, cursor=cursor, limit=limit
-    )
+    return ctx.state.list_events(ctx.user_id, local_date=local_date, until=until, cursor=cursor, limit=limit)
 
 
 @router.post("/events", response_model=Event, status_code=status.HTTP_201_CREATED)
@@ -101,7 +106,10 @@ def create_event(body: CreateEventRequest, ctx: Context) -> Event:
         return Event.model_validate(replayed)
     now = ctx.adapters.clock.now()
     event = Event(
-        id=new_id("event"), user_id=ctx.user_id, created_at=now, updated_at=now,
+        id=new_id("event"),
+        user_id=ctx.user_id,
+        created_at=now,
+        updated_at=now,
         **body.model_dump(),
     )
     with ctx.state.transaction(ctx.user_id) as tx:
@@ -147,9 +155,7 @@ def create_availability(body: AvailabilityBlock, ctx: Context) -> AvailabilityBl
     )
     existing = ctx.state.get(ctx.user_id, "availability", block.id)
     with ctx.state.transaction(ctx.user_id) as tx:
-        return tx.put(
-            "availability", block, expected_revision=existing.revision if existing else None
-        )
+        return tx.put("availability", block, expected_revision=existing.revision if existing else None)
 
 
 @router.get("/preferences", response_model=Preferences)

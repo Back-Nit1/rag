@@ -237,7 +237,10 @@ def snooze_reminder(
         stored = tx.put("reminder", updated, expected_revision=reminder.revision)
         tx.append_outbox(
             _sync_event(
-                stored, action="update", clock=clock, correlation_id=correlation_id,
+                stored,
+                action="update",
+                clock=clock,
+                correlation_id=correlation_id,
                 event_type=EventType.REMINDER_SCHEDULE_SYNC,
             )
         )
@@ -322,9 +325,7 @@ class DueDecision:
     defer_until: datetime | None = None
 
 
-def evaluate_due(
-    state: Any, reminder: Reminder, *, occurrence: str, clock: Any
-) -> DueDecision:
+def evaluate_due(state: Any, reminder: Reminder, *, occurrence: str, clock: Any) -> DueDecision:
     """Every suppression check, in one place, before any dispatch decision."""
     if reminder.occurrence_key != occurrence:
         return DueDecision(False, "a newer occurrence supersedes this one")

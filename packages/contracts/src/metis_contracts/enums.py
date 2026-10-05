@@ -72,15 +72,21 @@ class TaskState(StrEnum):
     CANCELED = "canceled"
 
 
-TASK_OPEN_STATES = frozenset(
-    {TaskState.INBOX, TaskState.READY, TaskState.IN_PROGRESS, TaskState.BLOCKED}
-)
+TASK_OPEN_STATES = frozenset({TaskState.INBOX, TaskState.READY, TaskState.IN_PROGRESS, TaskState.BLOCKED})
 
 TASK_TRANSITIONS: dict[TaskState, frozenset[TaskState]] = {
-    TaskState.INBOX: frozenset({TaskState.READY, TaskState.IN_PROGRESS, TaskState.BLOCKED, TaskState.DONE, TaskState.CANCELED}),
-    TaskState.READY: frozenset({TaskState.IN_PROGRESS, TaskState.BLOCKED, TaskState.DONE, TaskState.CANCELED, TaskState.INBOX}),
-    TaskState.IN_PROGRESS: frozenset({TaskState.BLOCKED, TaskState.DONE, TaskState.CANCELED, TaskState.READY}),
-    TaskState.BLOCKED: frozenset({TaskState.READY, TaskState.IN_PROGRESS, TaskState.DONE, TaskState.CANCELED}),
+    TaskState.INBOX: frozenset(
+        {TaskState.READY, TaskState.IN_PROGRESS, TaskState.BLOCKED, TaskState.DONE, TaskState.CANCELED}
+    ),
+    TaskState.READY: frozenset(
+        {TaskState.IN_PROGRESS, TaskState.BLOCKED, TaskState.DONE, TaskState.CANCELED, TaskState.INBOX}
+    ),
+    TaskState.IN_PROGRESS: frozenset(
+        {TaskState.BLOCKED, TaskState.DONE, TaskState.CANCELED, TaskState.READY}
+    ),
+    TaskState.BLOCKED: frozenset(
+        {TaskState.READY, TaskState.IN_PROGRESS, TaskState.DONE, TaskState.CANCELED}
+    ),
     TaskState.DONE: frozenset({TaskState.IN_PROGRESS, TaskState.READY}),  # reopen is allowed
     TaskState.CANCELED: frozenset({TaskState.INBOX, TaskState.READY}),  # un-cancel is allowed
 }
@@ -133,13 +139,29 @@ class ReminderState(StrEnum):
 
 REMINDER_TRANSITIONS: dict[ReminderState, frozenset[ReminderState]] = {
     ReminderState.PENDING_SCHEDULE: frozenset(
-        {ReminderState.SCHEDULED, ReminderState.SCHEDULE_FAILED, ReminderState.CANCELED, ReminderState.SUPERSEDED}
+        {
+            ReminderState.SCHEDULED,
+            ReminderState.SCHEDULE_FAILED,
+            ReminderState.CANCELED,
+            ReminderState.SUPERSEDED,
+        }
     ),
     ReminderState.SCHEDULE_FAILED: frozenset(
-        {ReminderState.PENDING_SCHEDULE, ReminderState.SCHEDULED, ReminderState.CANCELED, ReminderState.SUPERSEDED}
+        {
+            ReminderState.PENDING_SCHEDULE,
+            ReminderState.SCHEDULED,
+            ReminderState.CANCELED,
+            ReminderState.SUPERSEDED,
+        }
     ),
     ReminderState.SCHEDULED: frozenset(
-        {ReminderState.DISPATCHING, ReminderState.SNOOZED, ReminderState.CANCELED, ReminderState.SUPERSEDED, ReminderState.PENDING_SCHEDULE}
+        {
+            ReminderState.DISPATCHING,
+            ReminderState.SNOOZED,
+            ReminderState.CANCELED,
+            ReminderState.SUPERSEDED,
+            ReminderState.PENDING_SCHEDULE,
+        }
     ),
     ReminderState.DISPATCHING: frozenset(
         {ReminderState.DELIVERED, ReminderState.DELIVERY_FAILED, ReminderState.SUPERSEDED}
@@ -149,7 +171,12 @@ REMINDER_TRANSITIONS: dict[ReminderState, frozenset[ReminderState]] = {
     ),
     ReminderState.DELIVERED: frozenset({ReminderState.SNOOZED}),
     ReminderState.SNOOZED: frozenset(
-        {ReminderState.PENDING_SCHEDULE, ReminderState.SCHEDULED, ReminderState.CANCELED, ReminderState.SUPERSEDED}
+        {
+            ReminderState.PENDING_SCHEDULE,
+            ReminderState.SCHEDULED,
+            ReminderState.CANCELED,
+            ReminderState.SUPERSEDED,
+        }
     ),
     ReminderState.CANCELED: frozenset(),
     ReminderState.SUPERSEDED: frozenset(),

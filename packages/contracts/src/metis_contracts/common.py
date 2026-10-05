@@ -11,8 +11,8 @@ Rules enforced here rather than per-entity:
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
-from typing import Annotated, Any, Generic, Literal, TypeVar
+from datetime import UTC, date, datetime
+from typing import Annotated, Any, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -28,7 +28,7 @@ UserId = Annotated[str, Field(min_length=1, max_length=128)]
 
 def utcnow() -> datetime:
     """Current instant, timezone-aware UTC. Workers must use Clock, not this."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def new_id(prefix: str) -> str:
@@ -77,7 +77,7 @@ class Record(StrictModel):
     def _require_utc(cls, v: datetime) -> datetime:
         if v.tzinfo is None:
             raise ValueError("timestamps must be timezone-aware")
-        return v.astimezone(timezone.utc)
+        return v.astimezone(UTC)
 
 
 class LocalDeadline(StrictModel):
@@ -150,7 +150,7 @@ class SourceSpan(StrictModel):
 T = TypeVar("T")
 
 
-class Page(StrictModel, Generic[T]):
+class Page[T](StrictModel):
     """Bounded, cursor-paginated result. `complete=False` forbids claiming
     full coverage (used by the planner's completeness invariant)."""
 
@@ -175,6 +175,7 @@ class ConfidenceHint(StrictModel):
 
 __all__ = [
     "SCHEMA_VERSION",
+    "UNCHANGED",
     "ConfidenceHint",
     "EntityId",
     "Estimate",
@@ -188,7 +189,6 @@ __all__ = [
     "SourceSpan",
     "StrictModel",
     "TimezoneName",
-    "UNCHANGED",
     "Unchanged",
     "UserId",
     "new_id",

@@ -25,12 +25,12 @@ from metis_contracts import (
     Memory,
     Project,
     Task,
-    TaskState,
     settings,
 )
 from metis_contracts.enums import TASK_OPEN_STATES
 
 log = logging.getLogger("metis.retrieval.service")
+
 
 #: Rough token estimate for the shared evidence budget.
 def _tokens(text: str) -> int:
@@ -209,7 +209,7 @@ class RetrievalService:
 
         hydrated: list[tuple[Memory, float]] = []
         stale = 0
-        for memory_id, score, metadata in hits:
+        for memory_id, score, _metadata in hits:
             memory = self._state.get(user_id, "memory", memory_id)
             if memory is None:
                 stale += 1  # deleted or tombstoned since indexing
@@ -283,7 +283,9 @@ class RetrievalService:
                     excerpt=memory.content[:2000],
                     recorded_at=memory.effective_at,
                     # A failed attempt stays retrievable, labelled historical.
-                    validity="historical" if memory.kind.value in ("attempt", "work_log") else memory.validity.value,
+                    validity="historical"
+                    if memory.kind.value in ("attempt", "work_log")
+                    else memory.validity.value,
                 )
             )
         return evidence

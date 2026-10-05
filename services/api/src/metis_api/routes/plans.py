@@ -92,9 +92,7 @@ def create_plan(body: CreatePlanRequest, ctx: Context) -> CreatePlanResponse:
                 available_at=now,
             )
         )
-    result = CreatePlanResponse(
-        plan_id=stored_plan.id, job_id=stored_job.id, status=stored_plan.status.value
-    )
+    result = CreatePlanResponse(plan_id=stored_plan.id, job_id=stored_job.id, status=stored_plan.status.value)
     ctx.remember(result.model_dump(mode="json"))
     return result
 
@@ -142,15 +140,11 @@ def accept_plan(plan_id: str, body: AcceptPlanRequest, ctx: Context) -> Plan:
             details={"current_epoch": str(current_epoch), "plan_epoch": str(plan.planning_epoch)},
         )
     if plan.status not in (PlanStatus.PROPOSED, PlanStatus.FALLBACK):
-        raise MetisError(
-            ErrorCode.INVALID_STATE_TRANSITION, f"a {plan.status.value} plan cannot be accepted"
-        )
+        raise MetisError(ErrorCode.INVALID_STATE_TRANSITION, f"a {plan.status.value} plan cannot be accepted")
     with ctx.state.transaction(ctx.user_id) as tx:
         return tx.put(
             "plan",
-            plan.model_copy(
-                update={"status": PlanStatus.ACCEPTED, "accepted_at": ctx.adapters.clock.now()}
-            ),
+            plan.model_copy(update={"status": PlanStatus.ACCEPTED, "accepted_at": ctx.adapters.clock.now()}),
             expected_revision=plan.revision,
         )
 
@@ -177,10 +171,7 @@ def patch_plan(plan_id: str, body: PatchPlanRequest, ctx: Context) -> Plan:
     blocks = body.blocks if body.blocks is not None else list(plan.blocks)
     if body.pinned_block_indexes is not None:
         pinned = set(body.pinned_block_indexes)
-        blocks = [
-            block.model_copy(update={"pinned": index in pinned})
-            for index, block in enumerate(blocks)
-        ]
+        blocks = [block.model_copy(update={"pinned": index in pinned}) for index, block in enumerate(blocks)]
 
     snapshot = assemble(
         state_store=ctx.state,

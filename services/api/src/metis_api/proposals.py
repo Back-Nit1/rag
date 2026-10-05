@@ -35,9 +35,7 @@ from metis_pipeline.timeref import to_instant
 log = logging.getLogger("metis.api.proposals")
 
 
-def resolve_proposal(
-    ctx: Any, proposal_id: str, request: ResolveProposalRequest
-) -> ResolveProposalResponse:
+def resolve_proposal(ctx: Any, proposal_id: str, request: ResolveProposalRequest) -> ResolveProposalResponse:
     proposal = ctx.state.get(ctx.user_id, "proposal", proposal_id)
     if proposal is None:
         raise MetisError(ErrorCode.NOT_FOUND, f"proposal {proposal_id} not found")
@@ -229,8 +227,7 @@ def _maybe_reminder(
     from metis_scheduler import request_reminder
 
     wants_reminder = bool(
-        {RequestedAction.REMIND_TO_REGISTER, RequestedAction.REMIND_GENERIC}
-        & set(item.requested_actions)
+        {RequestedAction.REMIND_TO_REGISTER, RequestedAction.REMIND_GENERIC} & set(item.requested_actions)
     )
     if not wants_reminder:
         return None, None
@@ -247,7 +244,9 @@ def _maybe_reminder(
         if resolution.instant is None or resolution.dst != "ok":
             return None, ClarificationRequest(
                 clarification_id=new_id("clar"),
-                source_id=_ref(item, ctx.state.get(ctx.user_id, "source", item.evidence[0].source_id)).source_id
+                source_id=_ref(
+                    item, ctx.state.get(ctx.user_id, "source", item.evidence[0].source_id)
+                ).source_id
                 if item.evidence
                 else "",
                 target_id=target.id,
@@ -266,7 +265,7 @@ def _maybe_reminder(
             source_id=item.evidence[0].source_id if item.evidence else "",
             target_id=target.id,
             question="When would you like to be reminded? A date and time, please.",
-            missing_fields=[f for f in ("event_date_time", "registration_reminder_time")],
+            missing_fields=["event_date_time", "registration_reminder_time"],
             blocking=True,
         )
 

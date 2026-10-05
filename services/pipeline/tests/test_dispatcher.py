@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from metis_contracts import (
@@ -27,7 +27,7 @@ from metis_pipeline.dispatcher import (
 )
 from metis_state.sqlite_store import SqliteStateStore
 
-T0 = datetime(2026, 10, 5, 14, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)
 USER = "user_a"
 
 
@@ -49,12 +49,19 @@ def context(store, clock) -> DispatchContext:
     return DispatchContext(state_store=store, source_store=None, clock=clock, worker_id="w1")
 
 
-def enqueue(store, clock, *, event_type=EventType.TASK_CHANGED, target_id=None,
-            target_revision=None, key=None) -> str:
+def enqueue(
+    store, clock, *, event_type=EventType.TASK_CHANGED, target_id=None, target_revision=None, key=None
+) -> str:
     event = OutboxEvent(
-        id=new_id("obx"), user_id=USER, created_at=clock.now(), updated_at=clock.now(),
-        event_type=event_type, target_id=target_id, target_revision=target_revision,
-        correlation_id="corr_1", idempotency_key=key or new_id("idem"),
+        id=new_id("obx"),
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        event_type=event_type,
+        target_id=target_id,
+        target_revision=target_revision,
+        correlation_id="corr_1",
+        idempotency_key=key or new_id("idem"),
         available_at=clock.now(),
     )
     with store.transaction(USER) as tx:
@@ -158,8 +165,12 @@ def test_merging_registries_rejects_an_overlap():
 
 def envelope(target_id: str, revision: int | None) -> EventEnvelope:
     return EventEnvelope(
-        event_type=EventType.TASK_CHANGED, user_id=USER, correlation_id="c",
-        idempotency_key="k", target_id=target_id, target_revision=revision,
+        event_type=EventType.TASK_CHANGED,
+        user_id=USER,
+        correlation_id="c",
+        idempotency_key="k",
+        target_id=target_id,
+        target_revision=revision,
     )
 
 

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 from metis_contracts import (
+    FixedClock,
     Memory,
     MemoryKind,
     MemoryValidity,
@@ -14,7 +15,6 @@ from metis_contracts import (
     SourceRef,
     Task,
     TaskState,
-    FixedClock,
     reset_settings_cache,
 )
 from metis_contracts.entities import TranscriptRevision
@@ -26,12 +26,11 @@ from metis_retrieval import (
     SqliteMemoryStore,
     content_hash,
     context_window,
-    memories_from_proposal,
     needs_embedding,
 )
 from metis_state.sqlite_store import SqliteStateStore
 
-T0 = datetime(2026, 10, 5, 14, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)
 USER = "user_a"
 OTHER = "user_b"
 NY = "America/New_York"
@@ -63,9 +62,15 @@ def service(store, memory_store, clock) -> RetrievalService:
 
 def add_source(store, clock, *, source_id="src_cerno", text="placeholder", version=1) -> SourceArtifact:
     source = SourceArtifact(
-        id=source_id, user_id=USER, created_at=clock.now(), updated_at=clock.now(),
-        kind=SourceKind.TEXT, lifecycle=SourceLifecycle.READY, capture_timezone=NY,
-        captured_at=clock.now(), current_version=version,
+        id=source_id,
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        kind=SourceKind.TEXT,
+        lifecycle=SourceLifecycle.READY,
+        capture_timezone=NY,
+        captured_at=clock.now(),
+        current_version=version,
         transcripts=[TranscriptRevision(source_version=version, text=text, created_at=clock.now())],
     )
     with store.transaction(USER) as tx:
@@ -73,16 +78,32 @@ def add_source(store, clock, *, source_id="src_cerno", text="placeholder", versi
 
 
 def add_memory(
-    store, memory_store, clock, *, memory_id, content, kind=MemoryKind.OBSERVATION,
-    project_id=None, source_id="src_cerno", source_version=1, user=USER,
+    store,
+    memory_store,
+    clock,
+    *,
+    memory_id,
+    content,
+    kind=MemoryKind.OBSERVATION,
+    project_id=None,
+    source_id="src_cerno",
+    source_version=1,
+    user=USER,
     validity=MemoryValidity.CURRENT,
 ) -> Memory:
     memory = Memory(
-        id=memory_id, user_id=user, created_at=clock.now(), updated_at=clock.now(),
-        kind=kind, content=content, project_id=project_id, validity=validity,
+        id=memory_id,
+        user_id=user,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        kind=kind,
+        content=content,
+        project_id=project_id,
+        validity=validity,
         effective_at=clock.now(),
         source_refs=[SourceRef(source_id=source_id, source_version=source_version)],
-        content_hash=content_hash(content), embedding_model_id="fixture-embed-v1",
+        content_hash=content_hash(content),
+        embedding_model_id="fixture-embed-v1",
         embedding_dimensions=64,
     )
     with store.transaction(user) as tx:
@@ -93,8 +114,13 @@ def add_memory(
 
 def add_task(store, clock, *, task_id="task_1", state=TaskState.READY, **kw) -> Task:
     task = Task(
-        id=task_id, user_id=USER, created_at=clock.now(), updated_at=clock.now(),
-        title=kw.pop("title", "Test diff-aware invalidation"), state=state, **kw,
+        id=task_id,
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        title=kw.pop("title", "Test diff-aware invalidation"),
+        state=state,
+        **kw,
     )
     with store.transaction(USER) as tx:
         return tx.put("task", task)
@@ -104,8 +130,14 @@ def add_task(store, clock, *, task_id="task_1", state=TaskState.READY, **kw) -> 
 
 
 def test_a_dated_task_is_included_even_when_semantically_unrelated(store, clock, service):
-    add_task(store, clock, task_id="task_dentist", title="Call the dentist",
-             deadline_local_date=date(2026, 10, 6), timezone=NY)
+    add_task(
+        store,
+        clock,
+        task_id="task_dentist",
+        title="Call the dentist",
+        deadline_local_date=date(2026, 10, 6),
+        timezone=NY,
+    )
     scan = service.list_eligible_obligations(USER, local_date=date(2026, 10, 6))
     assert "task_dentist" in [t.id for t in scan.tasks]
     assert scan.complete is True
@@ -135,14 +167,25 @@ def test_a_truncated_scan_is_marked_incomplete(store, clock, service, monkeypatc
 
 def test_another_users_memory_is_never_returned(store, memory_store, clock, service):
     add_source(store, clock, text="shared vocabulary about caching files")
-    add_memory(store, memory_store, clock, memory_id="mem_mine",
-               content="caching whole files went stale after changes")
+    add_memory(
+        store,
+        memory_store,
+        clock,
+        memory_id="mem_mine",
+        content="caching whole files went stale after changes",
+    )
     other = Memory(
-        id="mem_theirs", user_id=OTHER, created_at=clock.now(), updated_at=clock.now(),
-        kind=MemoryKind.OBSERVATION, content="caching whole files went stale after changes",
-        validity=MemoryValidity.CURRENT, effective_at=clock.now(),
+        id="mem_theirs",
+        user_id=OTHER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        kind=MemoryKind.OBSERVATION,
+        content="caching whole files went stale after changes",
+        validity=MemoryValidity.CURRENT,
+        effective_at=clock.now(),
         source_refs=[SourceRef(source_id="src_other", source_version=1)],
-        content_hash=content_hash("other"), embedding_model_id="fixture-embed-v1",
+        content_hash=content_hash("other"),
+        embedding_model_id="fixture-embed-v1",
         embedding_dimensions=64,
     )
     with store.transaction(OTHER) as tx:
@@ -156,10 +199,22 @@ def test_another_users_memory_is_never_returned(store, memory_store, clock, serv
 
 def test_project_scope_filters_candidates(store, memory_store, clock, service):
     add_source(store, clock)
-    add_memory(store, memory_store, clock, memory_id="mem_cerno",
-               content="cerno review re-reads files", project_id="proj_cerno")
-    add_memory(store, memory_store, clock, memory_id="mem_themis",
-               content="cerno review re-reads files", project_id="proj_themis")
+    add_memory(
+        store,
+        memory_store,
+        clock,
+        memory_id="mem_cerno",
+        content="cerno review re-reads files",
+        project_id="proj_cerno",
+    )
+    add_memory(
+        store,
+        memory_store,
+        clock,
+        memory_id="mem_themis",
+        content="cerno review re-reads files",
+        project_id="proj_themis",
+    )
     results, _ = service.retrieve_supporting_memories(
         USER, query="review re-reads files", project_id="proj_cerno"
     )
@@ -171,8 +226,15 @@ def test_project_scope_filters_candidates(store, memory_store, clock, service):
 
 def test_a_memory_from_a_superseded_source_version_is_dropped(store, memory_store, clock, service):
     source = add_source(store, clock, text="original transcript about caching", version=1)
-    add_memory(store, memory_store, clock, memory_id="mem_old", content="caching files stale",
-               source_id=source.id, source_version=1)
+    add_memory(
+        store,
+        memory_store,
+        clock,
+        memory_id="mem_old",
+        content="caching files stale",
+        source_id=source.id,
+        source_version=1,
+    )
     # The user corrects the transcript: the source moves to version 2.
     with store.transaction(USER) as tx:
         tx.put(
@@ -182,8 +244,12 @@ def test_a_memory_from_a_superseded_source_version_is_dropped(store, memory_stor
                     "current_version": 2,
                     "transcripts": [
                         *source.transcripts,
-                        TranscriptRevision(source_version=2, text="corrected transcript",
-                                           edited_by_user=True, created_at=clock.now()),
+                        TranscriptRevision(
+                            source_version=2,
+                            text="corrected transcript",
+                            edited_by_user=True,
+                            created_at=clock.now(),
+                        ),
                     ],
                 }
             ),
@@ -203,14 +269,19 @@ def test_a_deleted_memory_is_dropped_even_while_still_in_the_index(store, memory
 
 def test_a_failed_attempt_remains_retrievable_as_history(store, memory_store, clock, service):
     add_source(store, clock, text="I tried caching whole files but it got stale after changes")
-    add_memory(store, memory_store, clock, memory_id="mem_attempt",
-               content="I tried caching whole files but it got stale after changes",
-               kind=MemoryKind.ATTEMPT, project_id="proj_cerno")
-    task = add_task(store, clock, project_id="proj_cerno",
-                    title="caching whole files stale changes invalidation")
-    evidence = service.evidence_for_task(
-        USER, task, budget=EvidenceBudget(max_tokens=3000)
+    add_memory(
+        store,
+        memory_store,
+        clock,
+        memory_id="mem_attempt",
+        content="I tried caching whole files but it got stale after changes",
+        kind=MemoryKind.ATTEMPT,
+        project_id="proj_cerno",
     )
+    task = add_task(
+        store, clock, project_id="proj_cerno", title="caching whole files stale changes invalidation"
+    )
+    evidence = service.evidence_for_task(USER, task, budget=EvidenceBudget(max_tokens=3000))
     assert evidence, "a failed attempt must not be filtered away"
     assert evidence[0].validity == "historical"
 
@@ -260,20 +331,24 @@ def test_a_query_failure_is_reported_not_raised(store, clock):
 
 def test_the_evidence_budget_is_shared_across_the_whole_plan():
     budget = EvidenceBudget(max_tokens=20)
-    assert budget.admit("a" * 40) is True       # ~10 tokens
-    assert budget.admit("b" * 40) is True       # ~20 tokens
+    assert budget.admit("a" * 40) is True  # ~10 tokens
+    assert budget.admit("b" * 40) is True  # ~20 tokens
     assert budget.admit("c" * 40) is False, "the plan-wide budget must stop here"
 
 
 def test_evidence_is_capped_per_task_and_deduplicated_by_source(store, memory_store, clock, service):
     add_source(store, clock, text="one note mentioning caching several times")
     for i in range(10):
-        add_memory(store, memory_store, clock, memory_id=f"mem_{i}",
-                   content=f"caching files stale note {i}", project_id="proj_cerno")
+        add_memory(
+            store,
+            memory_store,
+            clock,
+            memory_id=f"mem_{i}",
+            content=f"caching files stale note {i}",
+            project_id="proj_cerno",
+        )
     task = add_task(store, clock, project_id="proj_cerno", title="caching files stale")
-    evidence = service.evidence_for_task(
-        USER, task, budget=EvidenceBudget(max_tokens=10_000), per_task=6
-    )
+    evidence = service.evidence_for_task(USER, task, budget=EvidenceBudget(max_tokens=10_000), per_task=6)
     assert len(evidence) <= 6
     keys = {(e.source_id, e.source_version) for e in evidence}
     assert len(keys) == len(evidence), "related spans from one source are deduplicated"
@@ -288,8 +363,12 @@ def test_identifier_lookup_matches_aliases_exactly_first(store, clock, service):
         ("proj_other", "Cerno Notes", []),
     ]:
         project = Project(
-            id=project_id, user_id=USER, created_at=clock.now(), updated_at=clock.now(),
-            title=title, aliases=aliases,
+            id=project_id,
+            user_id=USER,
+            created_at=clock.now(),
+            updated_at=clock.now(),
+            title=title,
+            aliases=aliases,
         )
         with store.transaction(USER) as tx:
             tx.put("project", project)
@@ -301,11 +380,13 @@ def test_identifier_lookup_matches_aliases_exactly_first(store, clock, service):
 
 def test_project_history_is_read_directly_and_newest_first(store, memory_store, clock, service):
     add_source(store, clock)
-    first = add_memory(store, memory_store, clock, memory_id="mem_old",
-                       content="first observation", project_id="proj_cerno")
+    first = add_memory(
+        store, memory_store, clock, memory_id="mem_old", content="first observation", project_id="proj_cerno"
+    )
     clock.advance(hours=5)
-    add_memory(store, memory_store, clock, memory_id="mem_new",
-               content="second observation", project_id="proj_cerno")
+    add_memory(
+        store, memory_store, clock, memory_id="mem_new", content="second observation", project_id="proj_cerno"
+    )
     history = service.get_project_history(USER, "proj_cerno")
     assert [m.id for m in history] == ["mem_new", "mem_old"]
     assert first.id in [m.id for m in history]
@@ -328,12 +409,18 @@ def test_chunking_keeps_the_clause_that_reverses_the_meaning():
 
 def test_embedding_reuse_skips_unchanged_content(store, memory_store, clock):
     memory = Memory(
-        id="mem_1", user_id=USER, created_at=clock.now(), updated_at=clock.now(),
-        kind=MemoryKind.OBSERVATION, content="caching files stale",
-        validity=MemoryValidity.CURRENT, effective_at=clock.now(),
+        id="mem_1",
+        user_id=USER,
+        created_at=clock.now(),
+        updated_at=clock.now(),
+        kind=MemoryKind.OBSERVATION,
+        content="caching files stale",
+        validity=MemoryValidity.CURRENT,
+        effective_at=clock.now(),
         source_refs=[SourceRef(source_id="src_a", source_version=1)],
         content_hash=content_hash("caching files stale"),
-        embedding_model_id="fixture-embed-v1", embedding_dimensions=64,
+        embedding_model_id="fixture-embed-v1",
+        embedding_dimensions=64,
     )
     assert needs_embedding(memory, set()) is True
     assert needs_embedding(memory, {memory.content_hash}) is False

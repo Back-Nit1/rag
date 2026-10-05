@@ -50,7 +50,9 @@ def extract_json(raw: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         match = _JSON_BLOCK.search(raw)
         if not match:
-            raise MetisError(ErrorCode.SEMANTIC_VALIDATION_FAILED, "the model returned no JSON object") from None
+            raise MetisError(
+                ErrorCode.SEMANTIC_VALIDATION_FAILED, "the model returned no JSON object"
+            ) from None
         try:
             parsed = json.loads(match.group(0))
         except json.JSONDecodeError as exc:
@@ -350,7 +352,9 @@ class BedrockInferenceClient:
         try:
             response = self._client.converse(**kwargs)
         except self._client.exceptions.ThrottlingException as exc:
-            raise MetisError(ErrorCode.RATE_LIMITED, "Bedrock throttled the request", retry_after_seconds=2) from exc
+            raise MetisError(
+                ErrorCode.RATE_LIMITED, "Bedrock throttled the request", retry_after_seconds=2
+            ) from exc
         except self._client.exceptions.ValidationException as exc:
             raise MetisError(ErrorCode.VALIDATION_FAILED, f"Bedrock rejected the request: {exc}") from exc
         except Exception as exc:

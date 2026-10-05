@@ -32,7 +32,6 @@ from .entities import (
     Notification,
     Plan,
     PlanBlock,
-    Preferences,
     Project,
     Reminder,
     SourceArtifact,

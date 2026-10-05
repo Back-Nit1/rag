@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
@@ -19,7 +19,7 @@ class SystemClock:
     """Real time, always UTC-aware."""
 
     def now(self) -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     def today_local(self, timezone_name: str) -> date:
         return self.now().astimezone(resolve_timezone(timezone_name)).date()
@@ -31,7 +31,7 @@ class FixedClock:
     def __init__(self, start: datetime) -> None:
         if start.tzinfo is None:
             raise ValueError("FixedClock needs a timezone-aware instant")
-        self._now = start.astimezone(timezone.utc)
+        self._now = start.astimezone(UTC)
 
     def now(self) -> datetime:
         return self._now
@@ -44,4 +44,4 @@ class FixedClock:
         return self._now
 
     def set(self, instant: datetime) -> None:
-        self._now = instant.astimezone(timezone.utc)
+        self._now = instant.astimezone(UTC)

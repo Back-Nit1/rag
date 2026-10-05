@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, datetime
 
-from datetime import datetime, timezone
-
-T0 = datetime(2026, 10, 5, 14, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)
 NY = "America/New_York"
 USER = "demo_authenticated_subject"
 
 BLOOMBERG = (
-    "There is a Bloomberg event in New York I want to go to. "
-    "Remind me to register and help me prepare."
+    "There is a Bloomberg event in New York I want to go to. Remind me to register and help me prepare."
 )
 
 
@@ -398,9 +395,14 @@ def test_a_plan_request_returns_a_job_and_generates_an_outline(client, worker):
     client.post(
         "/v1/availability",
         json={
-            "id": "avail_1", "user_id": "ignored", "created_at": T0.isoformat(),
-            "updated_at": T0.isoformat(), "local_date": "2026-10-05", "timezone": NY,
-            "window": {"start": "11:00", "end": "17:00"}, "kind": "available",
+            "id": "avail_1",
+            "user_id": "ignored",
+            "created_at": T0.isoformat(),
+            "updated_at": T0.isoformat(),
+            "local_date": "2026-10-05",
+            "timezone": NY,
+            "window": {"start": "11:00", "end": "17:00"},
+            "kind": "available",
         },
     )
     client.post(
@@ -426,9 +428,14 @@ def test_availability_ownership_comes_from_the_token_not_the_body(client):
     created = client.post(
         "/v1/availability",
         json={
-            "id": "avail_x", "user_id": "someone_else", "created_at": T0.isoformat(),
-            "updated_at": T0.isoformat(), "local_date": "2026-10-05", "timezone": NY,
-            "window": {"start": "09:00", "end": "10:00"}, "kind": "available",
+            "id": "avail_x",
+            "user_id": "someone_else",
+            "created_at": T0.isoformat(),
+            "updated_at": T0.isoformat(),
+            "local_date": "2026-10-05",
+            "timezone": NY,
+            "window": {"start": "09:00", "end": "10:00"},
+            "kind": "available",
         },
     ).json()
     assert created["user_id"] == USER
@@ -461,7 +468,9 @@ def test_accepting_a_stale_plan_is_refused(client, worker):
     ).json()["plan_id"]
     worker()
     plan = client.get(f"/v1/plans/{plan_id}").json()
-    task = client.post("/v1/tasks", json={"title": "Changed my mind"}, headers={"Idempotency-Key": "t"}).json()
+    task = client.post(
+        "/v1/tasks", json={"title": "Changed my mind"}, headers={"Idempotency-Key": "t"}
+    ).json()
     client.patch(f"/v1/tasks/{task['id']}", json={"expected_revision": task["revision"], "priority": 3})
 
     response = client.post(

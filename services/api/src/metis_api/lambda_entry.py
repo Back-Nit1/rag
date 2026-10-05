@@ -54,7 +54,11 @@ def outbox(event: dict[str, Any], context: Any) -> dict[str, Any]:
     result = dispatcher.run_once(limit=len(event.get("Records", [])) or None)
     log.info(
         "outbox batch processed=%d ok=%d superseded=%d retried=%d dead=%d",
-        result.processed, result.succeeded, result.superseded, result.retried, result.dead_lettered,
+        result.processed,
+        result.succeeded,
+        result.superseded,
+        result.retried,
+        result.dead_lettered,
     )
     return {"batchItemFailures": []}
 

@@ -8,8 +8,7 @@ repaired, so the user sees what was wrong.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any
+import itertools
 
 from metis_contracts import PlanBlock, PlanValidation, ValidationIssue
 from metis_pipeline.timeref import end_of_local_day
@@ -26,7 +25,7 @@ def validate(
     event_by_id = {e.id: e for e in snapshot.fixed_events}
 
     # 1. No two blocks may overlap.
-    for (left_index, left), (right_index, right) in zip(ordered, ordered[1:], strict=False):
+    for (_left_index, left), (right_index, right) in itertools.pairwise(ordered):
         if right.starts_at < left.ends_at:
             issues.append(
                 ValidationIssue(
@@ -43,7 +42,11 @@ def validate(
             event = event_by_id.get(block.event_id)
             if event is None:
                 issues.append(
-                    ValidationIssue(code="unknown_event", message="fixed block references an unknown event", block_index=index)
+                    ValidationIssue(
+                        code="unknown_event",
+                        message="fixed block references an unknown event",
+                        block_index=index,
+                    )
                 )
             elif event.starts_at and block.starts_at != event.starts_at:
                 issues.append(
@@ -180,6 +183,5 @@ def blocks_with_index(blocks: list[PlanBlock]):
 
 def _within_any(block: PlanBlock, intervals: list[Interval]) -> bool:
     return any(
-        interval.starts_at <= block.starts_at and block.ends_at <= interval.ends_at
-        for interval in intervals
+        interval.starts_at <= block.starts_at and block.ends_at <= interval.ends_at for interval in intervals
     )

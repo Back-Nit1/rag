@@ -109,9 +109,7 @@ def build_registry() -> Any:
 
 
 def run(*, once: bool = False, interval: float = 2.0) -> int:
-    logging.basicConfig(
-        level=settings().log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s"
-    )
+    logging.basicConfig(level=settings().log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     signal.signal(signal.SIGINT, _request_stop)
     signal.signal(signal.SIGTERM, _request_stop)
 
@@ -122,7 +120,9 @@ def run(*, once: bool = False, interval: float = 2.0) -> int:
     dispatcher = OutboxDispatcher(registry, context)
     log.info(
         "worker started mode=%s handlers=%d worker_id=%s",
-        settings().mode.value, len(registry.event_types), context.worker_id,
+        settings().mode.value,
+        len(registry.event_types),
+        context.worker_id,
     )
 
     idle_cycles = 0
@@ -133,8 +133,12 @@ def run(*, once: bool = False, interval: float = 2.0) -> int:
             idle_cycles = 0
             log.info(
                 "batch processed=%d ok=%d superseded=%d retried=%d dead=%d due=%d",
-                result.processed, result.succeeded, result.superseded,
-                result.retried, result.dead_lettered, due,
+                result.processed,
+                result.succeeded,
+                result.superseded,
+                result.retried,
+                result.dead_lettered,
+                due,
             )
         else:
             idle_cycles += 1

@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -291,9 +291,7 @@ class DynamoStateStore:
         return ENTITY_MODELS[kind].model_validate(_from_dynamo(item["body"]))
 
     def get(self, user_id: str, kind: str, entity_id: str) -> Any | None:
-        resp = self._table.get_item(
-            Key={"pk": _pk(user_id), "sk": _sk(kind, entity_id)}, ConsistentRead=True
-        )
+        resp = self._table.get_item(Key={"pk": _pk(user_id), "sk": _sk(kind, entity_id)}, ConsistentRead=True)
         item = resp.get("Item")
         if not item or item.get("tombstoned_at"):
             return None
@@ -367,9 +365,7 @@ class DynamoStateStore:
     ) -> Page[Event]:
         items, next_cursor, complete = self._query_kind(user_id, "event", cursor=cursor, limit=limit)
         lo, hi = local_date, until or local_date
-        filtered = [
-            e for e in items if lo is None or (e.local_date and lo <= e.local_date <= (hi or lo))
-        ]
+        filtered = [e for e in items if lo is None or (e.local_date and lo <= e.local_date <= (hi or lo))]
         return Page(items=filtered, next_cursor=next_cursor, complete=complete)
 
     def list_availability(self, user_id: str, local_date: date) -> list[AvailabilityBlock]:
@@ -407,7 +403,10 @@ class DynamoStateStore:
             return existing
         now = self._clock.now()
         return Preferences(
-            id=f"pref_{user_id}", user_id=user_id, created_at=now, updated_at=now,
+            id=f"pref_{user_id}",
+            user_id=user_id,
+            created_at=now,
+            updated_at=now,
             timezone=settings().default_timezone,
         )
 
@@ -579,7 +578,8 @@ class DynamoStateStore:
     # ------------------------------------------------------------------ #
 
     def remember_idempotent(self, user_id: str, key: str, response: dict[str, Any]) -> None:
-        try:
+        # First response wins.
+        with suppress(self._client.exceptions.ConditionalCheckFailedException):
             self._table.put_item(
                 Item={
                     "pk": _pk(user_id),
@@ -591,8 +591,6 @@ class DynamoStateStore:
                 },
                 ConditionExpression="attribute_not_exists(sk)",
             )
-        except self._client.exceptions.ConditionalCheckFailedException:
-            pass  # first response wins
 
     def recall_idempotent(self, user_id: str, key: str) -> dict[str, Any] | None:
         resp = self._table.get_item(Key={"pk": _pk(user_id), "sk": f"IDEM#{key}"}, ConsistentRead=True)
@@ -635,9 +633,7 @@ class DynamoStateStore:
         try:
             self._table.update_item(
                 Key={"pk": _pk(user_id), "sk": f"USAGE#{local_date.isoformat()}"},
-                UpdateExpression=(
-                    "ADD reserved_micro_usd :amt, model_calls :one SET updated_at = :now"
-                ),
+                UpdateExpression=("ADD reserved_micro_usd :amt, model_calls :one SET updated_at = :now"),
                 ConditionExpression=(
                     "attribute_not_exists(reserved_micro_usd) OR "
                     "reserved_micro_usd + if_not_exists(settled_micro_usd, :zero) <= :headroom"

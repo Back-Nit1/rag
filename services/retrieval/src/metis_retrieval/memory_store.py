@@ -115,9 +115,7 @@ class SqliteMemoryStore:
             ).fetchall()
         return {r["content_hash"] for r in rows}
 
-    def upsert(
-        self, user_id: str, memories: Sequence[Memory], vectors: Sequence[Sequence[float]]
-    ) -> None:
+    def upsert(self, user_id: str, memories: Sequence[Memory], vectors: Sequence[Sequence[float]]) -> None:
         if len(memories) != len(vectors):
             raise MetisError(ErrorCode.VALIDATION_FAILED, "memories and vectors must be the same length")
         with self._lock:
@@ -316,9 +314,7 @@ class S3VectorsMemoryStore:
     def supports_lexical(self) -> bool:
         return self.capabilities.lexical
 
-    def upsert(
-        self, user_id: str, memories: Sequence[Memory], vectors: Sequence[Sequence[float]]
-    ) -> None:
+    def upsert(self, user_id: str, memories: Sequence[Memory], vectors: Sequence[Sequence[float]]) -> None:
         items = []
         for memory, vector in zip(memories, vectors, strict=True):
             if memory.user_id != user_id:
@@ -344,9 +340,7 @@ class S3VectorsMemoryStore:
             )
         for chunk in (items[i : i + 25] for i in range(0, len(items), 25)):
             try:
-                self._client.put_vectors(
-                    vectorBucketName=self._bucket, indexName=self._index, vectors=chunk
-                )
+                self._client.put_vectors(vectorBucketName=self._bucket, indexName=self._index, vectors=chunk)
             except Exception as exc:
                 raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, f"vector upsert failed: {exc}") from exc
 
@@ -400,9 +394,7 @@ class S3VectorsMemoryStore:
             return
         keys = [f"{user_id}/{mid}" for mid in memory_ids]
         for chunk in (keys[i : i + 100] for i in range(0, len(keys), 100)):
-            self._client.delete_vectors(
-                vectorBucketName=self._bucket, indexName=self._index, keys=chunk
-            )
+            self._client.delete_vectors(vectorBucketName=self._bucket, indexName=self._index, keys=chunk)
 
     def health(self) -> tuple[bool, str | None]:
         try:

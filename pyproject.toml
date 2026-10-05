@@ -68,18 +68,30 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# T20 (no print) is relaxed only where stdout/stderr IS the interface:
+# a CLI, a codegen script, or a container entrypoint whose printed JSON is the
+# job-result contract read by the caller. Everywhere else print is a defect.
 "**/tests/**" = ["T20", "DTZ"]
 "scripts/*" = ["T20"]
 "**/generate.py" = ["T20"]
 "**/local_worker.py" = ["T20"]
+"services/speech/src/metis_speech/worker.py" = ["T20"]
+"services/speech/src/metis_speech/evaluate.py" = ["T20"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_unused_ignores = true
 disallow_untyped_decorators = false
-exclude = "(cdk\\.out|node_modules|generated)"
+# Decision (docs/architecture/0003-typing-and-lint-scope.md): mypy --strict
+# covers production sources only. Tests are verified by pytest; annotating
+# ~400 fixture-heavy test signatures to satisfy strict mode buys no safety and
+# would slow every worker down. Production strictness is NOT relaxed.
+exclude = "(cdk\\.out|node_modules|generated|/tests/)"
 
 [[tool.mypy.overrides]]
-module = ["faster_whisper.*", "av.*", "mangum.*"]
+# Optional runtime dependencies with no published stubs. They are imported
+# lazily inside the adapters that need them, so a missing stub must not fail
+# the whole typecheck.
+module = ["faster_whisper.*", "av.*", "mangum.*", "numpy.*", "pywebpush.*"]
 ignore_missing_imports = true

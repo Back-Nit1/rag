@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from metis_contracts import FixedClock, reset_settings_cache
 
-T0 = datetime(2026, 10, 5, 14, 0, tzinfo=timezone.utc)  # 10:00 in New York
+T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)  # 10:00 in New York
 NY = "America/New_York"
 USER = "demo_authenticated_subject"
 

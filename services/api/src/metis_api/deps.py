@@ -59,6 +59,7 @@ class Adapters:
 
     def describe(self) -> dict[str, str]:
         """Adapter modes, surfaced through /v1/health so the UI can be honest."""
+
         def mode_of(adapter: Any) -> str:
             return str(getattr(getattr(adapter, "mode", None), "value", getattr(adapter, "mode", "none")))
 

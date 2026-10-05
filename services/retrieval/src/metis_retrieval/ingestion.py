@@ -43,8 +43,21 @@ KIND_MAP: dict[ExtractedItemKind, MemoryKind] = {
 #: Phrases that must survive chunking. Their presence widens the window so a
 #: unit never loses the clause that reverses its meaning.
 MEANING_CARRIERS = (
-    "not", "no", "never", "without", "abandoned", "failed", "stale", "instead",
-    "but", "unless", "stopped", "gave up", "doesn't", "don't", "won't",
+    "not",
+    "no",
+    "never",
+    "without",
+    "abandoned",
+    "failed",
+    "stale",
+    "instead",
+    "but",
+    "unless",
+    "stopped",
+    "gave up",
+    "doesn't",
+    "don't",
+    "won't",
 )
 
 

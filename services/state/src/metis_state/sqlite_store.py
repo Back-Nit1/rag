@@ -19,7 +19,7 @@ import json
 import sqlite3
 import threading
 from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -181,12 +181,16 @@ class SqliteStateStore:
             previous = json.loads(row["body"])
             created_at = datetime.fromisoformat(previous["created_at"])
 
-        stored = record.model_copy(update={"revision": new_revision, "created_at": created_at, "updated_at": now})
+        stored = record.model_copy(
+            update={"revision": new_revision, "created_at": created_at, "updated_at": now}
+        )
         body = stored.model_dump(mode="json")
         changed = sorted(k for k, v in body.items() if previous.get(k) != v) if previous else sorted(body)
 
         cols = {
-            "state": getattr(stored, "state", None) or getattr(stored, "status", None) or getattr(stored, "disposition", None),
+            "state": getattr(stored, "state", None)
+            or getattr(stored, "status", None)
+            or getattr(stored, "disposition", None),
             "project_id": getattr(stored, "project_id", None),
             "local_date": _iso(getattr(stored, "local_date", None)),
             "deadline_date": _iso(getattr(stored, "deadline_local_date", None)),
@@ -242,7 +246,9 @@ class SqliteStateStore:
 
     def _append_outbox_locked(self, conn: sqlite3.Connection, event: OutboxEvent) -> None:
         body = event.model_dump(mode="json")
-        try:
+        # Same (user, event_type, idempotency_key) already queued: the caller
+        # retried. One logical side effect is correct.
+        with suppress(sqlite3.IntegrityError):
             conn.execute(
                 """INSERT INTO outbox (user_id, id, event_type, event_version, target_id,
                        target_revision, correlation_id, idempotency_key, payload, state,
@@ -265,10 +271,6 @@ class SqliteStateStore:
                     body["updated_at"],
                 ),
             )
-        except sqlite3.IntegrityError:
-            # Same (user, event_type, idempotency_key) already queued: the
-            # caller retried. One logical side effect is correct.
-            pass
 
     def _bump_epoch_locked(self, conn: sqlite3.Connection, user_id: str) -> int:
         now = self._clock.now().isoformat()
@@ -342,7 +344,9 @@ class SqliteStateStore:
         items = [self._hydrate(kind, r) for r in rows]
         # `complete` is what stops the planner claiming full coverage after a
         # truncated scan.
-        return Page(items=items, next_cursor=rows[-1]["id"] if truncated and rows else None, complete=not truncated)
+        return Page(
+            items=items, next_cursor=rows[-1]["id"] if truncated and rows else None, complete=not truncated
+        )
 
     def list_tasks(
         self,
@@ -512,7 +516,9 @@ class SqliteStateStore:
             attempts=attempts if attempts is not None else int(row["attempts"]),
             available_at=datetime.fromisoformat(row["available_at"]),
             lease_owner=row["lease_owner"],
-            lease_expires_at=datetime.fromisoformat(row["lease_expires_at"]) if row["lease_expires_at"] else None,
+            lease_expires_at=datetime.fromisoformat(row["lease_expires_at"])
+            if row["lease_expires_at"]
+            else None,
             failure=row["failure"],
             error_message=row["error_message"],
         )

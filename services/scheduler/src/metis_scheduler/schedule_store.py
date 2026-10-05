@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from metis_contracts import AdapterMode, ErrorCode, MetisError, settings
@@ -114,25 +114,19 @@ class EventBridgeScheduleStore:
             # A retry of the same create: update in place, never duplicate.
             self._client.update_schedule(**request)
         except Exception as exc:
-            raise MetisError(
-                ErrorCode.PROVIDER_UNAVAILABLE, f"could not create the schedule: {exc}"
-            ) from exc
+            raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, f"could not create the schedule: {exc}") from exc
         return f"arn:schedule:{self._cfg.scheduler_group}/{name}"
 
     def delete_schedule(self, *, reminder_id: str, scheduler_ref: str | None) -> None:
         try:
-            self._client.delete_schedule(
-                Name=schedule_name(reminder_id), GroupName=self._cfg.scheduler_group
-            )
+            self._client.delete_schedule(Name=schedule_name(reminder_id), GroupName=self._cfg.scheduler_group)
         except self._client.exceptions.ResourceNotFoundException:
             return  # already gone; deletion is idempotent
         except Exception as exc:
             # Best effort: the schedule may still fire, which the due handler
             # is built to survive.
             log.warning("schedule delete for %s failed: %s", reminder_id, exc)
-            raise MetisError(
-                ErrorCode.PROVIDER_UNAVAILABLE, f"could not delete the schedule: {exc}"
-            ) from exc
+            raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, f"could not delete the schedule: {exc}") from exc
 
     def list_due(self, *, now: datetime, limit: int = 50) -> list[str]:
         """Not applicable: EventBridge invokes the due handler directly."""
@@ -140,9 +134,8 @@ class EventBridgeScheduleStore:
 
 
 def _utc():
-    from datetime import timezone
 
-    return timezone.utc
+    return UTC
 
 
 def build_schedule_store(state_store: Any | None = None, clock: Any | None = None) -> Any:

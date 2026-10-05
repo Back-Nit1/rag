@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 import pytest
 from metis_contracts import ErrorCode, MetisError
@@ -22,15 +22,15 @@ NY = "America/New_York"
 def test_tomorrow_resolves_against_the_capture_instant_not_the_worker_clock():
     # Captured 2026-10-05 23:30 local; a worker running the next afternoon must
     # still resolve "tomorrow" to the 6th.
-    captured = datetime(2026, 10, 6, 3, 30, tzinfo=timezone.utc)  # 23:30 on the 5th in NY
+    captured = datetime(2026, 10, 6, 3, 30, tzinfo=UTC)  # 23:30 on the 5th in NY
     resolution = parse_relative_date("remind me tomorrow", captured_at=captured, capture_timezone=NY)
     assert resolution is not None
     assert resolution.local_date == date(2026, 10, 6)
 
 
 def test_capture_near_midnight_uses_the_users_timezone_not_server_time():
-    captured = datetime(2026, 10, 6, 3, 30, tzinfo=timezone.utc)
-    assert captured.date() == date(2026, 10, 6)          # UTC has already rolled over
+    captured = datetime(2026, 10, 6, 3, 30, tzinfo=UTC)
+    assert captured.date() == date(2026, 10, 6)  # UTC has already rolled over
     assert capture_local_date(captured, NY) == date(2026, 10, 5)  # the user's day has not
 
 
@@ -46,15 +46,17 @@ def test_an_unknown_timezone_is_an_error_not_a_fallback():
 
 
 def test_no_recognised_phrase_returns_none_so_the_caller_asks():
-    captured = datetime(2026, 10, 5, 18, 0, tzinfo=timezone.utc)
-    assert parse_relative_date("I want to go to that event", captured_at=captured, capture_timezone=NY) is None
+    captured = datetime(2026, 10, 5, 18, 0, tzinfo=UTC)
+    assert (
+        parse_relative_date("I want to go to that event", captured_at=captured, capture_timezone=NY) is None
+    )
     assert resolve_phrase("sometime soon would be good", captured_at=captured, capture_timezone=NY) is None
 
 
 def test_six_pm_local_becomes_the_right_utc_instant():
     resolved = to_instant(date(2026, 10, 8), time(18, 0), NY)
     assert resolved.dst == "ok"
-    assert resolved.instant == datetime(2026, 10, 8, 22, 0, tzinfo=timezone.utc)
+    assert resolved.instant == datetime(2026, 10, 8, 22, 0, tzinfo=UTC)
 
 
 def test_a_nonexistent_spring_forward_time_is_reported_not_coerced():
@@ -76,16 +78,16 @@ def test_an_ambiguous_fall_back_time_keeps_both_candidates():
 
 def test_a_date_only_deadline_is_inclusive_of_the_whole_local_day():
     boundary = end_of_local_day(date(2026, 10, 12), NY)
-    assert boundary == datetime(2026, 10, 13, 4, 0, tzinfo=timezone.utc)
+    assert boundary == datetime(2026, 10, 13, 4, 0, tzinfo=UTC)
     # 23:59 local on the 12th is still on time.
-    assert is_overdue(date(2026, 10, 12), NY, now=datetime(2026, 10, 13, 3, 59, tzinfo=timezone.utc)) is False
+    assert is_overdue(date(2026, 10, 12), NY, now=datetime(2026, 10, 13, 3, 59, tzinfo=UTC)) is False
     assert is_overdue(date(2026, 10, 12), NY, now=boundary) is True
 
 
 def test_midnight_deadline_boundary_survives_a_dst_transition():
     # The day after 2026-03-07 has a 2am gap, not a missing midnight, but the
     # helper must still return a usable boundary for any date.
-    assert end_of_local_day(date(2026, 3, 7), NY).tzinfo is timezone.utc
+    assert end_of_local_day(date(2026, 3, 7), NY).tzinfo is UTC
 
 
 @pytest.mark.parametrize(
@@ -110,17 +112,21 @@ def test_clock_parsing(text, expected):
 
 
 def test_tomorrow_at_nine_am_resolves_to_one_instant():
-    captured = datetime(2026, 10, 6, 3, 30, tzinfo=timezone.utc)  # 23:30 on the 5th in NY
-    resolved = resolve_phrase("remind me tomorrow at 9am to register", captured_at=captured, capture_timezone=NY)
+    captured = datetime(2026, 10, 6, 3, 30, tzinfo=UTC)  # 23:30 on the 5th in NY
+    resolved = resolve_phrase(
+        "remind me tomorrow at 9am to register", captured_at=captured, capture_timezone=NY
+    )
     assert resolved is not None
     assert resolved.local_date == date(2026, 10, 6)
     assert resolved.local_time == time(9, 0)
-    assert resolved.instant == datetime(2026, 10, 6, 13, 0, tzinfo=timezone.utc)
+    assert resolved.instant == datetime(2026, 10, 6, 13, 0, tzinfo=UTC)
 
 
 def test_tomorrow_at_a_bare_nine_keeps_the_time_unresolved():
-    captured = datetime(2026, 10, 6, 3, 30, tzinfo=timezone.utc)
-    resolved = resolve_phrase("remind me tomorrow at 9 to register", captured_at=captured, capture_timezone=NY)
+    captured = datetime(2026, 10, 6, 3, 30, tzinfo=UTC)
+    resolved = resolve_phrase(
+        "remind me tomorrow at 9 to register", captured_at=captured, capture_timezone=NY
+    )
     assert resolved is not None
     assert resolved.local_date == date(2026, 10, 6)
     assert resolved.local_time is None, "9am vs 9pm must be clarified, not guessed"
@@ -128,12 +134,12 @@ def test_tomorrow_at_a_bare_nine_keeps_the_time_unresolved():
 
 
 def test_in_n_days_is_counted_from_the_capture_date():
-    captured = datetime(2026, 10, 5, 18, 0, tzinfo=timezone.utc)
+    captured = datetime(2026, 10, 5, 18, 0, tzinfo=UTC)
     resolved = parse_relative_date("in 3 days", captured_at=captured, capture_timezone=NY)
     assert resolved is not None and resolved.local_date == date(2026, 10, 8)
 
 
 def test_next_friday_never_resolves_to_the_same_day():
-    captured = datetime(2026, 10, 9, 18, 0, tzinfo=timezone.utc)  # a Friday in NY
+    captured = datetime(2026, 10, 9, 18, 0, tzinfo=UTC)  # a Friday in NY
     resolved = parse_relative_date("next friday", captured_at=captured, capture_timezone=NY)
     assert resolved is not None and resolved.local_date == date(2026, 10, 16)

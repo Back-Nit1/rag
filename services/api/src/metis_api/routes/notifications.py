@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, status
-from metis_contracts import CONTRACT_VERSION, EventType, JobState, OutboxEvent, new_id, settings
+from fastapi import APIRouter, Request, status
+from metis_contracts import CONTRACT_VERSION, JobState, new_id, settings
 from metis_contracts.api import CreateExportRequest, HealthResponse, JobAccepted
 from metis_contracts.entities import Job
 
 from ..deps import Context, get_adapters
-from fastapi import Depends, Request
 
 router = APIRouter(prefix="/v1", tags=["ops"])
 

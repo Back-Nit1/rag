@@ -149,7 +149,9 @@ def handle_reminder_due(envelope: EventEnvelope, context: DispatchContext) -> No
             expected_revision=reminder.revision,
         )
 
-    transport = context.notification_transports.get(reminder.channel.value) or context.notification_transports.get("in_app")
+    transport = context.notification_transports.get(
+        reminder.channel.value
+    ) or context.notification_transports.get("in_app")
     if transport is None:
         status, detail = DeliveryStatus.UNSUPPORTED, "no transport is configured"
     elif not transport.supported(envelope.user_id):
@@ -190,14 +192,19 @@ def handle_reminder_due(envelope: EventEnvelope, context: DispatchContext) -> No
                     update={
                         "state": terminal,
                         "attempts": reminder_after.attempts + 1,
-                        "last_error": None if terminal is ReminderState.DELIVERED else FailureCategory.TRANSIENT,
+                        "last_error": None
+                        if terminal is ReminderState.DELIVERED
+                        else FailureCategory.TRANSIENT,
                     }
                 ),
                 expected_revision=reminder_after.revision,
             )
     log.info(
         "reminder %s occurrence=%s delivery=%s detail=%s",
-        reminder.id, reminder.occurrence_key, status.value, detail,
+        reminder.id,
+        reminder.occurrence_key,
+        status.value,
+        detail,
     )
 
 

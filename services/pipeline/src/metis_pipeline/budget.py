@@ -13,8 +13,8 @@ reminder makes zero model calls and so takes no reservation.
 from __future__ import annotations
 
 import logging
-from contextlib import contextmanager
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any

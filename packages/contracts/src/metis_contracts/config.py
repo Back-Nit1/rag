@@ -59,12 +59,18 @@ class Limits:
     """Validated centrally; the browser reads these through /v1/health."""
 
     max_audio_seconds: int = field(default_factory=lambda: _env_int("METIS_MAX_AUDIO_SECONDS", 300))
-    max_upload_bytes: int = field(default_factory=lambda: _env_int("METIS_MAX_UPLOAD_BYTES", 25 * 1024 * 1024))
+    max_upload_bytes: int = field(
+        default_factory=lambda: _env_int("METIS_MAX_UPLOAD_BYTES", 25 * 1024 * 1024)
+    )
     max_text_chars: int = field(default_factory=lambda: _env_int("METIS_MAX_TEXT_CHARS", 100_000))
     upload_url_ttl_seconds: int = field(default_factory=lambda: _env_int("METIS_UPLOAD_TTL_SECONDS", 900))
 
-    extraction_max_input_tokens: int = field(default_factory=lambda: _env_int("METIS_EXTRACT_IN_TOKENS", 4000))
-    extraction_max_output_tokens: int = field(default_factory=lambda: _env_int("METIS_EXTRACT_OUT_TOKENS", 1200))
+    extraction_max_input_tokens: int = field(
+        default_factory=lambda: _env_int("METIS_EXTRACT_IN_TOKENS", 4000)
+    )
+    extraction_max_output_tokens: int = field(
+        default_factory=lambda: _env_int("METIS_EXTRACT_OUT_TOKENS", 1200)
+    )
     extraction_repair_attempts: int = field(default_factory=lambda: _env_int("METIS_EXTRACT_REPAIRS", 1))
     extraction_max_ranges: int = field(default_factory=lambda: _env_int("METIS_EXTRACT_MAX_RANGES", 6))
 
@@ -78,7 +84,9 @@ class Limits:
 
     retrieval_candidates: int = field(default_factory=lambda: _env_int("METIS_RETRIEVAL_CANDIDATES", 20))
     retrieval_evidence_per_task: int = field(default_factory=lambda: _env_int("METIS_EVIDENCE_PER_TASK", 6))
-    retrieval_evidence_token_budget: int = field(default_factory=lambda: _env_int("METIS_EVIDENCE_TOKENS", 3000))
+    retrieval_evidence_token_budget: int = field(
+        default_factory=lambda: _env_int("METIS_EVIDENCE_TOKENS", 3000)
+    )
 
     model_timeout_seconds: float = field(default_factory=lambda: _env_float("METIS_MODEL_TIMEOUT", 30.0))
     speech_wall_clock_seconds: int = field(default_factory=lambda: _env_int("METIS_SPEECH_TIMEOUT", 900))
@@ -121,17 +129,27 @@ class ModelConfig:
     card before trusting an estimate derived from them.
     """
 
-    extraction_model_id: str = field(default_factory=lambda: _env("METIS_EXTRACTION_MODEL_ID", "amazon.nova-micro-v1:0") or "")
+    extraction_model_id: str = field(
+        default_factory=lambda: _env("METIS_EXTRACTION_MODEL_ID", "amazon.nova-micro-v1:0") or ""
+    )
     escalation_model_id: str | None = field(default_factory=lambda: _env("METIS_ESCALATION_MODEL_ID"))
-    planning_model_id: str = field(default_factory=lambda: _env("METIS_PLANNING_MODEL_ID", "amazon.nova-lite-v1:0") or "")
-    embedding_model_id: str = field(default_factory=lambda: _env("METIS_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0") or "")
+    planning_model_id: str = field(
+        default_factory=lambda: _env("METIS_PLANNING_MODEL_ID", "amazon.nova-lite-v1:0") or ""
+    )
+    embedding_model_id: str = field(
+        default_factory=lambda: _env("METIS_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0") or ""
+    )
     embedding_dimensions: int = field(default_factory=lambda: _env_int("METIS_EMBEDDING_DIMENSIONS", 512))
     embedding_normalize: bool = field(default_factory=lambda: _env_bool("METIS_EMBEDDING_NORMALIZE", True))
     allow_escalation: bool = field(default_factory=lambda: _env_bool("METIS_ALLOW_ESCALATION", False))
 
     input_micro_usd_per_1k: int = field(default_factory=lambda: _env_int("METIS_INPUT_MICRO_USD_PER_1K", 35))
-    output_micro_usd_per_1k: int = field(default_factory=lambda: _env_int("METIS_OUTPUT_MICRO_USD_PER_1K", 140))
-    embedding_micro_usd_per_1k: int = field(default_factory=lambda: _env_int("METIS_EMBED_MICRO_USD_PER_1K", 2))
+    output_micro_usd_per_1k: int = field(
+        default_factory=lambda: _env_int("METIS_OUTPUT_MICRO_USD_PER_1K", 140)
+    )
+    embedding_micro_usd_per_1k: int = field(
+        default_factory=lambda: _env_int("METIS_EMBED_MICRO_USD_PER_1K", 2)
+    )
 
     prompt_version_extraction: str = "extract/v1"
     prompt_version_planning: str = "plan/v1"
@@ -141,12 +159,16 @@ class ModelConfig:
 class SpeechConfig:
     model_id: str = field(default_factory=lambda: _env("METIS_SPEECH_MODEL_ID", "small.en") or "")
     model_dir: str = field(default_factory=lambda: _env("METIS_SPEECH_MODEL_DIR", "/opt/models") or "")
-    artifact_revision: str = field(default_factory=lambda: _env("METIS_SPEECH_ARTIFACT_REVISION", "unpinned") or "")
+    artifact_revision: str = field(
+        default_factory=lambda: _env("METIS_SPEECH_ARTIFACT_REVISION", "unpinned") or ""
+    )
     compute_type: str = field(default_factory=lambda: _env("METIS_SPEECH_COMPUTE_TYPE", "int8") or "")
     beam_size: int = field(default_factory=lambda: _env_int("METIS_SPEECH_BEAM_SIZE", 1))
     temperature: float = field(default_factory=lambda: _env_float("METIS_SPEECH_TEMPERATURE", 0.0))
     vad_enabled: bool = field(default_factory=lambda: _env_bool("METIS_SPEECH_VAD", True))
-    condition_on_previous_text: bool = field(default_factory=lambda: _env_bool("METIS_SPEECH_CONDITION_PREV", False))
+    condition_on_previous_text: bool = field(
+        default_factory=lambda: _env_bool("METIS_SPEECH_CONDITION_PREV", False)
+    )
     cpu_threads: int = field(default_factory=lambda: _env_int("METIS_SPEECH_CPU_THREADS", 0))
     language: str | None = field(default_factory=lambda: _env("METIS_SPEECH_LANGUAGE", "en"))
 
@@ -162,7 +184,9 @@ class AwsConfig:
     scheduler_group: str | None = field(default_factory=lambda: _env("METIS_SCHEDULER_GROUP"))
     scheduler_role_arn: str | None = field(default_factory=lambda: _env("METIS_SCHEDULER_ROLE_ARN"))
     reminder_target_arn: str | None = field(default_factory=lambda: _env("METIS_REMINDER_TARGET_ARN"))
-    speech_state_machine_arn: str | None = field(default_factory=lambda: _env("METIS_SPEECH_STATE_MACHINE_ARN"))
+    speech_state_machine_arn: str | None = field(
+        default_factory=lambda: _env("METIS_SPEECH_STATE_MACHINE_ARN")
+    )
     cognito_user_pool_id: str | None = field(default_factory=lambda: _env("METIS_COGNITO_USER_POOL_ID"))
     cognito_client_id: str | None = field(default_factory=lambda: _env("METIS_COGNITO_CLIENT_ID"))
     vapid_public_key: str | None = field(default_factory=lambda: _env("METIS_VAPID_PUBLIC_KEY"))
@@ -175,14 +199,24 @@ class Settings:
     environment: Literal["dev", "staging", "prod"] = field(
         default_factory=lambda: _env("METIS_ENV", "dev")  # type: ignore[return-value]
     )
-    allow_fixture_identity: bool = field(default_factory=lambda: _env_bool("METIS_ALLOW_FIXTURE_IDENTITY", True))
-    fixture_user_id: str = field(default_factory=lambda: _env("METIS_FIXTURE_USER_ID", "demo_authenticated_subject") or "")
+    allow_fixture_identity: bool = field(
+        default_factory=lambda: _env_bool("METIS_ALLOW_FIXTURE_IDENTITY", True)
+    )
+    fixture_user_id: str = field(
+        default_factory=lambda: _env("METIS_FIXTURE_USER_ID", "demo_authenticated_subject") or ""
+    )
     sqlite_path: str = field(default_factory=lambda: _env("METIS_SQLITE_PATH", ".metis/metis.sqlite") or "")
-    local_objects_dir: str = field(default_factory=lambda: _env("METIS_LOCAL_OBJECTS_DIR", ".metis/objects") or "")
-    default_timezone: str = field(default_factory=lambda: _env("METIS_DEFAULT_TIMEZONE", "America/New_York") or "")
+    local_objects_dir: str = field(
+        default_factory=lambda: _env("METIS_LOCAL_OBJECTS_DIR", ".metis/objects") or ""
+    )
+    default_timezone: str = field(
+        default_factory=lambda: _env("METIS_DEFAULT_TIMEZONE", "America/New_York") or ""
+    )
     log_level: str = field(default_factory=lambda: _env("METIS_LOG_LEVEL", "INFO") or "")
     cors_origins: tuple[str, ...] = field(
-        default_factory=lambda: tuple(filter(None, (_env("METIS_CORS_ORIGINS", "http://localhost:5173") or "").split(",")))
+        default_factory=lambda: tuple(
+            filter(None, (_env("METIS_CORS_ORIGINS", "http://localhost:5173") or "").split(","))
+        )
     )
 
     limits: Limits = field(default_factory=Limits)

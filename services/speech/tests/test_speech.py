@@ -6,6 +6,8 @@ The one test that proves actual neural decoding lives in
 
 from __future__ import annotations
 
+import itertools
+
 import pytest
 from metis_contracts import AdapterMode, ErrorCode, MetisError, ObjectRef, TranscriptionJobInput
 from metis_speech.audio import DecodedAudio, looks_like_silence, validate_envelope
@@ -27,10 +29,12 @@ def test_oversize_recording_is_rejected_before_decoding():
 
 
 def test_silence_is_detected():
-    quiet = DecodedAudio(samples=[0.0] * 1000, sample_rate=16000, duration_seconds=0.06,
-                         channels_in=1, codec="opus")
-    loud = DecodedAudio(samples=[0.4, -0.4] * 500, sample_rate=16000, duration_seconds=0.06,
-                        channels_in=1, codec="opus")
+    quiet = DecodedAudio(
+        samples=[0.0] * 1000, sample_rate=16000, duration_seconds=0.06, channels_in=1, codec="opus"
+    )
+    loud = DecodedAudio(
+        samples=[0.4, -0.4] * 500, sample_rate=16000, duration_seconds=0.06, channels_in=1, codec="opus"
+    )
     assert looks_like_silence(quiet) is True
     assert looks_like_silence(loud) is False
 
@@ -57,7 +61,7 @@ def test_segments_are_ordered_and_non_overlapping():
         ObjectRef(bucket="local", key="users/abc/captures/src_demo_cerno.webm")
     )
     assert len(segments) > 1
-    for previous, current in zip(segments, segments[1:], strict=False):
+    for previous, current in itertools.pairwise(segments):
         assert current.index == previous.index + 1
         assert current.start_ms >= previous.end_ms
 
@@ -156,7 +160,9 @@ def test_a_dropped_negation_is_reported_even_when_wer_looks_fine():
 
 
 def test_a_mangled_project_name_is_reported_separately():
-    items = [{"id": "a", "split": "dev", "reference": "On Cerno the review re-reads files", "names": ["Cerno"]}]
+    items = [
+        {"id": "a", "split": "dev", "reference": "On Cerno the review re-reads files", "names": ["Cerno"]}
+    ]
     report = evaluate(items, {"a": "On Serno the review re-reads files"})
     assert report["splits"]["dev"]["name_fidelity"] == 0.0
 

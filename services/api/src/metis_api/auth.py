@@ -40,10 +40,7 @@ class Principal:
 
 def _jwks_url() -> str:
     cfg = settings().aws
-    return (
-        f"https://cognito-idp.{cfg.region}.amazonaws.com/"
-        f"{cfg.cognito_user_pool_id}/.well-known/jwks.json"
-    )
+    return f"https://cognito-idp.{cfg.region}.amazonaws.com/{cfg.cognito_user_pool_id}/.well-known/jwks.json"
 
 
 def _jwks() -> Any:

@@ -103,9 +103,7 @@ def pack(snapshot: PlanningSnapshot) -> tuple[list[PlanBlock], list[str]]:
                 starts_at=event.starts_at,
                 ends_at=ends_at,
                 title=event.title,
-                estimate=None
-                if event.ends_at
-                else Estimate(minutes=60, provenance="default"),
+                estimate=None if event.ends_at else Estimate(minutes=60, provenance="default"),
                 rationale="Fixed appointment.",
                 fixed=True,
             )
@@ -164,9 +162,7 @@ def _rationale(task: Any, snapshot: PlanningSnapshot) -> str:
 class PlannerService:
     """Builds a plan, enriches it when affordable, and always validates it."""
 
-    def __init__(
-        self, *, state_store: Any, retrieval: Any, inference: Any | None, clock: Any
-    ) -> None:
+    def __init__(self, *, state_store: Any, retrieval: Any, inference: Any | None, clock: Any) -> None:
         self._state = state_store
         self._retrieval = retrieval
         self._inference = inference
@@ -254,7 +250,11 @@ class PlannerService:
         prompt = _planner_prompt(snapshot, blocks)
         estimated_in = rough_token_count(PLANNER_SYSTEM) + rough_token_count(prompt)
         if estimated_in > limits.planning_max_input_tokens:
-            return None, "The planning context was too large for one model call; the deterministic outline is shown.", (AdapterMode.FIXTURE, None)
+            return (
+                None,
+                "The planning context was too large for one model call; the deterministic outline is shown.",
+                (AdapterMode.FIXTURE, None),
+            )
 
         try:
             with reserved(
@@ -283,8 +283,16 @@ class PlannerService:
                 )
         except MetisError as exc:
             if exc.code is ErrorCode.BUDGET_EXCEEDED:
-                return None, "The daily model budget is reached; this is the deterministic outline.", (AdapterMode.FIXTURE, None)
-            return None, f"Contextual planning was unavailable ({exc.code.value}); this is the deterministic outline.", (AdapterMode.FIXTURE, None)
+                return (
+                    None,
+                    "The daily model budget is reached; this is the deterministic outline.",
+                    (AdapterMode.FIXTURE, None),
+                )
+            return (
+                None,
+                f"Contextual planning was unavailable ({exc.code.value}); this is the deterministic outline.",
+                (AdapterMode.FIXTURE, None),
+            )
 
         by_task = {b.task_id: b for b in blocks if b.task_id}
         for raw in payload.get("blocks", []) or []:
@@ -336,7 +344,9 @@ def _planner_prompt(snapshot: PlanningSnapshot, blocks: list[PlanBlock]) -> str:
     for block in blocks:
         if not block.task_id:
             continue
-        estimate = f"{block.estimate.minutes} min ({block.estimate.provenance})" if block.estimate else "no estimate"
+        estimate = (
+            f"{block.estimate.minutes} min ({block.estimate.provenance})" if block.estimate else "no estimate"
+        )
         lines.append(f"- task_id={block.task_id} title={block.title!r} estimate={estimate}")
     if snapshot.overflow_tasks:
         lines += ["", "Overflow (do not schedule, they do not fit):"]

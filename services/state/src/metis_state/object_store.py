@@ -231,7 +231,9 @@ class S3SourceStore:
     def delete(self, ref: ObjectRef) -> None:
         self._s3.delete_object(Bucket=ref.bucket or self.bucket, Key=ref.key)
 
-    def delete_prefix(self, prefix: str, *, cursor: str | None = None, batch: int = 500) -> tuple[int, str | None]:
+    def delete_prefix(
+        self, prefix: str, *, cursor: str | None = None, batch: int = 500
+    ) -> tuple[int, str | None]:
         """Resumable prefix delete for the purge job.
 
         Returns ``(deleted_count, next_cursor)``. A caller that runs out of time

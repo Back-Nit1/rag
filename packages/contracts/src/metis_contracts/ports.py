@@ -17,8 +17,9 @@ Rules that are easier to state once here than to re-derive per adapter:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date, datetime
-from typing import Any, Literal, Protocol, Sequence, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from .common import Page
 from .entities import (
@@ -111,7 +112,9 @@ class StateStore(Protocol):
     # --- jobs and outbox ---------------------------------------------------
     def claim_outbox(self, *, owner: str, limit: int, lease_seconds: int) -> list[OutboxEvent]: ...
 
-    def complete_outbox(self, event_id: str, *, user_id: str, state: str, error: str | None = None) -> None: ...
+    def complete_outbox(
+        self, event_id: str, *, user_id: str, state: str, error: str | None = None
+    ) -> None: ...
 
     def claim_job(self, job_id: str, *, user_id: str, owner: str, lease_seconds: int) -> Job | None: ...
 
@@ -252,7 +255,9 @@ class MemoryStore(Protocol):
     supports_metadata_filter: bool
     supports_lexical: bool
 
-    def upsert(self, user_id: str, memories: Sequence[Memory], vectors: Sequence[Sequence[float]]) -> None: ...
+    def upsert(
+        self, user_id: str, memories: Sequence[Memory], vectors: Sequence[Sequence[float]]
+    ) -> None: ...
 
     def query(
         self,

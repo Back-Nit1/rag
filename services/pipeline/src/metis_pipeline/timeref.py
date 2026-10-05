@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal
 
 from metis_contracts import ErrorCode, MetisError, resolve_timezone
@@ -27,8 +27,13 @@ from metis_contracts import ErrorCode, MetisError, resolve_timezone
 DstKind = Literal["ok", "nonexistent", "ambiguous"]
 
 _WEEKDAYS = {
-    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
-    "friday": 4, "saturday": 5, "sunday": 6,
+    "monday": 0,
+    "tuesday": 1,
+    "wednesday": 2,
+    "thursday": 3,
+    "friday": 4,
+    "saturday": 5,
+    "sunday": 6,
 }
 
 _TIME_WORDS = {"noon": time(12, 0), "midnight": time(0, 0)}
@@ -88,11 +93,9 @@ def to_instant(local_date: date, local_time: time, timezone_name: str) -> LocalR
 
     # Order matters: a spring-forward gap ALSO shows two different offsets, so
     # the nonexistent case must be ruled out before the ambiguous one.
-    round_tripped = first.astimezone(timezone.utc).astimezone(tz)
+    round_tripped = first.astimezone(UTC).astimezone(tz)
     if round_tripped.replace(tzinfo=None) != naive:
-        return LocalResolution(
-            local_date=local_date, local_time=local_time, instant=None, dst="nonexistent"
-        )
+        return LocalResolution(local_date=local_date, local_time=local_time, instant=None, dst="nonexistent")
 
     # Past the gap check, differing offsets mean an autumn-back overlap: this
     # wall clock happens twice, and which one is meant changes when a reminder
@@ -101,15 +104,15 @@ def to_instant(local_date: date, local_time: time, timezone_name: str) -> LocalR
         return LocalResolution(
             local_date=local_date,
             local_time=local_time,
-            instant=first.astimezone(timezone.utc),
+            instant=first.astimezone(UTC),
             dst="ambiguous",
-            ambiguous_alternatives=(first.astimezone(timezone.utc), second.astimezone(timezone.utc)),
+            ambiguous_alternatives=(first.astimezone(UTC), second.astimezone(UTC)),
         )
 
     return LocalResolution(
         local_date=local_date,
         local_time=local_time,
-        instant=first.astimezone(timezone.utc),
+        instant=first.astimezone(UTC),
         dst="ok",
     )
 
@@ -195,9 +198,7 @@ def parse_clock_time(text: str) -> time | None:
     return time(hour, minute)
 
 
-def resolve_phrase(
-    text: str, *, captured_at: datetime, capture_timezone: str
-) -> LocalResolution | None:
+def resolve_phrase(text: str, *, captured_at: datetime, capture_timezone: str) -> LocalResolution | None:
     """Best-effort resolution of "tomorrow at 9" style phrases.
 
     Returns ``None`` when no date phrase is present, so the caller asks instead

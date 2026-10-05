@@ -105,9 +105,7 @@ def cancel_reminder_route(reminder_id: str, ctx: Context) -> Reminder:
     reminder = ctx.state.get(ctx.user_id, "reminder", reminder_id)
     if reminder is None:
         raise MetisError(ErrorCode.NOT_FOUND, f"reminder {reminder_id} not found")
-    return cancel_reminder(
-        ctx.state, reminder, clock=ctx.adapters.clock, correlation_id=ctx.correlation_id
-    )
+    return cancel_reminder(ctx.state, reminder, clock=ctx.adapters.clock, correlation_id=ctx.correlation_id)
 
 
 @router.post("/reminders/{reminder_id}/snooze", response_model=Reminder)
@@ -124,8 +122,11 @@ def snooze(reminder_id: str, body: SnoozeReminderRequest, ctx: Context) -> Remin
             current_revision=reminder.revision,
         )
     return snooze_reminder(
-        ctx.state, reminder, minutes=body.snooze_minutes,
-        clock=ctx.adapters.clock, correlation_id=ctx.correlation_id,
+        ctx.state,
+        reminder,
+        minutes=body.snooze_minutes,
+        clock=ctx.adapters.clock,
+        correlation_id=ctx.correlation_id,
     )
 
 
@@ -152,9 +153,7 @@ def mark_read(notification_id: str, ctx: Context) -> Notification:
         )
 
 
-@router.post(
-    "/push-subscriptions", response_model=PushSubscription, status_code=status.HTTP_201_CREATED
-)
+@router.post("/push-subscriptions", response_model=PushSubscription, status_code=status.HTTP_201_CREATED)
 def register_push(body: RegisterPushRequest, ctx: Context) -> PushSubscription:
     """Register this user's browser push subscription.
 
@@ -163,8 +162,14 @@ def register_push(body: RegisterPushRequest, ctx: Context) -> PushSubscription:
     """
     now = ctx.adapters.clock.now()
     subscription = PushSubscription(
-        id=new_id("push"), user_id=ctx.user_id, created_at=now, updated_at=now,
-        endpoint=body.endpoint, p256dh=body.p256dh, auth=body.auth, user_agent=body.user_agent,
+        id=new_id("push"),
+        user_id=ctx.user_id,
+        created_at=now,
+        updated_at=now,
+        endpoint=body.endpoint,
+        p256dh=body.p256dh,
+        auth=body.auth,
+        user_agent=body.user_agent,
     )
     with ctx.state.transaction(ctx.user_id) as tx:
         return tx.put("push_subscription", subscription)

@@ -70,7 +70,9 @@ def get_project(project_id: str, ctx: Context) -> ProjectDetail:
                 memory_id=memory.id,
                 excerpt=memory.content[:2000],
                 recorded_at=memory.effective_at,
-                validity="historical" if memory.kind.value in ("attempt", "work_log") else memory.validity.value,
+                validity="historical"
+                if memory.kind.value in ("attempt", "work_log")
+                else memory.validity.value,
             ),
         )
         for memory in history
@@ -80,7 +82,11 @@ def get_project(project_id: str, ctx: Context) -> ProjectDetail:
     stale = bool(
         packet
         and any(
-            (ctx.state.get(ctx.user_id, "task", entity_id) or ctx.state.get(ctx.user_id, "project", entity_id)) is None
+            (
+                ctx.state.get(ctx.user_id, "task", entity_id)
+                or ctx.state.get(ctx.user_id, "project", entity_id)
+            )
+            is None
             or getattr(
                 ctx.state.get(ctx.user_id, "task", entity_id)
                 or ctx.state.get(ctx.user_id, "project", entity_id),
@@ -130,7 +136,9 @@ def search(body: SearchRequest, ctx: Context) -> SearchResponse:
                 memory_id=memory.id,
                 excerpt=memory.content[:2000],
                 recorded_at=memory.effective_at,
-                validity="historical" if memory.kind.value in ("attempt", "work_log") else memory.validity.value,
+                validity="historical"
+                if memory.kind.value in ("attempt", "work_log")
+                else memory.validity.value,
             ),
         )
         for memory, score in memories

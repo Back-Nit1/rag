@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from metis_contracts import (
@@ -19,7 +19,7 @@ from metis_contracts import (
 from metis_contracts.entities import Job
 from metis_state.sqlite_store import SqliteStateStore
 
-T0 = datetime(2026, 10, 5, 14, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)
 USER = "user_a"
 OTHER = "user_b"
 
@@ -141,11 +141,10 @@ def test_entity_and_outbox_commit_together(store):
 
 
 def test_a_failed_transaction_leaves_no_outbox_event(store):
-    with pytest.raises(RuntimeError):
-        with store.transaction(USER) as tx:
-            tx.put("task", make_task())
-            tx.append_outbox(outbox_event())
-            raise RuntimeError("worker crashed after the write")
+    with pytest.raises(RuntimeError), store.transaction(USER) as tx:
+        tx.put("task", make_task())
+        tx.append_outbox(outbox_event())
+        raise RuntimeError("worker crashed after the write")
     assert store.get(USER, "task", "task_1") is None
     assert store.claim_outbox(owner="w1", limit=10, lease_seconds=60) == []
 
@@ -197,8 +196,14 @@ def test_a_non_planning_record_does_not_bump_the_epoch(store):
         tx.put(
             "notification",
             __import__("metis_contracts").Notification(
-                id="not_1", user_id=USER, created_at=T0, updated_at=T0, title="t",
-                body="b", channel="in_app", dedupe_key="d1",
+                id="not_1",
+                user_id=USER,
+                created_at=T0,
+                updated_at=T0,
+                title="t",
+                body="b",
+                channel="in_app",
+                dedupe_key="d1",
             ),
         )
     assert store.get_planning_epoch(USER) == 0
@@ -246,8 +251,13 @@ def test_events_filter_by_local_date_range(store):
         tx.put(
             "event",
             Event(
-                id="ev_1", user_id=USER, created_at=T0, updated_at=T0, title="Bloomberg event",
-                local_date=date(2026, 10, 8), timezone="America/New_York",
+                id="ev_1",
+                user_id=USER,
+                created_at=T0,
+                updated_at=T0,
+                title="Bloomberg event",
+                local_date=date(2026, 10, 8),
+                timezone="America/New_York",
             ),
         )
     assert store.list_events(USER, local_date=date(2026, 10, 8)).items
@@ -321,8 +331,13 @@ def test_settling_twice_is_idempotent(store, clock):
 
 def test_job_lease_is_exclusive_until_it_expires(store, clock):
     job = Job(
-        id="job_1", user_id=USER, created_at=T0, updated_at=T0, job_type="transcribe",
-        correlation_id="c1", idempotency_key="transcribe:src_1:1",
+        id="job_1",
+        user_id=USER,
+        created_at=T0,
+        updated_at=T0,
+        job_type="transcribe",
+        correlation_id="c1",
+        idempotency_key="transcribe:src_1:1",
     )
     with store.transaction(USER) as tx:
         tx.put("job", job)
@@ -334,8 +349,13 @@ def test_job_lease_is_exclusive_until_it_expires(store, clock):
 
 def test_terminal_job_state_clears_the_lease(store):
     job = Job(
-        id="job_1", user_id=USER, created_at=T0, updated_at=T0, job_type="transcribe",
-        correlation_id="c1", idempotency_key="transcribe:src_1:1",
+        id="job_1",
+        user_id=USER,
+        created_at=T0,
+        updated_at=T0,
+        job_type="transcribe",
+        correlation_id="c1",
+        idempotency_key="transcribe:src_1:1",
     )
     with store.transaction(USER) as tx:
         tx.put("job", job)

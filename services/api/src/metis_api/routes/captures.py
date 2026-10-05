@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Request, Response, status
 from metis_contracts import ErrorCode, MetisError, ObjectRef, settings
 from metis_contracts.api import (
@@ -36,9 +34,7 @@ def create_capture(body: CreateCaptureRequest, ctx: Context) -> CreateCaptureRes
 
 
 @router.post("/captures/{capture_id}/complete", response_model=CompleteCaptureResponse)
-def complete_capture(
-    capture_id: str, body: CompleteCaptureRequest, ctx: Context
-) -> CompleteCaptureResponse:
+def complete_capture(capture_id: str, body: CompleteCaptureRequest, ctx: Context) -> CompleteCaptureResponse:
     # A duplicate completion must not start a second logical inference job.
     ctx.require_idempotency_key()
     if replayed := ctx.replay():
@@ -54,9 +50,7 @@ def get_capture(capture_id: str, ctx: Context) -> CaptureDetail:
 
 
 @router.patch("/captures/{capture_id}/transcript", response_model=CaptureDetail)
-def patch_transcript(
-    capture_id: str, body: PatchTranscriptRequest, ctx: Context
-) -> CaptureDetail:
+def patch_transcript(capture_id: str, body: PatchTranscriptRequest, ctx: Context) -> CaptureDetail:
     return services.patch_transcript(ctx, capture_id, body)
 
 

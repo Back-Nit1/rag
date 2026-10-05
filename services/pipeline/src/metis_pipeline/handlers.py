@@ -7,7 +7,6 @@ dispatcher stays single.
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -17,7 +16,6 @@ from metis_contracts import (
     EventType,
     JobState,
     MetisError,
-    ObjectRef,
     OutboxEvent,
     SourceLifecycle,
     TranscriptionJobInput,
@@ -94,9 +92,15 @@ def handle_capture_completed(envelope: EventEnvelope, context: DispatchContext) 
     if job is None:
         now = context.clock.now()
         job = Job(
-            id=job_id, user_id=envelope.user_id, created_at=now, updated_at=now,
-            job_type="transcribe", state=JobState.TRANSCRIBING, target_id=source.id,
-            target_revision=source.current_version, correlation_id=envelope.correlation_id,
+            id=job_id,
+            user_id=envelope.user_id,
+            created_at=now,
+            updated_at=now,
+            job_type="transcribe",
+            state=JobState.TRANSCRIBING,
+            target_id=source.id,
+            target_revision=source.current_version,
+            correlation_id=envelope.correlation_id,
             idempotency_key=envelope.idempotency_key,
         )
         with state.transaction(envelope.user_id) as tx:
@@ -372,13 +376,18 @@ def handle_capture_deleted(envelope: EventEnvelope, context: DispatchContext) ->
             if task.source_unavailable:
                 continue
             with state.transaction(envelope.user_id) as tx:
-                tx.put("task", task.model_copy(update={"source_unavailable": True}),
-                       expected_revision=task.revision)
+                tx.put(
+                    "task",
+                    task.model_copy(update={"source_unavailable": True}),
+                    expected_revision=task.revision,
+                )
 
     state.purge(envelope.user_id, "source", payload.target_id)
     log.info(
         "purged capture=%s memories=%d commitments_deleted=%s",
-        payload.target_id, len(memory_ids), payload.delete_commitments,
+        payload.target_id,
+        len(memory_ids),
+        payload.delete_commitments,
     )
 
 
@@ -419,7 +428,8 @@ def _reminders_for_source(state: Any, user_id: str, source_id: str) -> list[Any]
     reminders: list[Any] = []
     for task_id in tasks:
         reminders.extend(
-            r for r in state.list_reminders_for_target(user_id, task_id)
+            r
+            for r in state.list_reminders_for_target(user_id, task_id)
             if r.state not in ("canceled", "delivered", "superseded")
         )
     return reminders

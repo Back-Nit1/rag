@@ -6,7 +6,7 @@ import logging
 
 from metis_contracts import ErrorCode, EventEnvelope, EventType, MetisError
 from metis_contracts.events import MemoryIndexPayload, PurgePayload
-from metis_pipeline.dispatcher import DispatchContext, HandlerRegistry, is_fresh
+from metis_pipeline.dispatcher import DispatchContext, HandlerRegistry
 
 from .ingestion import needs_embedding
 

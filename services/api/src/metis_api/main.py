@@ -42,7 +42,10 @@ async def lifespan(app: FastAPI):
     app.state.adapters = build_adapters()
     log.info(
         "metis api ready mode=%s env=%s contract=v%s adapters=%s",
-        cfg.mode.value, cfg.environment, CONTRACT_VERSION, app.state.adapters.describe(),
+        cfg.mode.value,
+        cfg.environment,
+        CONTRACT_VERSION,
+        app.state.adapters.describe(),
     )
     if cfg.environment != "prod" and cfg.allow_fixture_identity:
         log.warning("fixture identity is ENABLED; this configuration is for development only")
@@ -88,7 +91,11 @@ def create_app() -> FastAPI:
         response.headers["X-Correlation-Id"] = correlation_id
         log.info(
             "%s %s -> %s in %dms correlation=%s",
-            request.method, request.url.path, response.status_code, duration_ms, correlation_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            correlation_id,
         )
         return response
 
@@ -104,7 +111,9 @@ def create_app() -> FastAPI:
             for error in exc.errors()[:10]
         }
         return _error_response(
-            MetisError(ErrorCode.VALIDATION_FAILED, "the request did not match the contract", details=details),
+            MetisError(
+                ErrorCode.VALIDATION_FAILED, "the request did not match the contract", details=details
+            ),
             getattr(request.state, "correlation_id", None),
         )
 
@@ -113,9 +122,7 @@ def create_app() -> FastAPI:
         correlation_id = getattr(request.state, "correlation_id", None)
         # The message is deliberately generic: internal details stay in logs.
         log.exception("unhandled error correlation=%s", correlation_id)
-        return _error_response(
-            MetisError(ErrorCode.INTERNAL, "an unexpected error occurred"), correlation_id
-        )
+        return _error_response(MetisError(ErrorCode.INTERNAL, "an unexpected error occurred"), correlation_id)
 
     for module in (captures, tasks, reminders, plans, projects, notifications):
         app.include_router(module.router)
@@ -134,9 +141,7 @@ def _error_response(exc: MetisError, correlation_id: str | None) -> JSONResponse
         headers["Retry-After"] = str(exc.retry_after_seconds)
     if correlation_id:
         headers["X-Correlation-Id"] = correlation_id
-    return JSONResponse(
-        status_code=exc.status_code, content=body.model_dump(mode="json"), headers=headers
-    )
+    return JSONResponse(status_code=exc.status_code, content=body.model_dump(mode="json"), headers=headers)
 
 
 app = create_app()

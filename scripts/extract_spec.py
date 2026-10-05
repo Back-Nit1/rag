@@ -61,7 +61,9 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     for name, body in sorted(blocks.items()):
         target = out / f"{name}.md"
-        header = f"<!-- Extracted from {src.name}; block `{name}`. Do not edit here; edit the source spec. -->\n\n"
+        header = (
+            f"<!-- Extracted from {src.name}; block `{name}`. Do not edit here; edit the source spec. -->\n\n"
+        )
         target.write_text(header + body, encoding="utf-8")
         print(f"wrote {target} ({len(body.splitlines())} lines)")
     return 0

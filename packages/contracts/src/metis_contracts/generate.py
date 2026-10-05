@@ -221,7 +221,9 @@ def main() -> int:
             stale.unlink()
     for path, body in artifacts.items():
         path.write_text(body)
-    print(f"wrote {len(artifacts)} artifacts to {SCHEMA_DIR.relative_to(ROOT)} and {TS_DIR.relative_to(ROOT)}")
+    print(
+        f"wrote {len(artifacts)} artifacts to {SCHEMA_DIR.relative_to(ROOT)} and {TS_DIR.relative_to(ROOT)}"
+    )
     return 0
 
 
