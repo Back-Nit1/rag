@@ -48,8 +48,14 @@ export function readConfig(scope: Construct, envName: MetisConfig['envName']): M
   };
 }
 
-/** `metis-<env>-<name>`, so two environments can share an account safely. */
-export function resourceName(stack: Stack, config: MetisConfig, name: string): string {
+/**
+ * `metis-<env>-<name>`, so two environments can share an account safely.
+ *
+ * The stack is taken but unused: every caller already passes `this`, and the
+ * name is intentionally stack-independent so moving a resource between stacks
+ * does not rename (and therefore replace) it.
+ */
+export function resourceName(_stack: Stack, config: MetisConfig, name: string): string {
   return `metis-${config.envName}-${name}`;
 }
 

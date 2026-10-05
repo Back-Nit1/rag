@@ -44,8 +44,11 @@ def _worker_context() -> Any:
 def outbox(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """SQS-triggered outbox dispatch.
 
-    Partial batch failures are reported so successfully handled messages are
-    not redelivered; the rest return to the queue with their own retry budget.
+    The SQS message is only a wake-up. Retry state lives in the outbox row
+    itself (``state`` plus ``available_at``), which the dispatcher re-reads, so
+    the batch is always reported as fully consumed: redelivering the message
+    would duplicate a trigger, not recover a failure. A row that failed stays
+    claimable and is picked up by the next invocation or the timer.
     """
     from metis_pipeline.dispatcher import OutboxDispatcher
     from metis_pipeline.local_worker import build_registry
