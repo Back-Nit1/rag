@@ -1,0 +1,13 @@
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/node_modules
+**/.venv
+infra/cdk.out
+apps/web/dist
+.git
+.metis
+*.sqlite
+fixtures/audio

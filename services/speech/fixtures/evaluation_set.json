@@ -1,0 +1,201 @@
+{
+  "_note": "Synthetic evaluation references for the owned ASR service. No audio bytes are committed and no recording of a real person is included. To measure the real decoder, record each reference yourself into fixtures/audio/<id>.webm, run the worker over them, and pass the resulting transcripts via --hypotheses.",
+  "normalization": "NFKC, casefold, strip punctuation except ' and -, collapse whitespace",
+  "splits": {
+    "dev": "tuning is allowed",
+    "heldout": "do not tune decode parameters on these"
+  },
+  "items": [
+    {
+      "id": "ev_clean_01",
+      "split": "dev",
+      "category": "clean",
+      "reference": "There is a Bloomberg event in New York I want to go to.",
+      "names": [
+        "Bloomberg",
+        "New York"
+      ]
+    },
+    {
+      "id": "ev_clean_02",
+      "split": "dev",
+      "category": "clean",
+      "reference": "Remind me to register and help me prepare.",
+      "names": []
+    },
+    {
+      "id": "ev_clean_03",
+      "split": "dev",
+      "category": "clean",
+      "reference": "Plan today around my event, studying, applications, and Cerno.",
+      "names": [
+        "Cerno"
+      ]
+    },
+    {
+      "id": "ev_names_01",
+      "split": "dev",
+      "category": "names",
+      "reference": "On Cerno, the review keeps re-reading files.",
+      "names": [
+        "Cerno"
+      ]
+    },
+    {
+      "id": "ev_names_02",
+      "split": "dev",
+      "category": "names",
+      "reference": "Themis and Cerno both need a decision this week.",
+      "names": [
+        "Themis",
+        "Cerno"
+      ]
+    },
+    {
+      "id": "ev_names_03",
+      "split": "heldout",
+      "category": "names",
+      "reference": "The Bloomberg event is in New York, not Boston.",
+      "names": [
+        "Bloomberg",
+        "New York",
+        "Boston"
+      ]
+    },
+    {
+      "id": "ev_dates_01",
+      "split": "dev",
+      "category": "dates",
+      "reference": "The application is due on the twelfth, not the eighth.",
+      "names": []
+    },
+    {
+      "id": "ev_dates_02",
+      "split": "dev",
+      "category": "dates",
+      "reference": "Remind me tomorrow at nine to register.",
+      "names": []
+    },
+    {
+      "id": "ev_dates_03",
+      "split": "heldout",
+      "category": "dates",
+      "reference": "Move it to next Friday at six pm.",
+      "names": []
+    },
+    {
+      "id": "ev_dates_04",
+      "split": "heldout",
+      "category": "dates",
+      "reference": "I have about forty minutes tomorrow afternoon.",
+      "names": []
+    },
+    {
+      "id": "ev_neg_01",
+      "split": "dev",
+      "category": "negation",
+      "reference": "I am not going to the workshop.",
+      "names": []
+    },
+    {
+      "id": "ev_neg_02",
+      "split": "dev",
+      "category": "negation",
+      "reference": "I never finished the caching work.",
+      "names": []
+    },
+    {
+      "id": "ev_neg_03",
+      "split": "heldout",
+      "category": "negation",
+      "reference": "Do not remind me about this again.",
+      "names": []
+    },
+    {
+      "id": "ev_neg_04",
+      "split": "heldout",
+      "category": "negation",
+      "reference": "I tried Kafka and abandoned it, so do not suggest it.",
+      "names": [
+        "Kafka"
+      ]
+    },
+    {
+      "id": "ev_fast_01",
+      "split": "dev",
+      "category": "fast",
+      "reference": "I tried caching whole files but it got stale after changes so next I want to test diff-aware invalidation.",
+      "names": []
+    },
+    {
+      "id": "ev_fast_02",
+      "split": "dev",
+      "category": "fast",
+      "reference": "Study, applications, Cerno, and the event all need time today.",
+      "names": [
+        "Cerno"
+      ]
+    },
+    {
+      "id": "ev_fast_03",
+      "split": "heldout",
+      "category": "fast",
+      "reference": "Register, prepare the talk, and book the travel before Thursday.",
+      "names": []
+    },
+    {
+      "id": "ev_pause_01",
+      "split": "dev",
+      "category": "pauses",
+      "reference": "So... the review... keeps re-reading files.",
+      "names": []
+    },
+    {
+      "id": "ev_pause_02",
+      "split": "heldout",
+      "category": "pauses",
+      "reference": "I think, maybe, I should go to that Themis workshop.",
+      "names": [
+        "Themis"
+      ]
+    },
+    {
+      "id": "ev_noise_01",
+      "split": "dev",
+      "category": "noise",
+      "reference": "There is a Bloomberg event in New York I want to attend.",
+      "names": [
+        "Bloomberg",
+        "New York"
+      ]
+    },
+    {
+      "id": "ev_noise_02",
+      "split": "heldout",
+      "category": "noise",
+      "reference": "Remind me to register for the event on the eighth.",
+      "names": []
+    },
+    {
+      "id": "ev_silence_01",
+      "split": "dev",
+      "category": "silence",
+      "reference": "",
+      "names": []
+    },
+    {
+      "id": "ev_silence_02",
+      "split": "heldout",
+      "category": "silence",
+      "reference": "",
+      "names": []
+    },
+    {
+      "id": "ev_nonspeech_01",
+      "split": "heldout",
+      "category": "nonspeech",
+      "reference": "",
+      "names": []
+    }
+  ]
+}

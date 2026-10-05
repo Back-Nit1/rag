@@ -1,0 +1,24 @@
+[project]
+name = "metis-speech"
+version = "0.1.0"
+description = "Metis owned speech-to-text service (pretrained open-source Whisper weights, self-hosted)"
+requires-python = ">=3.12"
+dependencies = ["metis-contracts"]
+
+[project.optional-dependencies]
+# Installed in the worker container only. Pinned, not tracking main: the
+# decode path must be reproducible across image builds.
+asr = [
+  "faster-whisper==1.0.3",
+  "ctranslate2==4.4.0",
+  "av==12.3.0",
+  "numpy>=1.26,<2",
+]
+cloud = ["boto3>=1.35"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/metis_speech"]

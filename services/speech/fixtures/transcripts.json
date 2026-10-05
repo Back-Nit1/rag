@@ -1,0 +1,14 @@
+{
+  "_note": "Synthetic fixture transcripts for local mode. No real recording, event, venue or person is described here. Keys are object-key stems or sha256 prefixes of audio bytes.",
+  "by_key": {
+    "src_demo_bloomberg": "There is a Bloomberg event in New York I want to go to. Remind me to register and help me prepare.",
+    "src_demo_cerno": "On Cerno, the review keeps re-reading files. I tried caching whole files but it got stale after changes. Next I want to test diff-aware invalidation. I have about forty minutes tomorrow.",
+    "src_demo_plan": "Plan today around my event, studying, applications, and Cerno.",
+    "src_demo_registered": "I already registered for the Bloomberg event.",
+    "src_demo_cancel": "Cancel the Bloomberg event, I am not going.",
+    "src_demo_deadline_change": "The application is actually due on the twelfth, not the eighth.",
+    "src_demo_tentative": "Maybe I should go to that Themis workshop at some point.",
+    "src_demo_failed_attempt": "I tried diff-aware invalidation and it failed, the diffs were too coarse.",
+    "src_demo_silence": ""
+  }
+}
