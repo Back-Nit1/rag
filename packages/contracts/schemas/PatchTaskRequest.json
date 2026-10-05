@@ -1,0 +1,208 @@
+{
+  "$defs": {
+    "Estimate": {
+      "additionalProperties": false,
+      "description": "A duration estimate that always declares where it came from.",
+      "properties": {
+        "minutes": {
+          "maximum": 1440,
+          "minimum": 0,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "minutes_max": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minutes Max"
+        },
+        "provenance": {
+          "enum": [
+            "user",
+            "inferred",
+            "default"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minutes",
+        "provenance"
+      ],
+      "title": "Estimate",
+      "type": "object"
+    },
+    "TaskState": {
+      "enum": [
+        "inbox",
+        "ready",
+        "in_progress",
+        "blocked",
+        "done",
+        "canceled"
+      ],
+      "title": "TaskState",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/PatchTaskRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Omitted key = unchanged. Explicit null = clear.",
+  "properties": {
+    "body": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Body"
+    },
+    "deadline_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deadline At"
+    },
+    "deadline_local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deadline Local Date"
+    },
+    "depends_on": {
+      "anyOf": [
+        {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Depends On"
+    },
+    "duration_estimate": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Estimate"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "priority": {
+      "anyOf": [
+        {
+          "maximum": 3,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Priority"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskState"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "timezone": {
+      "anyOf": [
+        {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timezone"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Title"
+    }
+  },
+  "required": [
+    "expected_revision"
+  ],
+  "title": "PatchTaskRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

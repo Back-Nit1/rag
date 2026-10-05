@@ -1,0 +1,236 @@
+{
+  "$defs": {
+    "Estimate": {
+      "additionalProperties": false,
+      "description": "A duration estimate that always declares where it came from.",
+      "properties": {
+        "minutes": {
+          "maximum": 1440,
+          "minimum": 0,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "minutes_max": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minutes Max"
+        },
+        "provenance": {
+          "enum": [
+            "user",
+            "inferred",
+            "default"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minutes",
+        "provenance"
+      ],
+      "title": "Estimate",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "description": "One retrieved, source-backed justification shown to the user.",
+      "properties": {
+        "excerpt": {
+          "maxLength": 2000,
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "memory_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Id"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        },
+        "validity": {
+          "default": "current",
+          "enum": [
+            "current",
+            "historical",
+            "superseded",
+            "uncertain"
+          ],
+          "title": "Validity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version",
+        "excerpt",
+        "recorded_at"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/PlanBlock.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "completion_criterion": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completion Criterion"
+    },
+    "ends_at": {
+      "format": "date-time",
+      "title": "Ends At",
+      "type": "string"
+    },
+    "estimate": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Estimate"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "event_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Id"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "fixed": {
+      "default": false,
+      "title": "Fixed",
+      "type": "boolean"
+    },
+    "next_steps": {
+      "items": {
+        "maxLength": 500,
+        "type": "string"
+      },
+      "title": "Next Steps",
+      "type": "array"
+    },
+    "pinned": {
+      "default": false,
+      "title": "Pinned",
+      "type": "boolean"
+    },
+    "rationale": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rationale"
+    },
+    "starts_at": {
+      "format": "date-time",
+      "title": "Starts At",
+      "type": "string"
+    },
+    "task_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Id"
+    },
+    "title": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "starts_at",
+    "ends_at",
+    "title"
+  ],
+  "title": "PlanBlock",
+  "type": "object",
+  "x-contract-version": 1
+}

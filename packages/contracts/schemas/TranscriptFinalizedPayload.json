@@ -1,0 +1,48 @@
+{
+  "$id": "https://metis.local/schemas/v1/TranscriptFinalizedPayload.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "edited_by_user": {
+      "default": false,
+      "title": "Edited By User",
+      "type": "boolean"
+    },
+    "recording_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Recording Id",
+      "type": "string"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    },
+    "text_length": {
+      "minimum": 0,
+      "title": "Text Length",
+      "type": "integer"
+    },
+    "transcript_object_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transcript Object Ref"
+    }
+  },
+  "required": [
+    "recording_id",
+    "source_version",
+    "text_length"
+  ],
+  "title": "TranscriptFinalizedPayload",
+  "type": "object",
+  "x-contract-version": 1
+}

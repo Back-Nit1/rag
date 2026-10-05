@@ -1,0 +1,75 @@
+{
+  "$id": "https://metis.local/schemas/v1/Evidence.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One retrieved, source-backed justification shown to the user.",
+  "properties": {
+    "excerpt": {
+      "maxLength": 2000,
+      "title": "Excerpt",
+      "type": "string"
+    },
+    "memory_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Memory Id"
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    },
+    "span_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Span Ref"
+    },
+    "validity": {
+      "default": "current",
+      "enum": [
+        "current",
+        "historical",
+        "superseded",
+        "uncertain"
+      ],
+      "title": "Validity",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_id",
+    "source_version",
+    "excerpt",
+    "recorded_at"
+  ],
+  "title": "Evidence",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,32 @@
+{
+  "$id": "https://metis.local/schemas/v1/CompleteCaptureResponse.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capture_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Capture Id",
+      "type": "string"
+    },
+    "job_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Job Id",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "capture_id",
+    "job_id",
+    "revision"
+  ],
+  "title": "CompleteCaptureResponse",
+  "type": "object",
+  "x-contract-version": 1
+}

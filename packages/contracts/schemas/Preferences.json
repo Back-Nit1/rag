@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "Budgets": {
+      "additionalProperties": false,
+      "description": "Enforced before paid calls, not merely displayed afterwards.",
+      "properties": {
+        "allow_escalation_model": {
+          "default": false,
+          "title": "Allow Escalation Model",
+          "type": "boolean"
+        },
+        "daily_micro_usd": {
+          "default": 500000,
+          "minimum": 0,
+          "title": "Daily Micro Usd",
+          "type": "integer"
+        },
+        "max_audio_seconds": {
+          "default": 300,
+          "maximum": 3600,
+          "minimum": 1,
+          "title": "Max Audio Seconds",
+          "type": "integer"
+        },
+        "max_extraction_input_tokens": {
+          "default": 4000,
+          "minimum": 256,
+          "title": "Max Extraction Input Tokens",
+          "type": "integer"
+        },
+        "max_extraction_output_tokens": {
+          "default": 1200,
+          "minimum": 128,
+          "title": "Max Extraction Output Tokens",
+          "type": "integer"
+        },
+        "max_planning_input_tokens": {
+          "default": 8000,
+          "minimum": 512,
+          "title": "Max Planning Input Tokens",
+          "type": "integer"
+        },
+        "max_planning_output_tokens": {
+          "default": 2000,
+          "minimum": 128,
+          "title": "Max Planning Output Tokens",
+          "type": "integer"
+        },
+        "max_speech_concurrency": {
+          "default": 1,
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Speech Concurrency",
+          "type": "integer"
+        },
+        "max_tool_iterations": {
+          "default": 4,
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Tool Iterations",
+          "type": "integer"
+        },
+        "max_upload_bytes": {
+          "default": 26214400,
+          "minimum": 1024,
+          "title": "Max Upload Bytes",
+          "type": "integer"
+        },
+        "monthly_micro_usd": {
+          "default": 10000000,
+          "minimum": 0,
+          "title": "Monthly Micro Usd",
+          "type": "integer"
+        }
+      },
+      "title": "Budgets",
+      "type": "object"
+    },
+    "DeliveryChannel": {
+      "enum": [
+        "in_app",
+        "web_push"
+      ],
+      "title": "DeliveryChannel",
+      "type": "string"
+    },
+    "TimeWindow": {
+      "additionalProperties": false,
+      "description": "Local wall-clock window, e.g. 09:00-17:00. Not an instant.",
+      "properties": {
+        "end": {
+          "pattern": "^\\d{2}:\\d{2}$",
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "pattern": "^\\d{2}:\\d{2}$",
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "TimeWindow",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/Preferences.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "break_minutes": {
+      "default": 10,
+      "maximum": 120,
+      "minimum": 0,
+      "title": "Break Minutes",
+      "type": "integer"
+    },
+    "budgets": {
+      "$ref": "#/$defs/Budgets"
+    },
+    "channels": {
+      "items": {
+        "$ref": "#/$defs/DeliveryChannel"
+      },
+      "title": "Channels",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "daily_planning_local_time": {
+      "default": "08:00",
+      "pattern": "^\\d{2}:\\d{2}$",
+      "title": "Daily Planning Local Time",
+      "type": "string"
+    },
+    "delete_commitments_with_source": {
+      "default": false,
+      "title": "Delete Commitments With Source",
+      "type": "boolean"
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Id",
+      "type": "string"
+    },
+    "max_focus_tasks": {
+      "default": 3,
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Max Focus Tasks",
+      "type": "integer"
+    },
+    "planning_horizon_days": {
+      "default": 7,
+      "maximum": 30,
+      "minimum": 1,
+      "title": "Planning Horizon Days",
+      "type": "integer"
+    },
+    "quiet_hours": {
+      "items": {
+        "$ref": "#/$defs/TimeWindow"
+      },
+      "title": "Quiet Hours",
+      "type": "array"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_retention_days": {
+      "default": 30,
+      "maximum": 3650,
+      "minimum": 1,
+      "title": "Source Retention Days",
+      "type": "integer"
+    },
+    "speech_model_id": {
+      "default": "small.en",
+      "title": "Speech Model Id",
+      "type": "string"
+    },
+    "timezone": {
+      "default": "America/New_York",
+      "examples": [
+        "America/New_York"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    },
+    "transition_minutes": {
+      "default": 0,
+      "maximum": 120,
+      "minimum": 0,
+      "title": "Transition Minutes",
+      "type": "integer"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "work_hours": {
+      "items": {
+        "$ref": "#/$defs/TimeWindow"
+      },
+      "title": "Work Hours",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "user_id",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "Preferences",
+  "type": "object",
+  "x-contract-version": 1
+}

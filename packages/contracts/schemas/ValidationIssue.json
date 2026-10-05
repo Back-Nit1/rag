@@ -1,0 +1,45 @@
+{
+  "$id": "https://metis.local/schemas/v1/ValidationIssue.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "block_index": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Block Index"
+    },
+    "code": {
+      "title": "Code",
+      "type": "string"
+    },
+    "message": {
+      "maxLength": 500,
+      "title": "Message",
+      "type": "string"
+    },
+    "severity": {
+      "default": "error",
+      "enum": [
+        "error",
+        "warning"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "title": "ValidationIssue",
+  "type": "object",
+  "x-contract-version": 1
+}

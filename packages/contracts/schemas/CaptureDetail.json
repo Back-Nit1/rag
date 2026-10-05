@@ -1,0 +1,1330 @@
+{
+  "$defs": {
+    "AdapterMode": {
+      "description": "Visible in every job result. A fixture must never claim production.",
+      "enum": [
+        "fixture",
+        "local",
+        "cloud"
+      ],
+      "title": "AdapterMode",
+      "type": "string"
+    },
+    "AttendanceStatus": {
+      "enum": [
+        "tentative",
+        "committed",
+        "declined",
+        "canceled"
+      ],
+      "title": "AttendanceStatus",
+      "type": "string"
+    },
+    "ConfidenceHint": {
+      "additionalProperties": false,
+      "description": "A routing hint only. Never evidence that a value is true.",
+      "properties": {
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "value": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "producer"
+      ],
+      "title": "ConfidenceHint",
+      "type": "object"
+    },
+    "Estimate": {
+      "additionalProperties": false,
+      "description": "A duration estimate that always declares where it came from.",
+      "properties": {
+        "minutes": {
+          "maximum": 1440,
+          "minimum": 0,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "minutes_max": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minutes Max"
+        },
+        "provenance": {
+          "enum": [
+            "user",
+            "inferred",
+            "default"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minutes",
+        "provenance"
+      ],
+      "title": "Estimate",
+      "type": "object"
+    },
+    "ExtractedItem": {
+      "additionalProperties": false,
+      "description": "One proposed structured record. Unknown fields stay None, never guessed.",
+      "properties": {
+        "attendance_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AttendanceStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "body": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceHint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "deadline_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline At"
+        },
+        "deadline_local_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline Local Date"
+        },
+        "duration_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Estimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/$defs/ExtractedItemKind"
+        },
+        "local_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Date"
+        },
+        "location_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location Text"
+        },
+        "missing_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "project_hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Hint"
+        },
+        "registration_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegistrationStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "remind_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remind At"
+        },
+        "remind_local_time": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{2}:\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remind Local Time"
+        },
+        "requested_actions": {
+          "items": {
+            "$ref": "#/$defs/RequestedAction"
+          },
+          "title": "Requested Actions",
+          "type": "array"
+        },
+        "starts_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Starts At"
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "examples": [
+                "America/New_York"
+              ],
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timezone"
+        },
+        "title": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "title"
+      ],
+      "title": "ExtractedItem",
+      "type": "object"
+    },
+    "ExtractedItemKind": {
+      "enum": [
+        "task",
+        "event_intent",
+        "thought",
+        "decision",
+        "work_log",
+        "reminder_request",
+        "preference",
+        "project_hint"
+      ],
+      "title": "ExtractedItemKind",
+      "type": "string"
+    },
+    "ExtractionProposal": {
+      "additionalProperties": false,
+      "description": "Model output after schema + semantic validation. Not yet authoritative.",
+      "properties": {
+        "adapter_mode": {
+          "$ref": "#/$defs/AdapterMode"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "created_entity_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Created Entity Ids",
+          "type": "array"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ProposalDisposition",
+          "default": "pending"
+        },
+        "extractor_version": {
+          "title": "Extractor Version",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ExtractedItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "prompt_version": {
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "range_count": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Range Count",
+          "type": "integer"
+        },
+        "range_index": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Range Index",
+          "type": "integer"
+        },
+        "requires_clarification": {
+          "default": false,
+          "title": "Requires Clarification",
+          "type": "boolean"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "unresolved_reason": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unresolved Reason"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "source_id",
+        "source_version",
+        "extractor_version",
+        "model_id",
+        "adapter_mode",
+        "prompt_version"
+      ],
+      "title": "ExtractionProposal",
+      "type": "object"
+    },
+    "FailureCategory": {
+      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable.",
+      "enum": [
+        "transient",
+        "throttled",
+        "validation",
+        "unsupported_media",
+        "limit_exceeded",
+        "budget_exceeded",
+        "provider_unavailable",
+        "permission_denied",
+        "superseded",
+        "internal"
+      ],
+      "title": "FailureCategory",
+      "type": "string"
+    },
+    "Job": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter_mode": {
+          "$ref": "#/$defs/AdapterMode",
+          "default": "fixture"
+        },
+        "attempts": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "error_message": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Message"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FailureCategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "job_type": {
+          "title": "Job Type",
+          "type": "string"
+        },
+        "lease_expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Expires At"
+        },
+        "lease_owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Owner"
+        },
+        "max_attempts": {
+          "default": 5,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Max Attempts",
+          "type": "integer"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "result_refs": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Result Refs",
+          "type": "object"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "state": {
+          "$ref": "#/$defs/JobState",
+          "default": "queued"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
+        },
+        "target_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Revision"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "job_type",
+        "correlation_id",
+        "idempotency_key"
+      ],
+      "title": "Job",
+      "type": "object"
+    },
+    "JobState": {
+      "description": "Shared by capture/transcription/extraction/index/plan jobs.",
+      "enum": [
+        "uploading",
+        "queued",
+        "starting",
+        "transcribing",
+        "extracting",
+        "indexing",
+        "planning",
+        "ready",
+        "failed",
+        "canceled"
+      ],
+      "title": "JobState",
+      "type": "string"
+    },
+    "ObjectRef": {
+      "additionalProperties": false,
+      "description": "Private object-storage reference. Never a public or presigned URL at rest.",
+      "properties": {
+        "bucket": {
+          "title": "Bucket",
+          "type": "string"
+        },
+        "checksum_sha256": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checksum Sha256"
+        },
+        "content_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Type"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        }
+      },
+      "required": [
+        "bucket",
+        "key"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "ProposalDisposition": {
+      "enum": [
+        "pending",
+        "accepted",
+        "edited",
+        "dismissed",
+        "superseded",
+        "unresolved"
+      ],
+      "title": "ProposalDisposition",
+      "type": "string"
+    },
+    "RegistrationStatus": {
+      "description": "Never inferred from an intention to attend.",
+      "enum": [
+        "unknown",
+        "not_registered",
+        "registered"
+      ],
+      "title": "RegistrationStatus",
+      "type": "string"
+    },
+    "RequestedAction": {
+      "enum": [
+        "remind_to_register",
+        "prepare_for_event",
+        "remind_generic",
+        "plan_time"
+      ],
+      "title": "RequestedAction",
+      "type": "string"
+    },
+    "SourceArtifact": {
+      "additionalProperties": false,
+      "description": "Evidence of what the user said or imported. Immutable per source_version.",
+      "properties": {
+        "capture_timezone": {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Capture Timezone",
+          "type": "string"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "client_capture_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Client Capture Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current_version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Current Version",
+          "type": "integer"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        },
+        "error_message": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Message"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FailureCategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/SourceLifecycle"
+        },
+        "object_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "retention_expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retention Expires At"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "spans": {
+          "items": {
+            "$ref": "#/$defs/SourceSpan"
+          },
+          "title": "Spans",
+          "type": "array"
+        },
+        "tombstoned_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tombstoned At"
+        },
+        "transcripts": {
+          "items": {
+            "$ref": "#/$defs/TranscriptRevision"
+          },
+          "title": "Transcripts",
+          "type": "array"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "kind",
+        "lifecycle",
+        "capture_timezone",
+        "captured_at"
+      ],
+      "title": "SourceArtifact",
+      "type": "object"
+    },
+    "SourceKind": {
+      "enum": [
+        "audio",
+        "text",
+        "image",
+        "document"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "SourceLifecycle": {
+      "enum": [
+        "pending_upload",
+        "uploaded",
+        "processing",
+        "ready",
+        "failed",
+        "tombstoned"
+      ],
+      "title": "SourceLifecycle",
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Pointer to an immutable source revision, optionally a span within it.",
+      "properties": {
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "description": "Character range inside an immutable source revision.\n\nOffsets are Unicode code points of the source text \u2014 never bytes and never\nUTF-16 code units. Audio offsets are optional and independent.",
+      "properties": {
+        "audio_end_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio End Ms"
+        },
+        "audio_start_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio Start Ms"
+        },
+        "end_char": {
+          "minimum": 0,
+          "title": "End Char",
+          "type": "integer"
+        },
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "title": "Span Ref",
+          "type": "string"
+        },
+        "start_char": {
+          "minimum": 0,
+          "title": "Start Char",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "span_ref",
+        "source_id",
+        "source_version",
+        "start_char",
+        "end_char"
+      ],
+      "title": "SourceSpan",
+      "type": "object"
+    },
+    "SpeechMetadata": {
+      "additionalProperties": false,
+      "description": "Reproducibility record for one decode. Persisted with every result.",
+      "properties": {
+        "adapter_mode": {
+          "$ref": "#/$defs/AdapterMode"
+        },
+        "artifact_revision": {
+          "title": "Artifact Revision",
+          "type": "string"
+        },
+        "audio_seconds": {
+          "minimum": 0.0,
+          "title": "Audio Seconds",
+          "type": "number"
+        },
+        "beam_size": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Beam Size",
+          "type": "integer"
+        },
+        "cold_start": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cold Start"
+        },
+        "compute_type": {
+          "title": "Compute Type",
+          "type": "string"
+        },
+        "decode_seconds": {
+          "minimum": 0.0,
+          "title": "Decode Seconds",
+          "type": "number"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "language_detected": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language Detected"
+        },
+        "library_version": {
+          "title": "Library Version",
+          "type": "string"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "temperature": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Temperature",
+          "type": "number"
+        },
+        "vad_enabled": {
+          "title": "Vad Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id",
+        "artifact_revision",
+        "library_version",
+        "compute_type",
+        "beam_size",
+        "temperature",
+        "vad_enabled",
+        "language",
+        "adapter_mode",
+        "decode_seconds",
+        "audio_seconds"
+      ],
+      "title": "SpeechMetadata",
+      "type": "object"
+    },
+    "TranscriptRevision": {
+      "additionalProperties": false,
+      "description": "One accepted text revision of a source. Audio bytes are unchanged by an edit.",
+      "properties": {
+        "asr_text": {
+          "anyOf": [
+            {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asr Text"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "edited_by_user": {
+          "default": false,
+          "title": "Edited By User",
+          "type": "boolean"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/TranscriptSegment"
+          },
+          "title": "Segments",
+          "type": "array"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "speech": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpeechMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text": {
+          "maxLength": 100000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version",
+        "text",
+        "created_at"
+      ],
+      "title": "TranscriptRevision",
+      "type": "object"
+    },
+    "TranscriptSegment": {
+      "additionalProperties": false,
+      "description": "ASR output segment. Timing is audio timing, never a semantic event date.",
+      "properties": {
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "start_ms",
+        "end_ms",
+        "text"
+      ],
+      "title": "TranscriptSegment",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/CaptureDetail.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "created_event_ids": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 3,
+        "type": "string"
+      },
+      "title": "Created Event Ids",
+      "type": "array"
+    },
+    "created_task_ids": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 3,
+        "type": "string"
+      },
+      "title": "Created Task Ids",
+      "type": "array"
+    },
+    "jobs": {
+      "items": {
+        "$ref": "#/$defs/Job"
+      },
+      "title": "Jobs",
+      "type": "array"
+    },
+    "proposals": {
+      "items": {
+        "$ref": "#/$defs/ExtractionProposal"
+      },
+      "title": "Proposals",
+      "type": "array"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/TranscriptSegment"
+      },
+      "title": "Segments",
+      "type": "array"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceArtifact"
+    },
+    "transcript_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transcript Text"
+    }
+  },
+  "required": [
+    "source"
+  ],
+  "title": "CaptureDetail",
+  "type": "object",
+  "x-contract-version": 1
+}

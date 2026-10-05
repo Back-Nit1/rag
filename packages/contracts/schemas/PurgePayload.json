@@ -1,0 +1,42 @@
+{
+  "$id": "https://metis.local/schemas/v1/PurgePayload.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Resumable derived-data deletion. `cursor` lets a retry continue.",
+  "properties": {
+    "cursor": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cursor"
+    },
+    "delete_commitments": {
+      "default": false,
+      "title": "Delete Commitments",
+      "type": "boolean"
+    },
+    "target_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Target Id",
+      "type": "string"
+    },
+    "target_kind": {
+      "title": "Target Kind",
+      "type": "string"
+    }
+  },
+  "required": [
+    "target_id",
+    "target_kind"
+  ],
+  "title": "PurgePayload",
+  "type": "object",
+  "x-contract-version": 1
+}

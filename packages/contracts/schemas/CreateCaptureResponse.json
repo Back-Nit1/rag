@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "UploadInstructions": {
+      "additionalProperties": false,
+      "description": "Short-lived, owner-prefixed upload permission. The server picks the key.",
+      "properties": {
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "object"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Headers",
+          "type": "object"
+        },
+        "max_bytes": {
+          "minimum": 1,
+          "title": "Max Bytes",
+          "type": "integer"
+        },
+        "method": {
+          "default": "PUT",
+          "enum": [
+            "PUT",
+            "POST"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "object_key": {
+          "title": "Object Key",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "object_key",
+        "expires_at",
+        "max_bytes"
+      ],
+      "title": "UploadInstructions",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/CreateCaptureResponse.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capture_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Capture Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "upload": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UploadInstructions"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "capture_id",
+    "revision"
+  ],
+  "title": "CreateCaptureResponse",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,1232 @@
+{
+  "$defs": {
+    "AdapterMode": {
+      "description": "Visible in every job result. A fixture must never claim production.",
+      "enum": [
+        "fixture",
+        "local",
+        "cloud"
+      ],
+      "title": "AdapterMode",
+      "type": "string"
+    },
+    "AttendanceStatus": {
+      "enum": [
+        "tentative",
+        "committed",
+        "declined",
+        "canceled"
+      ],
+      "title": "AttendanceStatus",
+      "type": "string"
+    },
+    "AvailabilityBlock": {
+      "additionalProperties": false,
+      "description": "Manually captured fixed block. No external calendar provider required.",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "available",
+            "busy"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "local_date": {
+          "format": "date",
+          "title": "Local Date",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "timezone": {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        },
+        "window": {
+          "$ref": "#/$defs/TimeWindow"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "local_date",
+        "timezone",
+        "window",
+        "kind"
+      ],
+      "title": "AvailabilityBlock",
+      "type": "object"
+    },
+    "Estimate": {
+      "additionalProperties": false,
+      "description": "A duration estimate that always declares where it came from.",
+      "properties": {
+        "minutes": {
+          "maximum": 1440,
+          "minimum": 0,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "minutes_max": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minutes Max"
+        },
+        "provenance": {
+          "enum": [
+            "user",
+            "inferred",
+            "default"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minutes",
+        "provenance"
+      ],
+      "title": "Estimate",
+      "type": "object"
+    },
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "attendance_status": {
+          "$ref": "#/$defs/AttendanceStatus",
+          "default": "tentative"
+        },
+        "body": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
+        "canceled_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canceled At"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "ends_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ends At"
+        },
+        "external_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Ref"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "local_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Date"
+        },
+        "location_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location Text"
+        },
+        "meeting_link": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Meeting Link"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
+        "registration_deadline_local_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Registration Deadline Local Date"
+        },
+        "registration_status": {
+          "$ref": "#/$defs/RegistrationStatus",
+          "default": "unknown"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "starts_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Starts At"
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "examples": [
+                "America/New_York"
+              ],
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timezone"
+        },
+        "title": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_edited_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "User Edited Fields",
+          "type": "array"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        },
+        "venue_address": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Venue Address"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "title"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "description": "One retrieved, source-backed justification shown to the user.",
+      "properties": {
+        "excerpt": {
+          "maxLength": 2000,
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "memory_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Id"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        },
+        "validity": {
+          "default": "current",
+          "enum": [
+            "current",
+            "historical",
+            "superseded",
+            "uncertain"
+          ],
+          "title": "Validity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version",
+        "excerpt",
+        "recorded_at"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Plan": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accepted At"
+        },
+        "adapter_mode": {
+          "$ref": "#/$defs/AdapterMode",
+          "default": "fixture"
+        },
+        "assumptions": {
+          "items": {
+            "maxLength": 500,
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "blocks": {
+          "items": {
+            "$ref": "#/$defs/PlanBlock"
+          },
+          "title": "Blocks",
+          "type": "array"
+        },
+        "change_summary": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Change Summary"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "input_revisions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Input Revisions",
+          "type": "object"
+        },
+        "local_date": {
+          "format": "date",
+          "title": "Local Date",
+          "type": "string"
+        },
+        "model_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Id"
+        },
+        "overflow_task_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Overflow Task Ids",
+          "type": "array"
+        },
+        "planning_epoch": {
+          "minimum": 0,
+          "title": "Planning Epoch",
+          "type": "integer"
+        },
+        "prompt_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Version"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/PlanStatus",
+          "default": "pending"
+        },
+        "time_budget_minutes": {
+          "minimum": 0,
+          "title": "Time Budget Minutes",
+          "type": "integer"
+        },
+        "timezone": {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        },
+        "validation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlanValidation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "local_date",
+        "timezone",
+        "planning_epoch",
+        "time_budget_minutes"
+      ],
+      "title": "Plan",
+      "type": "object"
+    },
+    "PlanBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "completion_criterion": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Criterion"
+        },
+        "ends_at": {
+          "format": "date-time",
+          "title": "Ends At",
+          "type": "string"
+        },
+        "estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Estimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Id"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "fixed": {
+          "default": false,
+          "title": "Fixed",
+          "type": "boolean"
+        },
+        "next_steps": {
+          "items": {
+            "maxLength": 500,
+            "type": "string"
+          },
+          "title": "Next Steps",
+          "type": "array"
+        },
+        "pinned": {
+          "default": false,
+          "title": "Pinned",
+          "type": "boolean"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rationale"
+        },
+        "starts_at": {
+          "format": "date-time",
+          "title": "Starts At",
+          "type": "string"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        },
+        "title": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "starts_at",
+        "ends_at",
+        "title"
+      ],
+      "title": "PlanBlock",
+      "type": "object"
+    },
+    "PlanStatus": {
+      "enum": [
+        "pending",
+        "generating",
+        "proposed",
+        "accepted",
+        "invalidated",
+        "failed",
+        "fallback"
+      ],
+      "title": "PlanStatus",
+      "type": "string"
+    },
+    "PlanValidation": {
+      "additionalProperties": false,
+      "description": "Produced by application code. The model cannot mark its own plan valid.",
+      "properties": {
+        "capacity_minutes": {
+          "minimum": 0,
+          "title": "Capacity Minutes",
+          "type": "integer"
+        },
+        "checked_by": {
+          "const": "application",
+          "default": "application",
+          "title": "Checked By",
+          "type": "string"
+        },
+        "inputs_complete": {
+          "default": true,
+          "title": "Inputs Complete",
+          "type": "boolean"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "scheduled_minutes": {
+          "minimum": 0,
+          "title": "Scheduled Minutes",
+          "type": "integer"
+        },
+        "valid": {
+          "title": "Valid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "valid",
+        "capacity_minutes",
+        "scheduled_minutes"
+      ],
+      "title": "PlanValidation",
+      "type": "object"
+    },
+    "RegistrationStatus": {
+      "description": "Never inferred from an intention to attend.",
+      "enum": [
+        "unknown",
+        "not_registered",
+        "registered"
+      ],
+      "title": "RegistrationStatus",
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Pointer to an immutable source revision, optionally a span within it.",
+      "properties": {
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "Task": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
+        "canceled_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canceled At"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "deadline_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline At"
+        },
+        "deadline_local_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline Local Date"
+        },
+        "depends_on": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "duration_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Estimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "priority": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "source_unavailable": {
+          "default": false,
+          "title": "Source Unavailable",
+          "type": "boolean"
+        },
+        "state": {
+          "$ref": "#/$defs/TaskState",
+          "default": "inbox"
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "examples": [
+                "America/New_York"
+              ],
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timezone"
+        },
+        "title": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_edited_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "User Edited Fields",
+          "type": "array"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "title"
+      ],
+      "title": "Task",
+      "type": "object"
+    },
+    "TaskState": {
+      "enum": [
+        "inbox",
+        "ready",
+        "in_progress",
+        "blocked",
+        "done",
+        "canceled"
+      ],
+      "title": "TaskState",
+      "type": "string"
+    },
+    "TimeWindow": {
+      "additionalProperties": false,
+      "description": "Local wall-clock window, e.g. 09:00-17:00. Not an instant.",
+      "properties": {
+        "end": {
+          "pattern": "^\\d{2}:\\d{2}$",
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "pattern": "^\\d{2}:\\d{2}$",
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "TimeWindow",
+      "type": "object"
+    },
+    "ValidationIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "block_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Block Index"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "default": "error",
+          "enum": [
+            "error",
+            "warning"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "ValidationIssue",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/TodayResponse.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Deterministic authoritative view. Usable with no model or vector store.",
+  "properties": {
+    "availability": {
+      "items": {
+        "$ref": "#/$defs/AvailabilityBlock"
+      },
+      "title": "Availability",
+      "type": "array"
+    },
+    "availability_configured": {
+      "default": false,
+      "title": "Availability Configured",
+      "type": "boolean"
+    },
+    "fixed_events": {
+      "items": {
+        "$ref": "#/$defs/Event"
+      },
+      "title": "Fixed Events",
+      "type": "array"
+    },
+    "inputs_complete": {
+      "default": true,
+      "title": "Inputs Complete",
+      "type": "boolean"
+    },
+    "local_date": {
+      "format": "date",
+      "title": "Local Date",
+      "type": "string"
+    },
+    "open_tasks": {
+      "items": {
+        "$ref": "#/$defs/Task"
+      },
+      "title": "Open Tasks",
+      "type": "array"
+    },
+    "overdue_tasks": {
+      "items": {
+        "$ref": "#/$defs/Task"
+      },
+      "title": "Overdue Tasks",
+      "type": "array"
+    },
+    "plan": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Plan"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "plan_stale": {
+      "default": false,
+      "title": "Plan Stale",
+      "type": "boolean"
+    },
+    "plan_stale_reason": {
+      "anyOf": [
+        {
+          "maxLength": 300,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Plan Stale Reason"
+    },
+    "planning_epoch": {
+      "minimum": 0,
+      "title": "Planning Epoch",
+      "type": "integer"
+    },
+    "timezone": {
+      "examples": [
+        "America/New_York"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    }
+  },
+  "required": [
+    "local_date",
+    "timezone",
+    "planning_epoch"
+  ],
+  "title": "TodayResponse",
+  "type": "object",
+  "x-contract-version": 1
+}

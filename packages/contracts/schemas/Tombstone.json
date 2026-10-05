@@ -1,0 +1,100 @@
+{
+  "$id": "https://metis.local/schemas/v1/Tombstone.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Immediate access removal; async purge of derived copies follows.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Id",
+      "type": "string"
+    },
+    "purge_completed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Purge Completed At"
+    },
+    "purge_job_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Purge Job Id"
+    },
+    "reason": {
+      "enum": [
+        "user_delete",
+        "retention",
+        "admin"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "target_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Target Id",
+      "type": "string"
+    },
+    "target_kind": {
+      "title": "Target Kind",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "user_id",
+    "created_at",
+    "updated_at",
+    "target_id",
+    "target_kind",
+    "reason"
+  ],
+  "title": "Tombstone",
+  "type": "object",
+  "x-contract-version": 1
+}

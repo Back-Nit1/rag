@@ -1,0 +1,193 @@
+{
+  "$defs": {
+    "AttendanceStatus": {
+      "enum": [
+        "tentative",
+        "committed",
+        "declined",
+        "canceled"
+      ],
+      "title": "AttendanceStatus",
+      "type": "string"
+    },
+    "RegistrationStatus": {
+      "description": "Never inferred from an intention to attend.",
+      "enum": [
+        "unknown",
+        "not_registered",
+        "registered"
+      ],
+      "title": "RegistrationStatus",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/PatchEventRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attendance_status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AttendanceStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "body": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Body"
+    },
+    "ends_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ends At"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Local Date"
+    },
+    "location_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Text"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "registration_deadline_local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Registration Deadline Local Date"
+    },
+    "registration_status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RegistrationStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "starts_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Starts At"
+    },
+    "timezone": {
+      "anyOf": [
+        {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timezone"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Title"
+    },
+    "venue_address": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Venue Address"
+    }
+  },
+  "required": [
+    "expected_revision"
+  ],
+  "title": "PatchEventRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

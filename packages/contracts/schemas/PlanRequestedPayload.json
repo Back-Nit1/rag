@@ -1,0 +1,41 @@
+{
+  "$id": "https://metis.local/schemas/v1/PlanRequestedPayload.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "local_date": {
+      "title": "Local Date",
+      "type": "string"
+    },
+    "plan_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "planning_epoch": {
+      "minimum": 0,
+      "title": "Planning Epoch",
+      "type": "integer"
+    },
+    "time_budget_minutes": {
+      "minimum": 0,
+      "title": "Time Budget Minutes",
+      "type": "integer"
+    },
+    "timezone": {
+      "title": "Timezone",
+      "type": "string"
+    }
+  },
+  "required": [
+    "plan_id",
+    "local_date",
+    "timezone",
+    "time_budget_minutes",
+    "planning_epoch"
+  ],
+  "title": "PlanRequestedPayload",
+  "type": "object",
+  "x-contract-version": 1
+}

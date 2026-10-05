@@ -1,0 +1,365 @@
+{
+  "$defs": {
+    "AttendanceStatus": {
+      "enum": [
+        "tentative",
+        "committed",
+        "declined",
+        "canceled"
+      ],
+      "title": "AttendanceStatus",
+      "type": "string"
+    },
+    "ConfidenceHint": {
+      "additionalProperties": false,
+      "description": "A routing hint only. Never evidence that a value is true.",
+      "properties": {
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "value": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "producer"
+      ],
+      "title": "ConfidenceHint",
+      "type": "object"
+    },
+    "Estimate": {
+      "additionalProperties": false,
+      "description": "A duration estimate that always declares where it came from.",
+      "properties": {
+        "minutes": {
+          "maximum": 1440,
+          "minimum": 0,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "minutes_max": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minutes Max"
+        },
+        "provenance": {
+          "enum": [
+            "user",
+            "inferred",
+            "default"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minutes",
+        "provenance"
+      ],
+      "title": "Estimate",
+      "type": "object"
+    },
+    "ExtractedItemKind": {
+      "enum": [
+        "task",
+        "event_intent",
+        "thought",
+        "decision",
+        "work_log",
+        "reminder_request",
+        "preference",
+        "project_hint"
+      ],
+      "title": "ExtractedItemKind",
+      "type": "string"
+    },
+    "RegistrationStatus": {
+      "description": "Never inferred from an intention to attend.",
+      "enum": [
+        "unknown",
+        "not_registered",
+        "registered"
+      ],
+      "title": "RegistrationStatus",
+      "type": "string"
+    },
+    "RequestedAction": {
+      "enum": [
+        "remind_to_register",
+        "prepare_for_event",
+        "remind_generic",
+        "plan_time"
+      ],
+      "title": "RequestedAction",
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Pointer to an immutable source revision, optionally a span within it.",
+      "properties": {
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/ExtractedItem.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One proposed structured record. Unknown fields stay None, never guessed.",
+  "properties": {
+    "attendance_status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AttendanceStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "body": {
+      "anyOf": [
+        {
+          "maxLength": 20000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Body"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ConfidenceHint"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "deadline_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deadline At"
+    },
+    "deadline_local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deadline Local Date"
+    },
+    "duration_estimate": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Estimate"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/SourceRef"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "kind": {
+      "$ref": "#/$defs/ExtractedItemKind"
+    },
+    "local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Local Date"
+    },
+    "location_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Text"
+    },
+    "missing_fields": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing Fields",
+      "type": "array"
+    },
+    "project_hint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Hint"
+    },
+    "registration_status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RegistrationStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "remind_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Remind At"
+    },
+    "remind_local_time": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{2}:\\d{2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Remind Local Time"
+    },
+    "requested_actions": {
+      "items": {
+        "$ref": "#/$defs/RequestedAction"
+      },
+      "title": "Requested Actions",
+      "type": "array"
+    },
+    "starts_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Starts At"
+    },
+    "timezone": {
+      "anyOf": [
+        {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timezone"
+    },
+    "title": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "title"
+  ],
+  "title": "ExtractedItem",
+  "type": "object",
+  "x-contract-version": 1
+}

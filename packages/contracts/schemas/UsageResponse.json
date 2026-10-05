@@ -1,0 +1,73 @@
+{
+  "$id": "https://metis.local/schemas/v1/UsageResponse.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Measured inference usage is reported separately from infra estimates.",
+  "properties": {
+    "audio_seconds": {
+      "title": "Audio Seconds",
+      "type": "number"
+    },
+    "budget_exhausted": {
+      "default": false,
+      "title": "Budget Exhausted",
+      "type": "boolean"
+    },
+    "daily_limit_micro_usd": {
+      "title": "Daily Limit Micro Usd",
+      "type": "integer"
+    },
+    "estimated_infra_micro_usd": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Estimated Infra Micro Usd"
+    },
+    "local_date": {
+      "format": "date",
+      "title": "Local Date",
+      "type": "string"
+    },
+    "measured_model_micro_usd": {
+      "title": "Measured Model Micro Usd",
+      "type": "integer"
+    },
+    "model_calls": {
+      "title": "Model Calls",
+      "type": "integer"
+    },
+    "reserved_micro_usd": {
+      "title": "Reserved Micro Usd",
+      "type": "integer"
+    },
+    "speech_jobs": {
+      "title": "Speech Jobs",
+      "type": "integer"
+    },
+    "unmeasured_components": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unmeasured Components",
+      "type": "array"
+    }
+  },
+  "required": [
+    "local_date",
+    "measured_model_micro_usd",
+    "reserved_micro_usd",
+    "model_calls",
+    "audio_seconds",
+    "speech_jobs",
+    "daily_limit_micro_usd"
+  ],
+  "title": "UsageResponse",
+  "type": "object",
+  "x-contract-version": 1
+}

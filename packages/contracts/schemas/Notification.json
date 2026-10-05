@@ -1,0 +1,233 @@
+{
+  "$defs": {
+    "DeliveryChannel": {
+      "enum": [
+        "in_app",
+        "web_push"
+      ],
+      "title": "DeliveryChannel",
+      "type": "string"
+    },
+    "DeliveryStatus": {
+      "description": "Transport acceptance and a user read receipt are separate facts.",
+      "enum": [
+        "pending",
+        "accepted",
+        "failed",
+        "unsupported"
+      ],
+      "title": "DeliveryStatus",
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Pointer to an immutable source revision, optionally a span within it.",
+      "properties": {
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/Notification.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "accepted_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accepted At"
+    },
+    "body": {
+      "maxLength": 4000,
+      "title": "Body",
+      "type": "string"
+    },
+    "channel": {
+      "$ref": "#/$defs/DeliveryChannel"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "dedupe_key": {
+      "title": "Dedupe Key",
+      "type": "string"
+    },
+    "delivery_detail": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Delivery Detail"
+    },
+    "delivery_status": {
+      "$ref": "#/$defs/DeliveryStatus",
+      "default": "pending"
+    },
+    "dismissed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dismissed At"
+    },
+    "entity_links": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 3,
+        "type": "string"
+      },
+      "title": "Entity Links",
+      "type": "array"
+    },
+    "generated": {
+      "default": false,
+      "title": "Generated",
+      "type": "boolean"
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "read_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Read At"
+    },
+    "reminder_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reminder Id"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_refs": {
+      "items": {
+        "$ref": "#/$defs/SourceRef"
+      },
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "title": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "user_id",
+    "created_at",
+    "updated_at",
+    "title",
+    "body",
+    "channel",
+    "dedupe_key"
+  ],
+  "title": "Notification",
+  "type": "object",
+  "x-contract-version": 1
+}

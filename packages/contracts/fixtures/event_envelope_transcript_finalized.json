@@ -1,0 +1,18 @@
+{
+  "correlation_id": "run_demo_001",
+  "event_id": "evt_demo_001",
+  "event_type": "transcript.finalized",
+  "event_version": 1,
+  "idempotency_key": "transcript:src_demo_bloomberg:2",
+  "occurred_at": "2026-10-05T14:00:00Z",
+  "payload": {
+    "edited_by_user": true,
+    "recording_id": "src_demo_bloomberg",
+    "source_version": 2,
+    "text_length": 98,
+    "transcript_object_ref": "private-object-reference"
+  },
+  "target_id": "src_demo_bloomberg",
+  "target_revision": 2,
+  "user_id": "demo_authenticated_subject"
+}

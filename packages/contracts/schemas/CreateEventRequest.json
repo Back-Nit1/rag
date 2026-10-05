@@ -1,0 +1,159 @@
+{
+  "$defs": {
+    "AttendanceStatus": {
+      "enum": [
+        "tentative",
+        "committed",
+        "declined",
+        "canceled"
+      ],
+      "title": "AttendanceStatus",
+      "type": "string"
+    },
+    "RegistrationStatus": {
+      "description": "Never inferred from an intention to attend.",
+      "enum": [
+        "unknown",
+        "not_registered",
+        "registered"
+      ],
+      "title": "RegistrationStatus",
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Pointer to an immutable source revision, optionally a span within it.",
+      "properties": {
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/CreateEventRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attendance_status": {
+      "$ref": "#/$defs/AttendanceStatus",
+      "default": "tentative"
+    },
+    "ends_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ends At"
+    },
+    "local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Local Date"
+    },
+    "location_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Text"
+    },
+    "registration_status": {
+      "$ref": "#/$defs/RegistrationStatus",
+      "default": "unknown"
+    },
+    "source_refs": {
+      "items": {
+        "$ref": "#/$defs/SourceRef"
+      },
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "starts_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Starts At"
+    },
+    "timezone": {
+      "anyOf": [
+        {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timezone"
+    },
+    "title": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "title": "CreateEventRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "DeliveryChannel": {
+      "enum": [
+        "in_app",
+        "web_push"
+      ],
+      "title": "DeliveryChannel",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/CreateReminderRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "$ref": "#/$defs/DeliveryChannel",
+      "default": "in_app"
+    },
+    "expected_target_revision": {
+      "minimum": 1,
+      "title": "Expected Target Revision",
+      "type": "integer"
+    },
+    "local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Local Date"
+    },
+    "local_time": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{2}:\\d{2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Local Time"
+    },
+    "requires_generation": {
+      "default": false,
+      "title": "Requires Generation",
+      "type": "boolean"
+    },
+    "target_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Target Id",
+      "type": "string"
+    },
+    "target_kind": {
+      "enum": [
+        "task",
+        "event"
+      ],
+      "title": "Target Kind",
+      "type": "string"
+    },
+    "timezone": {
+      "examples": [
+        "America/New_York"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    },
+    "trigger_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trigger At"
+    }
+  },
+  "required": [
+    "target_id",
+    "target_kind",
+    "expected_target_revision",
+    "timezone"
+  ],
+  "title": "CreateReminderRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

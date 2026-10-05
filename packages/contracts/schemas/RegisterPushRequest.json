@@ -1,0 +1,42 @@
+{
+  "$id": "https://metis.local/schemas/v1/RegisterPushRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "auth": {
+      "title": "Auth",
+      "type": "string"
+    },
+    "endpoint": {
+      "maxLength": 2000,
+      "minLength": 10,
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "p256dh": {
+      "title": "P256Dh",
+      "type": "string"
+    },
+    "user_agent": {
+      "anyOf": [
+        {
+          "maxLength": 300,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "User Agent"
+    }
+  },
+  "required": [
+    "endpoint",
+    "p256dh",
+    "auth"
+  ],
+  "title": "RegisterPushRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

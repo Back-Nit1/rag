@@ -1,0 +1,51 @@
+{
+  "$id": "https://metis.local/schemas/v1/HealthResponse.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapters": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Adapters",
+      "type": "object"
+    },
+    "build": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Build"
+    },
+    "contract_version": {
+      "title": "Contract Version",
+      "type": "integer"
+    },
+    "mode": {
+      "title": "Mode",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "degraded"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "status",
+    "mode",
+    "adapters",
+    "contract_version"
+  ],
+  "title": "HealthResponse",
+  "type": "object",
+  "x-contract-version": 1
+}

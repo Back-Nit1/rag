@@ -1,0 +1,104 @@
+{
+  "$id": "https://metis.local/schemas/v1/TranscriptionJobInput.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Contract between the pipeline and the owned ASR worker.\n\n`user_id` is validated against the authenticated owner by the enqueuing\nservice; the worker additionally rejects an s3_key outside that owner's\nprefix.",
+  "properties": {
+    "beam_size": {
+      "default": 1,
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Beam Size",
+      "type": "integer"
+    },
+    "correlation_id": {
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "glossary": {
+      "items": {
+        "maxLength": 80,
+        "type": "string"
+      },
+      "title": "Glossary",
+      "type": "array"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "job_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Job Id",
+      "type": "string"
+    },
+    "language": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Language"
+    },
+    "max_audio_seconds": {
+      "default": 300,
+      "maximum": 3600,
+      "minimum": 1,
+      "title": "Max Audio Seconds",
+      "type": "integer"
+    },
+    "model_id": {
+      "default": "small.en",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "recording_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Recording Id",
+      "type": "string"
+    },
+    "s3_bucket": {
+      "title": "S3 Bucket",
+      "type": "string"
+    },
+    "s3_key": {
+      "title": "S3 Key",
+      "type": "string"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "vad_enabled": {
+      "default": true,
+      "title": "Vad Enabled",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "recording_id",
+    "user_id",
+    "source_version",
+    "s3_bucket",
+    "s3_key",
+    "idempotency_key",
+    "correlation_id",
+    "job_id"
+  ],
+  "title": "TranscriptionJobInput",
+  "type": "object",
+  "x-contract-version": 1
+}

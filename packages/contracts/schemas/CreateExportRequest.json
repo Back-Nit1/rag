@@ -1,0 +1,25 @@
+{
+  "$id": "https://metis.local/schemas/v1/CreateExportRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "include_commitments": {
+      "default": true,
+      "title": "Include Commitments",
+      "type": "boolean"
+    },
+    "include_memories": {
+      "default": true,
+      "title": "Include Memories",
+      "type": "boolean"
+    },
+    "include_sources": {
+      "default": true,
+      "title": "Include Sources",
+      "type": "boolean"
+    }
+  },
+  "title": "CreateExportRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,24 @@
+{
+  "$id": "https://metis.local/schemas/v1/JobAccepted.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Job Id",
+      "type": "string"
+    },
+    "state": {
+      "title": "State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "state"
+  ],
+  "title": "JobAccepted",
+  "type": "object",
+  "x-contract-version": 1
+}

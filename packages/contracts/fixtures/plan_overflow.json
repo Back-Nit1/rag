@@ -1,0 +1,87 @@
+{
+  "accepted_at": null,
+  "adapter_mode": "fixture",
+  "assumptions": [
+    "Availability was entered manually; no calendar provider is connected.",
+    "Event end time is unknown; 60 minutes is a visible default estimate."
+  ],
+  "blocks": [
+    {
+      "completion_criterion": "Confirmation page saved.",
+      "ends_at": "2026-10-06T14:30:00Z",
+      "estimate": {
+        "minutes": 90,
+        "minutes_max": null,
+        "provenance": "user"
+      },
+      "event_id": null,
+      "evidence": [],
+      "fixed": false,
+      "next_steps": [
+        "Collect the required documents",
+        "Fill the form",
+        "Submit"
+      ],
+      "pinned": true,
+      "rationale": "Deadline is 2026-10-12 and priority is explicit.",
+      "starts_at": "2026-10-06T13:00:00Z",
+      "task_id": "task_demo_apply",
+      "title": "Submit the application"
+    },
+    {
+      "completion_criterion": null,
+      "ends_at": "2026-10-06T16:00:00Z",
+      "estimate": {
+        "minutes": 60,
+        "minutes_max": null,
+        "provenance": "default"
+      },
+      "event_id": "event_demo_bloomberg",
+      "evidence": [],
+      "fixed": false,
+      "next_steps": [],
+      "pinned": false,
+      "rationale": "Event is on 2026-10-08; preparation is still active.",
+      "starts_at": "2026-10-06T15:00:00Z",
+      "task_id": null,
+      "title": "Prepare for the Bloomberg event"
+    }
+  ],
+  "change_summary": null,
+  "created_at": "2026-10-05T14:00:00Z",
+  "id": "plan_demo_overflow",
+  "input_revisions": {
+    "event_demo_bloomberg": 2,
+    "task_demo_apply": 4
+  },
+  "local_date": "2026-10-06",
+  "model_id": "fixture-plan",
+  "overflow_task_ids": [
+    "task_demo_invalidation",
+    "task_demo_study"
+  ],
+  "planning_epoch": 17,
+  "prompt_version": "plan/v1",
+  "revision": 1,
+  "schema_version": 1,
+  "status": "proposed",
+  "time_budget_minutes": 180,
+  "timezone": "America/New_York",
+  "updated_at": "2026-10-05T14:00:00Z",
+  "user_id": "demo_authenticated_subject",
+  "validation": {
+    "capacity_minutes": 180,
+    "checked_by": "application",
+    "inputs_complete": true,
+    "issues": [
+      {
+        "block_index": null,
+        "code": "capacity_exceeded",
+        "message": "2 tasks do not fit the remaining capacity.",
+        "severity": "warning"
+      }
+    ],
+    "scheduled_minutes": 150,
+    "valid": true
+  }
+}

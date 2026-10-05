@@ -1,0 +1,25 @@
+{
+  "$id": "https://metis.local/schemas/v1/SnoozeReminderRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "snooze_minutes": {
+      "maximum": 10080,
+      "minimum": 1,
+      "title": "Snooze Minutes",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "snooze_minutes"
+  ],
+  "title": "SnoozeReminderRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

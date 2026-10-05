@@ -1,0 +1,548 @@
+{
+  "$defs": {
+    "AdapterMode": {
+      "description": "Visible in every job result. A fixture must never claim production.",
+      "enum": [
+        "fixture",
+        "local",
+        "cloud"
+      ],
+      "title": "AdapterMode",
+      "type": "string"
+    },
+    "FailureCategory": {
+      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable.",
+      "enum": [
+        "transient",
+        "throttled",
+        "validation",
+        "unsupported_media",
+        "limit_exceeded",
+        "budget_exceeded",
+        "provider_unavailable",
+        "permission_denied",
+        "superseded",
+        "internal"
+      ],
+      "title": "FailureCategory",
+      "type": "string"
+    },
+    "ObjectRef": {
+      "additionalProperties": false,
+      "description": "Private object-storage reference. Never a public or presigned URL at rest.",
+      "properties": {
+        "bucket": {
+          "title": "Bucket",
+          "type": "string"
+        },
+        "checksum_sha256": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checksum Sha256"
+        },
+        "content_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Type"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        }
+      },
+      "required": [
+        "bucket",
+        "key"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "SourceKind": {
+      "enum": [
+        "audio",
+        "text",
+        "image",
+        "document"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "SourceLifecycle": {
+      "enum": [
+        "pending_upload",
+        "uploaded",
+        "processing",
+        "ready",
+        "failed",
+        "tombstoned"
+      ],
+      "title": "SourceLifecycle",
+      "type": "string"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "description": "Character range inside an immutable source revision.\n\nOffsets are Unicode code points of the source text \u2014 never bytes and never\nUTF-16 code units. Audio offsets are optional and independent.",
+      "properties": {
+        "audio_end_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio End Ms"
+        },
+        "audio_start_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio Start Ms"
+        },
+        "end_char": {
+          "minimum": 0,
+          "title": "End Char",
+          "type": "integer"
+        },
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "title": "Span Ref",
+          "type": "string"
+        },
+        "start_char": {
+          "minimum": 0,
+          "title": "Start Char",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "span_ref",
+        "source_id",
+        "source_version",
+        "start_char",
+        "end_char"
+      ],
+      "title": "SourceSpan",
+      "type": "object"
+    },
+    "SpeechMetadata": {
+      "additionalProperties": false,
+      "description": "Reproducibility record for one decode. Persisted with every result.",
+      "properties": {
+        "adapter_mode": {
+          "$ref": "#/$defs/AdapterMode"
+        },
+        "artifact_revision": {
+          "title": "Artifact Revision",
+          "type": "string"
+        },
+        "audio_seconds": {
+          "minimum": 0.0,
+          "title": "Audio Seconds",
+          "type": "number"
+        },
+        "beam_size": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Beam Size",
+          "type": "integer"
+        },
+        "cold_start": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cold Start"
+        },
+        "compute_type": {
+          "title": "Compute Type",
+          "type": "string"
+        },
+        "decode_seconds": {
+          "minimum": 0.0,
+          "title": "Decode Seconds",
+          "type": "number"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "language_detected": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language Detected"
+        },
+        "library_version": {
+          "title": "Library Version",
+          "type": "string"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "temperature": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Temperature",
+          "type": "number"
+        },
+        "vad_enabled": {
+          "title": "Vad Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id",
+        "artifact_revision",
+        "library_version",
+        "compute_type",
+        "beam_size",
+        "temperature",
+        "vad_enabled",
+        "language",
+        "adapter_mode",
+        "decode_seconds",
+        "audio_seconds"
+      ],
+      "title": "SpeechMetadata",
+      "type": "object"
+    },
+    "TranscriptRevision": {
+      "additionalProperties": false,
+      "description": "One accepted text revision of a source. Audio bytes are unchanged by an edit.",
+      "properties": {
+        "asr_text": {
+          "anyOf": [
+            {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asr Text"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "edited_by_user": {
+          "default": false,
+          "title": "Edited By User",
+          "type": "boolean"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/TranscriptSegment"
+          },
+          "title": "Segments",
+          "type": "array"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "speech": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpeechMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text": {
+          "maxLength": 100000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version",
+        "text",
+        "created_at"
+      ],
+      "title": "TranscriptRevision",
+      "type": "object"
+    },
+    "TranscriptSegment": {
+      "additionalProperties": false,
+      "description": "ASR output segment. Timing is audio timing, never a semantic event date.",
+      "properties": {
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "start_ms",
+        "end_ms",
+        "text"
+      ],
+      "title": "TranscriptSegment",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/SourceArtifact.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Evidence of what the user said or imported. Immutable per source_version.",
+  "properties": {
+    "capture_timezone": {
+      "examples": [
+        "America/New_York"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Capture Timezone",
+      "type": "string"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "client_capture_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Client Capture Id"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "current_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Current Version",
+      "type": "integer"
+    },
+    "duration_seconds": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Duration Seconds"
+    },
+    "error_message": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Message"
+    },
+    "failure": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FailureCategory"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/SourceKind"
+    },
+    "lifecycle": {
+      "$ref": "#/$defs/SourceLifecycle"
+    },
+    "object_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "retention_expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Retention Expires At"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "spans": {
+      "items": {
+        "$ref": "#/$defs/SourceSpan"
+      },
+      "title": "Spans",
+      "type": "array"
+    },
+    "tombstoned_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tombstoned At"
+    },
+    "transcripts": {
+      "items": {
+        "$ref": "#/$defs/TranscriptRevision"
+      },
+      "title": "Transcripts",
+      "type": "array"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "user_id",
+    "created_at",
+    "updated_at",
+    "kind",
+    "lifecycle",
+    "capture_timezone",
+    "captured_at"
+  ],
+  "title": "SourceArtifact",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,39 @@
+{
+  "attendance_status": "committed",
+  "body": null,
+  "canceled_at": null,
+  "created_at": "2026-10-05T14:00:00Z",
+  "ends_at": null,
+  "external_ref": null,
+  "id": "event_demo_bloomberg",
+  "local_date": "2026-10-08",
+  "location_text": "New York City",
+  "meeting_link": null,
+  "project_id": null,
+  "registration_deadline_local_date": null,
+  "registration_status": "not_registered",
+  "revision": 2,
+  "schema_version": 1,
+  "source_refs": [
+    {
+      "source_id": "src_demo_bloomberg",
+      "source_version": 1,
+      "span_ref": "span_001"
+    },
+    {
+      "source_id": "src_demo_clarification",
+      "source_version": 1,
+      "span_ref": null
+    }
+  ],
+  "starts_at": "2026-10-08T22:00:00Z",
+  "timezone": "America/New_York",
+  "title": "Bloomberg event",
+  "updated_at": "2026-10-05T14:05:00Z",
+  "user_edited_fields": [
+    "starts_at",
+    "attendance_status"
+  ],
+  "user_id": "demo_authenticated_subject",
+  "venue_address": null
+}

@@ -1,0 +1,51 @@
+{
+  "capture_timezone": "America/New_York",
+  "captured_at": "2026-10-05T14:00:00Z",
+  "client_capture_id": "cli_demo_0001",
+  "created_at": "2026-10-05T14:00:00Z",
+  "current_version": 1,
+  "duration_seconds": null,
+  "error_message": null,
+  "failure": null,
+  "id": "src_demo_bloomberg",
+  "kind": "text",
+  "lifecycle": "ready",
+  "object_ref": null,
+  "retention_expires_at": null,
+  "revision": 1,
+  "schema_version": 1,
+  "spans": [
+    {
+      "audio_end_ms": null,
+      "audio_start_ms": null,
+      "end_char": 44,
+      "source_id": "src_demo_bloomberg",
+      "source_version": 1,
+      "span_ref": "span_001",
+      "start_char": 0
+    },
+    {
+      "audio_end_ms": null,
+      "audio_start_ms": null,
+      "end_char": 97,
+      "source_id": "src_demo_bloomberg",
+      "source_version": 1,
+      "span_ref": "span_002",
+      "start_char": 55
+    }
+  ],
+  "tombstoned_at": null,
+  "transcripts": [
+    {
+      "asr_text": null,
+      "created_at": "2026-10-05T14:00:00Z",
+      "edited_by_user": false,
+      "segments": [],
+      "source_version": 1,
+      "speech": null,
+      "text": "There is a Bloomberg event in New York I want to go to. Remind me to register and help me prepare."
+    }
+  ],
+  "updated_at": "2026-10-05T14:00:00Z",
+  "user_id": "demo_authenticated_subject"
+}

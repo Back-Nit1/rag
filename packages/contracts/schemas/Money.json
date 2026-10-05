@@ -1,0 +1,28 @@
+{
+  "$id": "https://metis.local/schemas/v1/Money.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Cost figures are always labelled estimated vs measured.",
+  "properties": {
+    "basis": {
+      "enum": [
+        "measured",
+        "estimated"
+      ],
+      "title": "Basis",
+      "type": "string"
+    },
+    "micro_usd": {
+      "minimum": 0,
+      "title": "Micro Usd",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "micro_usd",
+    "basis"
+  ],
+  "title": "Money",
+  "type": "object",
+  "x-contract-version": 1
+}

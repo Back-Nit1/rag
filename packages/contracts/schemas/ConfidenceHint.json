@@ -1,0 +1,25 @@
+{
+  "$id": "https://metis.local/schemas/v1/ConfidenceHint.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A routing hint only. Never evidence that a value is true.",
+  "properties": {
+    "producer": {
+      "title": "Producer",
+      "type": "string"
+    },
+    "value": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Value",
+      "type": "number"
+    }
+  },
+  "required": [
+    "value",
+    "producer"
+  ],
+  "title": "ConfidenceHint",
+  "type": "object",
+  "x-contract-version": 1
+}

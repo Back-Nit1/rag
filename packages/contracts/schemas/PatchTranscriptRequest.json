@@ -1,0 +1,25 @@
+{
+  "$id": "https://metis.local/schemas/v1/PatchTranscriptRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "text": {
+      "maxLength": 100000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "text"
+  ],
+  "title": "PatchTranscriptRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

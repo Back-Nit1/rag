@@ -1,0 +1,51 @@
+{
+  "adapter_mode": "fixture",
+  "attempts": [
+    {
+      "outcome": "failed",
+      "recorded_at": "2026-10-05T14:00:00Z",
+      "source_refs": [
+        {
+          "source_id": "src_demo_cerno",
+          "source_version": 1,
+          "span_ref": "span_010"
+        }
+      ],
+      "summary": "Cached whole files; results went stale after changes."
+    }
+  ],
+  "blocker": "No invalidation rule for changed files.",
+  "completion_criterion": "A documented list of invalidation cases plus one failing-then-passing reproduction.",
+  "created_at": "2026-10-05T14:00:00Z",
+  "current_state": "Whole-file caching was implemented but went stale after edits.",
+  "estimate": {
+    "minutes": 40,
+    "minutes_max": null,
+    "provenance": "user"
+  },
+  "evidence": [
+    {
+      "excerpt": "I tried caching whole files but it got stale after changes.",
+      "memory_id": "mem_demo_cerno_attempt",
+      "recorded_at": "2026-10-05T14:00:00Z",
+      "source_id": "src_demo_cerno",
+      "source_version": 1,
+      "span_ref": "span_010",
+      "validity": "historical"
+    }
+  ],
+  "generated_at": "2026-10-05T14:00:00Z",
+  "id": "wp_demo_cerno",
+  "input_revisions": {
+    "proj_cerno": 2,
+    "task_demo_invalidation": 1
+  },
+  "next_action": "Write down the exact cases that must invalidate a cached result.",
+  "objective": "Stop the Cerno review re-reading unchanged files.",
+  "project_id": "proj_cerno",
+  "revision": 1,
+  "schema_version": 1,
+  "task_id": "task_demo_invalidation",
+  "updated_at": "2026-10-05T14:00:00Z",
+  "user_id": "demo_authenticated_subject"
+}

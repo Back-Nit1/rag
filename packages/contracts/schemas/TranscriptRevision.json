@@ -1,0 +1,206 @@
+{
+  "$defs": {
+    "AdapterMode": {
+      "description": "Visible in every job result. A fixture must never claim production.",
+      "enum": [
+        "fixture",
+        "local",
+        "cloud"
+      ],
+      "title": "AdapterMode",
+      "type": "string"
+    },
+    "SpeechMetadata": {
+      "additionalProperties": false,
+      "description": "Reproducibility record for one decode. Persisted with every result.",
+      "properties": {
+        "adapter_mode": {
+          "$ref": "#/$defs/AdapterMode"
+        },
+        "artifact_revision": {
+          "title": "Artifact Revision",
+          "type": "string"
+        },
+        "audio_seconds": {
+          "minimum": 0.0,
+          "title": "Audio Seconds",
+          "type": "number"
+        },
+        "beam_size": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Beam Size",
+          "type": "integer"
+        },
+        "cold_start": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cold Start"
+        },
+        "compute_type": {
+          "title": "Compute Type",
+          "type": "string"
+        },
+        "decode_seconds": {
+          "minimum": 0.0,
+          "title": "Decode Seconds",
+          "type": "number"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "language_detected": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language Detected"
+        },
+        "library_version": {
+          "title": "Library Version",
+          "type": "string"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "temperature": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Temperature",
+          "type": "number"
+        },
+        "vad_enabled": {
+          "title": "Vad Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id",
+        "artifact_revision",
+        "library_version",
+        "compute_type",
+        "beam_size",
+        "temperature",
+        "vad_enabled",
+        "language",
+        "adapter_mode",
+        "decode_seconds",
+        "audio_seconds"
+      ],
+      "title": "SpeechMetadata",
+      "type": "object"
+    },
+    "TranscriptSegment": {
+      "additionalProperties": false,
+      "description": "ASR output segment. Timing is audio timing, never a semantic event date.",
+      "properties": {
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "start_ms",
+        "end_ms",
+        "text"
+      ],
+      "title": "TranscriptSegment",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/TranscriptRevision.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One accepted text revision of a source. Audio bytes are unchanged by an edit.",
+  "properties": {
+    "asr_text": {
+      "anyOf": [
+        {
+          "maxLength": 100000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Asr Text"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "edited_by_user": {
+      "default": false,
+      "title": "Edited By User",
+      "type": "boolean"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/TranscriptSegment"
+      },
+      "title": "Segments",
+      "type": "array"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    },
+    "speech": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SpeechMetadata"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "text": {
+      "maxLength": 100000,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_version",
+    "text",
+    "created_at"
+  ],
+  "title": "TranscriptRevision",
+  "type": "object",
+  "x-contract-version": 1
+}

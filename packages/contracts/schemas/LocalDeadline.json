@@ -1,0 +1,29 @@
+{
+  "$id": "https://metis.local/schemas/v1/LocalDeadline.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A date-only deadline. Kept distinct from a precise instant on purpose.",
+  "properties": {
+    "local_date": {
+      "format": "date",
+      "title": "Local Date",
+      "type": "string"
+    },
+    "timezone": {
+      "examples": [
+        "America/New_York"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    }
+  },
+  "required": [
+    "local_date",
+    "timezone"
+  ],
+  "title": "LocalDeadline",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,63 @@
+{
+  "$id": "https://metis.local/schemas/v1/CreatePlanRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "focus_task_ids": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 3,
+        "type": "string"
+      },
+      "title": "Focus Task Ids",
+      "type": "array"
+    },
+    "local_date": {
+      "format": "date",
+      "title": "Local Date",
+      "type": "string"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    },
+    "time_budget_minutes": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Time Budget Minutes"
+    },
+    "timezone": {
+      "examples": [
+        "America/New_York"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    }
+  },
+  "required": [
+    "local_date",
+    "timezone"
+  ],
+  "title": "CreatePlanRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

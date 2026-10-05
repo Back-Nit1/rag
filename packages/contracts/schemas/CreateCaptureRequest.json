@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "SourceKind": {
+      "enum": [
+        "audio",
+        "text",
+        "image",
+        "document"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/CreateCaptureRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capture_timezone": {
+      "examples": [
+        "America/New_York"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Capture Timezone",
+      "type": "string"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "client_capture_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Client Capture Id"
+    },
+    "content_type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Content Type"
+    },
+    "duration_seconds": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Duration Seconds"
+    },
+    "expected_bytes": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Bytes"
+    },
+    "kind": {
+      "$ref": "#/$defs/SourceKind"
+    },
+    "text": {
+      "anyOf": [
+        {
+          "maxLength": 100000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Text"
+    }
+  },
+  "required": [
+    "kind",
+    "capture_timezone",
+    "captured_at"
+  ],
+  "title": "CreateCaptureRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

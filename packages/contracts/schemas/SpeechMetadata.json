@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "AdapterMode": {
+      "description": "Visible in every job result. A fixture must never claim production.",
+      "enum": [
+        "fixture",
+        "local",
+        "cloud"
+      ],
+      "title": "AdapterMode",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/SpeechMetadata.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Reproducibility record for one decode. Persisted with every result.",
+  "properties": {
+    "adapter_mode": {
+      "$ref": "#/$defs/AdapterMode"
+    },
+    "artifact_revision": {
+      "title": "Artifact Revision",
+      "type": "string"
+    },
+    "audio_seconds": {
+      "minimum": 0.0,
+      "title": "Audio Seconds",
+      "type": "number"
+    },
+    "beam_size": {
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Beam Size",
+      "type": "integer"
+    },
+    "cold_start": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cold Start"
+    },
+    "compute_type": {
+      "title": "Compute Type",
+      "type": "string"
+    },
+    "decode_seconds": {
+      "minimum": 0.0,
+      "title": "Decode Seconds",
+      "type": "number"
+    },
+    "language": {
+      "title": "Language",
+      "type": "string"
+    },
+    "language_detected": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Language Detected"
+    },
+    "library_version": {
+      "title": "Library Version",
+      "type": "string"
+    },
+    "model_id": {
+      "title": "Model Id",
+      "type": "string"
+    },
+    "temperature": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Temperature",
+      "type": "number"
+    },
+    "vad_enabled": {
+      "title": "Vad Enabled",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "model_id",
+    "artifact_revision",
+    "library_version",
+    "compute_type",
+    "beam_size",
+    "temperature",
+    "vad_enabled",
+    "language",
+    "adapter_mode",
+    "decode_seconds",
+    "audio_seconds"
+  ],
+  "title": "SpeechMetadata",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,229 @@
+"""Emit JSON Schema and TypeScript artifacts from the Pydantic contracts.
+
+The Pydantic models are the single hand-written definition. Running this module
+regenerates `schemas/*.json` and `generated/metis.ts`; both are checked in so
+the web client needs no Python toolchain, and CI re-runs this to prove the
+checked-in artifacts match the models.
+
+    python -m metis_contracts.generate [--check]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from enum import StrEnum
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel
+
+from . import CONTRACT_VERSION, api, common, entities, enums, errors, events
+
+ROOT = Path(__file__).resolve().parents[2]
+SCHEMA_DIR = ROOT / "schemas"
+TS_DIR = ROOT / "generated"
+
+PY_TO_TS: dict[str, str] = {
+    "string": "string",
+    "integer": "number",
+    "number": "number",
+    "boolean": "boolean",
+    "null": "null",
+}
+
+
+def _collected(module: Any, base: type) -> dict[str, type]:
+    out = {}
+    for name in dir(module):
+        obj = getattr(module, name)
+        if isinstance(obj, type) and issubclass(obj, base) and obj.__module__ == module.__name__:
+            out[name] = obj
+    return out
+
+
+SKIP_MODELS = {"StrictModel", "Page"}
+
+
+def models() -> dict[str, type[BaseModel]]:
+    """Every concrete contract model, in dependency-agnostic sorted order.
+
+    Generic containers (``Page[T]``) and the bare base class are skipped: an
+    unparameterised generic has no JSON Schema, and consumers use the concrete
+    ``*Page`` aliases instead.
+    """
+    out: dict[str, type[BaseModel]] = {}
+    for mod in (common, entities, events, errors, api):
+        out.update(_collected(mod, BaseModel))
+    for name in SKIP_MODELS:
+        out.pop(name, None)
+    return dict(sorted(out.items()))
+
+
+def enum_types() -> dict[str, type[StrEnum]]:
+    out = _collected(enums, StrEnum)
+    out.update(_collected(errors, StrEnum))
+    return dict(sorted(out.items()))
+
+
+# --------------------------------------------------------------------------- #
+# JSON Schema
+# --------------------------------------------------------------------------- #
+
+
+def build_schemas() -> dict[str, str]:
+    """One JSON Schema document per model, plus a combined bundle."""
+    files: dict[str, str] = {}
+    defs: dict[str, Any] = {}
+    for name, model in models().items():
+        schema = model.model_json_schema(ref_template="#/$defs/{model}")
+        schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+        schema["$id"] = f"https://metis.local/schemas/v{CONTRACT_VERSION}/{name}.json"
+        schema["x-contract-version"] = CONTRACT_VERSION
+        files[f"{name}.json"] = json.dumps(schema, indent=2, sort_keys=True) + "\n"
+        defs[name] = {k: v for k, v in schema.items() if not k.startswith("$schema")}
+    bundle = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"https://metis.local/schemas/v{CONTRACT_VERSION}/bundle.json",
+        "title": f"Metis contracts v{CONTRACT_VERSION}",
+        "x-contract-version": CONTRACT_VERSION,
+        "x-event-types": sorted(events.ALL_EVENT_TYPES),
+        "x-revision-sensitive-events": sorted(events.REVISION_SENSITIVE),
+        "$defs": defs,
+    }
+    files["bundle.json"] = json.dumps(bundle, indent=2, sort_keys=True) + "\n"
+    return files
+
+
+# --------------------------------------------------------------------------- #
+# TypeScript
+# --------------------------------------------------------------------------- #
+
+
+def _ts_type(schema: dict[str, Any], model_names: set[str]) -> str:
+    if ref := schema.get("$ref"):
+        name = ref.rsplit("/", 1)[-1]
+        return name if name in model_names else "unknown"
+    if "anyOf" in schema or "oneOf" in schema:
+        parts = [_ts_type(s, model_names) for s in schema.get("anyOf") or schema["oneOf"]]
+        uniq = list(dict.fromkeys(parts))
+        return " | ".join(uniq)
+    if "const" in schema:
+        return json.dumps(schema["const"])
+    if enum_values := schema.get("enum"):
+        return " | ".join(json.dumps(v) for v in enum_values)
+    t = schema.get("type")
+    if t == "array":
+        inner = _ts_type(schema.get("items", {}), model_names) if schema.get("items") else "unknown"
+        return f"{inner}[]"
+    if t == "object":
+        extra = schema.get("additionalProperties")
+        if isinstance(extra, dict):
+            return f"Record<string, {_ts_type(extra, model_names)}>"
+        return "Record<string, unknown>"
+    if isinstance(t, list):
+        return " | ".join(PY_TO_TS.get(x, "unknown") for x in t)
+    if t in PY_TO_TS:
+        # date / date-time arrive as ISO strings over the wire.
+        return PY_TO_TS[t]
+    return "unknown"
+
+
+def build_typescript() -> str:
+    model_map = models()
+    model_names = set(model_map)
+    lines: list[str] = [
+        "/* AUTOGENERATED by `python -m metis_contracts.generate`. Do not edit.",
+        f" * Metis contracts v{CONTRACT_VERSION}. Instants are ISO-8601 UTC strings;",
+        " * local dates are `YYYY-MM-DD` strings paired with an IANA timezone id.",
+        " */",
+        "",
+        f"export const CONTRACT_VERSION = {CONTRACT_VERSION};",
+        "",
+    ]
+
+    for name, enum_cls in enum_types().items():
+        members = [f'  {m.name} = "{m.value}",' for m in enum_cls]
+        lines.append(f"export enum {name} {{")
+        lines.extend(members)
+        lines.append("}")
+        lines.append("")
+
+    lines.append("export const EVENT_TYPES = [")
+    lines.extend(f'  "{t}",' for t in sorted(events.ALL_EVENT_TYPES))
+    lines.append("] as const;")
+    lines.append("export type EventTypeName = (typeof EVENT_TYPES)[number];")
+    lines.append("")
+    lines.append("export const HTTP_STATUS_BY_ERROR: Record<string, number> = {")
+    lines.extend(f'  "{code.value}": {status},' for code, status in sorted(errors.HTTP_STATUS.items()))
+    lines.append("};")
+    lines.append("")
+
+    enum_names = set(enum_types())
+    emitted: set[str] = set()
+    for name, model in model_map.items():
+        schema = model.model_json_schema(ref_template="#/$defs/{model}")
+        inline_defs = schema.get("$defs", {})
+        for def_name, def_schema in inline_defs.items():
+            if def_name in model_names or def_name in emitted or def_name in enum_names:
+                continue
+            if def_schema.get("enum") and def_schema.get("type") == "string":
+                union = " | ".join(json.dumps(v) for v in def_schema["enum"])
+                lines.append(f"export type {def_name} = {union};")
+                lines.append("")
+                emitted.add(def_name)
+        props = schema.get("properties", {})
+        required = set(schema.get("required", []))
+        doc = (model.__doc__ or "").strip().splitlines()
+        if doc:
+            lines.append("/** " + doc[0].strip() + " */")
+        lines.append(f"export interface {name} {{")
+        for prop, prop_schema in props.items():
+            optional = "" if prop in required else "?"
+            ts = _ts_type(prop_schema, model_names | enum_names | emitted)
+            desc = prop_schema.get("description")
+            if desc:
+                lines.append(f"  /** {' '.join(desc.split())} */")
+            lines.append(f"  {prop}{optional}: {ts};")
+        lines.append("}")
+        lines.append("")
+        emitted.add(name)
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+# --------------------------------------------------------------------------- #
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--check", action="store_true", help="fail if artifacts are stale")
+    args = ap.parse_args()
+
+    artifacts: dict[Path, str] = {SCHEMA_DIR / n: b for n, b in build_schemas().items()}
+    artifacts[TS_DIR / "metis.ts"] = build_typescript()
+
+    if args.check:
+        stale = [p for p, body in artifacts.items() if not p.is_file() or p.read_text() != body]
+        for p in stale:
+            print(f"stale: {p.relative_to(ROOT)}", file=sys.stderr)
+        if stale:
+            print("run `make contracts`", file=sys.stderr)
+            return 1
+        print(f"contracts up to date ({len(artifacts)} artifacts)")
+        return 0
+
+    SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
+    TS_DIR.mkdir(parents=True, exist_ok=True)
+    for stale in SCHEMA_DIR.glob("*.json"):
+        if stale.name not in {p.name for p in artifacts}:
+            stale.unlink()
+    for path, body in artifacts.items():
+        path.write_text(body)
+    print(f"wrote {len(artifacts)} artifacts to {SCHEMA_DIR.relative_to(ROOT)} and {TS_DIR.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

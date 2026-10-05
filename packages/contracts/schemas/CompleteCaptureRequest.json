@@ -1,0 +1,45 @@
+{
+  "$id": "https://metis.local/schemas/v1/CompleteCaptureRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actual_bytes": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Actual Bytes"
+    },
+    "checksum_sha256": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "minLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Checksum Sha256"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "expected_revision"
+  ],
+  "title": "CompleteCaptureRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

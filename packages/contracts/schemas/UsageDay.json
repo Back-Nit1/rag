@@ -1,0 +1,87 @@
+{
+  "$id": "https://metis.local/schemas/v1/UsageDay.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Per-user daily rollup used for the pre-call budget check.",
+  "properties": {
+    "audio_seconds": {
+      "default": 0.0,
+      "minimum": 0,
+      "title": "Audio Seconds",
+      "type": "number"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Id",
+      "type": "string"
+    },
+    "local_date": {
+      "format": "date",
+      "title": "Local Date",
+      "type": "string"
+    },
+    "model_calls": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Model Calls",
+      "type": "integer"
+    },
+    "reserved_micro_usd": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Reserved Micro Usd",
+      "type": "integer"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "settled_micro_usd": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Settled Micro Usd",
+      "type": "integer"
+    },
+    "speech_jobs": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Speech Jobs",
+      "type": "integer"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "user_id",
+    "created_at",
+    "updated_at",
+    "local_date"
+  ],
+  "title": "UsageDay",
+  "type": "object",
+  "x-contract-version": 1
+}

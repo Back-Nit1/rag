@@ -1,0 +1,200 @@
+{
+  "$defs": {
+    "FailureCategory": {
+      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable.",
+      "enum": [
+        "transient",
+        "throttled",
+        "validation",
+        "unsupported_media",
+        "limit_exceeded",
+        "budget_exceeded",
+        "provider_unavailable",
+        "permission_denied",
+        "superseded",
+        "internal"
+      ],
+      "title": "FailureCategory",
+      "type": "string"
+    },
+    "OutboxState": {
+      "enum": [
+        "pending",
+        "leased",
+        "done",
+        "failed",
+        "dead_letter",
+        "superseded"
+      ],
+      "title": "OutboxState",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/OutboxEvent.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Written in the same transaction as the entity change it describes.",
+  "properties": {
+    "attempts": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Attempts",
+      "type": "integer"
+    },
+    "available_at": {
+      "format": "date-time",
+      "title": "Available At",
+      "type": "string"
+    },
+    "correlation_id": {
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "error_message": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Message"
+    },
+    "event_type": {
+      "title": "Event Type",
+      "type": "string"
+    },
+    "event_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Event Version",
+      "type": "integer"
+    },
+    "failure": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FailureCategory"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Id",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "lease_expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lease Expires At"
+    },
+    "lease_owner": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lease Owner"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "state": {
+      "$ref": "#/$defs/OutboxState",
+      "default": "pending"
+    },
+    "target_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Id"
+    },
+    "target_revision": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Revision"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "user_id",
+    "created_at",
+    "updated_at",
+    "event_type",
+    "correlation_id",
+    "idempotency_key",
+    "available_at"
+  ],
+  "title": "OutboxEvent",
+  "type": "object",
+  "x-contract-version": 1
+}

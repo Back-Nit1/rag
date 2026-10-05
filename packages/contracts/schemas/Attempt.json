@@ -1,0 +1,80 @@
+{
+  "$defs": {
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Pointer to an immutable source revision, optionally a span within it.",
+      "properties": {
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/Attempt.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A tried-and-failed approach. Preserved so it is not re-suggested.",
+  "properties": {
+    "outcome": {
+      "enum": [
+        "failed",
+        "partial",
+        "abandoned",
+        "succeeded"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "source_refs": {
+      "items": {
+        "$ref": "#/$defs/SourceRef"
+      },
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "summary": {
+      "maxLength": 2000,
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "summary",
+    "outcome",
+    "recorded_at"
+  ],
+  "title": "Attempt",
+  "type": "object",
+  "x-contract-version": 1
+}

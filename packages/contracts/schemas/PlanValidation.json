@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "ValidationIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "block_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Block Index"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "default": "error",
+          "enum": [
+            "error",
+            "warning"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "ValidationIssue",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/PlanValidation.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Produced by application code. The model cannot mark its own plan valid.",
+  "properties": {
+    "capacity_minutes": {
+      "minimum": 0,
+      "title": "Capacity Minutes",
+      "type": "integer"
+    },
+    "checked_by": {
+      "const": "application",
+      "default": "application",
+      "title": "Checked By",
+      "type": "string"
+    },
+    "inputs_complete": {
+      "default": true,
+      "title": "Inputs Complete",
+      "type": "boolean"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/ValidationIssue"
+      },
+      "title": "Issues",
+      "type": "array"
+    },
+    "scheduled_minutes": {
+      "minimum": 0,
+      "title": "Scheduled Minutes",
+      "type": "integer"
+    },
+    "valid": {
+      "title": "Valid",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "valid",
+    "capacity_minutes",
+    "scheduled_minutes"
+  ],
+  "title": "PlanValidation",
+  "type": "object",
+  "x-contract-version": 1
+}

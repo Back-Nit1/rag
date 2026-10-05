@@ -1,0 +1,62 @@
+{
+  "$id": "https://metis.local/schemas/v1/ObjectRef.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Private object-storage reference. Never a public or presigned URL at rest.",
+  "properties": {
+    "bucket": {
+      "title": "Bucket",
+      "type": "string"
+    },
+    "checksum_sha256": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "minLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Checksum Sha256"
+    },
+    "content_type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Content Type"
+    },
+    "key": {
+      "title": "Key",
+      "type": "string"
+    },
+    "size_bytes": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Size Bytes"
+    }
+  },
+  "required": [
+    "bucket",
+    "key"
+  ],
+  "title": "ObjectRef",
+  "type": "object",
+  "x-contract-version": 1
+}

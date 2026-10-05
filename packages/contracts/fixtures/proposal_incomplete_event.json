@@ -1,0 +1,84 @@
+{
+  "adapter_mode": "fixture",
+  "created_at": "2026-10-05T14:00:00Z",
+  "created_entity_ids": [],
+  "disposition": "pending",
+  "extractor_version": "extract-1",
+  "id": "prop_demo_bloomberg",
+  "items": [
+    {
+      "attendance_status": "tentative",
+      "body": null,
+      "confidence": null,
+      "deadline_at": null,
+      "deadline_local_date": null,
+      "duration_estimate": null,
+      "evidence": [
+        {
+          "source_id": "src_demo_bloomberg",
+          "source_version": 1,
+          "span_ref": "span_001"
+        }
+      ],
+      "kind": "event_intent",
+      "local_date": null,
+      "location_text": "New York City",
+      "missing_fields": [
+        "event_date_time",
+        "registration_reminder_time"
+      ],
+      "project_hint": null,
+      "registration_status": "unknown",
+      "remind_at": null,
+      "remind_local_time": null,
+      "requested_actions": [
+        "remind_to_register",
+        "prepare_for_event"
+      ],
+      "starts_at": null,
+      "timezone": "America/New_York",
+      "title": "Bloomberg event"
+    },
+    {
+      "attendance_status": null,
+      "body": null,
+      "confidence": null,
+      "deadline_at": null,
+      "deadline_local_date": null,
+      "duration_estimate": null,
+      "evidence": [
+        {
+          "source_id": "src_demo_bloomberg",
+          "source_version": 1,
+          "span_ref": "span_002"
+        }
+      ],
+      "kind": "task",
+      "local_date": null,
+      "location_text": null,
+      "missing_fields": [
+        "deadline_local_date"
+      ],
+      "project_hint": null,
+      "registration_status": null,
+      "remind_at": null,
+      "remind_local_time": null,
+      "requested_actions": [],
+      "starts_at": null,
+      "timezone": null,
+      "title": "Register for the Bloomberg event"
+    }
+  ],
+  "model_id": "fixture-extract",
+  "prompt_version": "extract/v1",
+  "range_count": 1,
+  "range_index": 0,
+  "requires_clarification": true,
+  "revision": 1,
+  "schema_version": 1,
+  "source_id": "src_demo_bloomberg",
+  "source_version": 1,
+  "unresolved_reason": null,
+  "updated_at": "2026-10-05T14:00:00Z",
+  "user_id": "demo_authenticated_subject"
+}

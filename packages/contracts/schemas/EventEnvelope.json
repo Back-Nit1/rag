@@ -1,0 +1,84 @@
+{
+  "$id": "https://metis.local/schemas/v1/EventEnvelope.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Canonical internal event. Payloads stay small and reference-only.",
+  "properties": {
+    "correlation_id": {
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "event_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "title": "Event Type",
+      "type": "string"
+    },
+    "event_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Event Version",
+      "type": "integer"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "target_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Id"
+    },
+    "target_revision": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Revision"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_type",
+    "user_id",
+    "correlation_id",
+    "idempotency_key"
+  ],
+  "title": "EventEnvelope",
+  "type": "object",
+  "x-contract-version": 1
+}

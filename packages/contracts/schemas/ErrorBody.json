@@ -1,0 +1,94 @@
+{
+  "$defs": {
+    "ErrorCode": {
+      "enum": [
+        "unauthenticated",
+        "forbidden",
+        "not_found",
+        "revision_conflict",
+        "epoch_conflict",
+        "idempotency_mismatch",
+        "validation_failed",
+        "semantic_validation_failed",
+        "dependency_cycle",
+        "invalid_state_transition",
+        "upload_too_large",
+        "unsupported_media",
+        "object_missing",
+        "rate_limited",
+        "budget_exceeded",
+        "provider_unavailable",
+        "tombstoned",
+        "ambiguous_target",
+        "incomplete_inputs",
+        "internal"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/ErrorBody.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One shape for every failure. `current_revision` lets the client reload.",
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/ErrorCode"
+    },
+    "correlation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlation Id"
+    },
+    "current_revision": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Current Revision"
+    },
+    "details": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Details",
+      "type": "object"
+    },
+    "message": {
+      "maxLength": 500,
+      "title": "Message",
+      "type": "string"
+    },
+    "retry_after_seconds": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Retry After Seconds"
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "title": "ErrorBody",
+  "type": "object",
+  "x-contract-version": 1
+}

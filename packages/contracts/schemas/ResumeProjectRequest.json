@@ -1,0 +1,17 @@
+{
+  "$id": "https://metis.local/schemas/v1/ResumeProjectRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "minutes": {
+      "default": 30,
+      "maximum": 480,
+      "minimum": 5,
+      "title": "Minutes",
+      "type": "integer"
+    }
+  },
+  "title": "ResumeProjectRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

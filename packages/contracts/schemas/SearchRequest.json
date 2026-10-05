@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "MemoryKind": {
+      "enum": [
+        "idea",
+        "observation",
+        "hypothesis",
+        "decision",
+        "commitment",
+        "work_log",
+        "attempt",
+        "blocker",
+        "preference"
+      ],
+      "title": "MemoryKind",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/SearchRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "include_historical": {
+      "default": false,
+      "title": "Include Historical",
+      "type": "boolean"
+    },
+    "kinds": {
+      "items": {
+        "$ref": "#/$defs/MemoryKind"
+      },
+      "title": "Kinds",
+      "type": "array"
+    },
+    "limit": {
+      "default": 20,
+      "maximum": 50,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "mode": {
+      "default": "auto",
+      "enum": [
+        "auto",
+        "structured",
+        "semantic",
+        "lexical",
+        "hybrid"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "query": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Query",
+      "type": "string"
+    },
+    "since": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Since"
+    },
+    "until": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Until"
+    }
+  },
+  "required": [
+    "query"
+  ],
+  "title": "SearchRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

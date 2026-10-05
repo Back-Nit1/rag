@@ -1,0 +1,56 @@
+{
+  "$id": "https://metis.local/schemas/v1/ExtractionRequestedPayload.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "char_end": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Char End"
+    },
+    "char_start": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Char Start",
+      "type": "integer"
+    },
+    "range_count": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Range Count",
+      "type": "integer"
+    },
+    "range_index": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Range Index",
+      "type": "integer"
+    },
+    "source_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "source_id",
+    "source_version"
+  ],
+  "title": "ExtractionRequestedPayload",
+  "type": "object",
+  "x-contract-version": 1
+}

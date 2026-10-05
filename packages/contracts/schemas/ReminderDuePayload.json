@@ -1,0 +1,30 @@
+{
+  "$id": "https://metis.local/schemas/v1/ReminderDuePayload.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "occurrence_key": {
+      "title": "Occurrence Key",
+      "type": "string"
+    },
+    "reminder_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Reminder Id",
+      "type": "string"
+    },
+    "scheduled_for": {
+      "format": "date-time",
+      "title": "Scheduled For",
+      "type": "string"
+    }
+  },
+  "required": [
+    "reminder_id",
+    "occurrence_key",
+    "scheduled_for"
+  ],
+  "title": "ReminderDuePayload",
+  "type": "object",
+  "x-contract-version": 1
+}

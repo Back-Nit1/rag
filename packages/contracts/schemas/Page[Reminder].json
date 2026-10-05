@@ -1,0 +1,250 @@
+{
+  "$defs": {
+    "DeliveryChannel": {
+      "enum": [
+        "in_app",
+        "web_push"
+      ],
+      "title": "DeliveryChannel",
+      "type": "string"
+    },
+    "FailureCategory": {
+      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable.",
+      "enum": [
+        "transient",
+        "throttled",
+        "validation",
+        "unsupported_media",
+        "limit_exceeded",
+        "budget_exceeded",
+        "provider_unavailable",
+        "permission_denied",
+        "superseded",
+        "internal"
+      ],
+      "title": "FailureCategory",
+      "type": "string"
+    },
+    "Reminder": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "canceled_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canceled At"
+        },
+        "channel": {
+          "$ref": "#/$defs/DeliveryChannel",
+          "default": "in_app"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FailureCategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "occurrence_key": {
+          "title": "Occurrence Key",
+          "type": "string"
+        },
+        "requires_generation": {
+          "default": false,
+          "title": "Requires Generation",
+          "type": "boolean"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "scheduler_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheduler Ref"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "snoozed_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snoozed Until"
+        },
+        "state": {
+          "$ref": "#/$defs/ReminderState",
+          "default": "pending_schedule"
+        },
+        "suspended_reason": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suspended Reason"
+        },
+        "target_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "target_kind": {
+          "enum": [
+            "task",
+            "event"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_revision": {
+          "minimum": 1,
+          "title": "Target Revision",
+          "type": "integer"
+        },
+        "timezone": {
+          "examples": [
+            "America/New_York"
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        },
+        "trigger_at": {
+          "format": "date-time",
+          "title": "Trigger At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "target_id",
+        "target_kind",
+        "target_revision",
+        "trigger_at",
+        "timezone",
+        "occurrence_key"
+      ],
+      "title": "Reminder",
+      "type": "object"
+    },
+    "ReminderState": {
+      "enum": [
+        "pending_schedule",
+        "scheduled",
+        "dispatching",
+        "delivered",
+        "schedule_failed",
+        "delivery_failed",
+        "snoozed",
+        "canceled",
+        "superseded"
+      ],
+      "title": "ReminderState",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/Page[Reminder].json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "complete": {
+      "default": true,
+      "title": "Complete",
+      "type": "boolean"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/Reminder"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "next_cursor": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next Cursor"
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "title": "Page[Reminder]",
+  "type": "object",
+  "x-contract-version": 1
+}

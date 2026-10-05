@@ -1,0 +1,31 @@
+{
+  "$id": "https://metis.local/schemas/v1/DeleteCaptureResponse.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capture_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Capture Id",
+      "type": "string"
+    },
+    "purge_job_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Purge Job Id",
+      "type": "string"
+    },
+    "tombstoned": {
+      "title": "Tombstoned",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "capture_id",
+    "tombstoned",
+    "purge_job_id"
+  ],
+  "title": "DeleteCaptureResponse",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,54 @@
+{
+  "$id": "https://metis.local/schemas/v1/ReminderSyncPayload.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "create",
+        "update",
+        "delete"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "reminder_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Reminder Id",
+      "type": "string"
+    },
+    "scheduler_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scheduler Ref"
+    },
+    "trigger_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trigger At"
+    }
+  },
+  "required": [
+    "reminder_id",
+    "action"
+  ],
+  "title": "ReminderSyncPayload",
+  "type": "object",
+  "x-contract-version": 1
+}

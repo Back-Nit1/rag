@@ -1,0 +1,25 @@
+{
+  "$id": "https://metis.local/schemas/v1/TimeWindow.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Local wall-clock window, e.g. 09:00-17:00. Not an instant.",
+  "properties": {
+    "end": {
+      "pattern": "^\\d{2}:\\d{2}$",
+      "title": "End",
+      "type": "string"
+    },
+    "start": {
+      "pattern": "^\\d{2}:\\d{2}$",
+      "title": "Start",
+      "type": "string"
+    }
+  },
+  "required": [
+    "start",
+    "end"
+  ],
+  "title": "TimeWindow",
+  "type": "object",
+  "x-contract-version": 1
+}

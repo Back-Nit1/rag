@@ -1,0 +1,37 @@
+{
+  "$id": "https://metis.local/schemas/v1/MemoryIndexPayload.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content_hash": {
+      "title": "Content Hash",
+      "type": "string"
+    },
+    "memory_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Memory Id",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "memory_id",
+    "source_id",
+    "source_version",
+    "content_hash"
+  ],
+  "title": "MemoryIndexPayload",
+  "type": "object",
+  "x-contract-version": 1
+}

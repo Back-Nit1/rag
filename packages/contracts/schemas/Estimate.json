@@ -1,0 +1,44 @@
+{
+  "$id": "https://metis.local/schemas/v1/Estimate.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A duration estimate that always declares where it came from.",
+  "properties": {
+    "minutes": {
+      "maximum": 1440,
+      "minimum": 0,
+      "title": "Minutes",
+      "type": "integer"
+    },
+    "minutes_max": {
+      "anyOf": [
+        {
+          "maximum": 1440,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Minutes Max"
+    },
+    "provenance": {
+      "enum": [
+        "user",
+        "inferred",
+        "default"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    }
+  },
+  "required": [
+    "minutes",
+    "provenance"
+  ],
+  "title": "Estimate",
+  "type": "object",
+  "x-contract-version": 1
+}

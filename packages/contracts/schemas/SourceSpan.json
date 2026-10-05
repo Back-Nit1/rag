@@ -1,0 +1,69 @@
+{
+  "$id": "https://metis.local/schemas/v1/SourceSpan.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Character range inside an immutable source revision.\n\nOffsets are Unicode code points of the source text \u2014 never bytes and never\nUTF-16 code units. Audio offsets are optional and independent.",
+  "properties": {
+    "audio_end_ms": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Audio End Ms"
+    },
+    "audio_start_ms": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Audio Start Ms"
+    },
+    "end_char": {
+      "minimum": 0,
+      "title": "End Char",
+      "type": "integer"
+    },
+    "source_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    },
+    "span_ref": {
+      "title": "Span Ref",
+      "type": "string"
+    },
+    "start_char": {
+      "minimum": 0,
+      "title": "Start Char",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "span_ref",
+    "source_id",
+    "source_version",
+    "start_char",
+    "end_char"
+  ],
+  "title": "SourceSpan",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,248 @@
+{
+  "$defs": {
+    "AdapterMode": {
+      "description": "Visible in every job result. A fixture must never claim production.",
+      "enum": [
+        "fixture",
+        "local",
+        "cloud"
+      ],
+      "title": "AdapterMode",
+      "type": "string"
+    },
+    "FailureCategory": {
+      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable.",
+      "enum": [
+        "transient",
+        "throttled",
+        "validation",
+        "unsupported_media",
+        "limit_exceeded",
+        "budget_exceeded",
+        "provider_unavailable",
+        "permission_denied",
+        "superseded",
+        "internal"
+      ],
+      "title": "FailureCategory",
+      "type": "string"
+    },
+    "JobState": {
+      "description": "Shared by capture/transcription/extraction/index/plan jobs.",
+      "enum": [
+        "uploading",
+        "queued",
+        "starting",
+        "transcribing",
+        "extracting",
+        "indexing",
+        "planning",
+        "ready",
+        "failed",
+        "canceled"
+      ],
+      "title": "JobState",
+      "type": "string"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/Job.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_mode": {
+      "$ref": "#/$defs/AdapterMode",
+      "default": "fixture"
+    },
+    "attempts": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Attempts",
+      "type": "integer"
+    },
+    "correlation_id": {
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "error_message": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Message"
+    },
+    "failure": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FailureCategory"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "finished_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Finished At"
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Id",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "job_type": {
+      "title": "Job Type",
+      "type": "string"
+    },
+    "lease_expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lease Expires At"
+    },
+    "lease_owner": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lease Owner"
+    },
+    "max_attempts": {
+      "default": 5,
+      "maximum": 20,
+      "minimum": 1,
+      "title": "Max Attempts",
+      "type": "integer"
+    },
+    "metrics": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Metrics",
+      "type": "object"
+    },
+    "result_refs": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Result Refs",
+      "type": "object"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "state": {
+      "$ref": "#/$defs/JobState",
+      "default": "queued"
+    },
+    "target_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Id"
+    },
+    "target_revision": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Revision"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "user_id",
+    "created_at",
+    "updated_at",
+    "job_type",
+    "correlation_id",
+    "idempotency_key"
+  ],
+  "title": "Job",
+  "type": "object",
+  "x-contract-version": 1
+}

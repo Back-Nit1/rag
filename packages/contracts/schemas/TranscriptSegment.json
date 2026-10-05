@@ -1,0 +1,36 @@
+{
+  "$id": "https://metis.local/schemas/v1/TranscriptSegment.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "ASR output segment. Timing is audio timing, never a semantic event date.",
+  "properties": {
+    "end_ms": {
+      "minimum": 0,
+      "title": "End Ms",
+      "type": "integer"
+    },
+    "index": {
+      "minimum": 0,
+      "title": "Index",
+      "type": "integer"
+    },
+    "start_ms": {
+      "minimum": 0,
+      "title": "Start Ms",
+      "type": "integer"
+    },
+    "text": {
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "index",
+    "start_ms",
+    "end_ms",
+    "text"
+  ],
+  "title": "TranscriptSegment",
+  "type": "object",
+  "x-contract-version": 1
+}

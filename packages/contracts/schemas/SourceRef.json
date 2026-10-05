@@ -1,0 +1,38 @@
+{
+  "$id": "https://metis.local/schemas/v1/SourceRef.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Pointer to an immutable source revision, optionally a span within it.",
+  "properties": {
+    "source_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_version": {
+      "minimum": 1,
+      "title": "Source Version",
+      "type": "integer"
+    },
+    "span_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Span Ref"
+    }
+  },
+  "required": [
+    "source_id",
+    "source_version"
+  ],
+  "title": "SourceRef",
+  "type": "object",
+  "x-contract-version": 1
+}

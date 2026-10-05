@@ -1,0 +1,799 @@
+{
+  "$defs": {
+    "AdapterMode": {
+      "description": "Visible in every job result. A fixture must never claim production.",
+      "enum": [
+        "fixture",
+        "local",
+        "cloud"
+      ],
+      "title": "AdapterMode",
+      "type": "string"
+    },
+    "Attempt": {
+      "additionalProperties": false,
+      "description": "A tried-and-failed approach. Preserved so it is not re-suggested.",
+      "properties": {
+        "outcome": {
+          "enum": [
+            "failed",
+            "partial",
+            "abandoned",
+            "succeeded"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "summary": {
+          "maxLength": 2000,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "outcome",
+        "recorded_at"
+      ],
+      "title": "Attempt",
+      "type": "object"
+    },
+    "Estimate": {
+      "additionalProperties": false,
+      "description": "A duration estimate that always declares where it came from.",
+      "properties": {
+        "minutes": {
+          "maximum": 1440,
+          "minimum": 0,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "minutes_max": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minutes Max"
+        },
+        "provenance": {
+          "enum": [
+            "user",
+            "inferred",
+            "default"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minutes",
+        "provenance"
+      ],
+      "title": "Estimate",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "description": "One retrieved, source-backed justification shown to the user.",
+      "properties": {
+        "excerpt": {
+          "maxLength": 2000,
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "memory_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Id"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        },
+        "validity": {
+          "default": "current",
+          "enum": [
+            "current",
+            "historical",
+            "superseded",
+            "uncertain"
+          ],
+          "title": "Validity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version",
+        "excerpt",
+        "recorded_at"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "MemoryKind": {
+      "enum": [
+        "idea",
+        "observation",
+        "hypothesis",
+        "decision",
+        "commitment",
+        "work_log",
+        "attempt",
+        "blocker",
+        "preference"
+      ],
+      "title": "MemoryKind",
+      "type": "string"
+    },
+    "Project": {
+      "additionalProperties": false,
+      "properties": {
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "archived": {
+          "default": false,
+          "title": "Archived",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current_blocker_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "current_decision_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Current Decision Ids",
+          "type": "array"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "next_action_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Objective"
+        },
+        "pinned_context": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pinned Context"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "summary_version": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Summary Version",
+          "type": "integer"
+        },
+        "title": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "title"
+      ],
+      "title": "Project",
+      "type": "object"
+    },
+    "SearchResult": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "kind": {
+          "$ref": "#/$defs/MemoryKind"
+        },
+        "memory_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
+        "score": {
+          "minimum": 0.0,
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "memory_id",
+        "kind",
+        "content",
+        "score",
+        "evidence"
+      ],
+      "title": "SearchResult",
+      "type": "object"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Pointer to an immutable source revision, optionally a span within it.",
+      "properties": {
+        "source_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minimum": 1,
+          "title": "Source Version",
+          "type": "integer"
+        },
+        "span_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Ref"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "Task": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
+        "canceled_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canceled At"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "deadline_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline At"
+        },
+        "deadline_local_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline Local Date"
+        },
+        "depends_on": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "duration_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Estimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "priority": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "source_unavailable": {
+          "default": false,
+          "title": "Source Unavailable",
+          "type": "boolean"
+        },
+        "state": {
+          "$ref": "#/$defs/TaskState",
+          "default": "inbox"
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "examples": [
+                "America/New_York"
+              ],
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timezone"
+        },
+        "title": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_edited_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "User Edited Fields",
+          "type": "array"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "title"
+      ],
+      "title": "Task",
+      "type": "object"
+    },
+    "TaskState": {
+      "enum": [
+        "inbox",
+        "ready",
+        "in_progress",
+        "blocked",
+        "done",
+        "canceled"
+      ],
+      "title": "TaskState",
+      "type": "string"
+    },
+    "WorkPacket": {
+      "additionalProperties": false,
+      "description": "Enough context to resume an engineering task. Derived and cacheable.",
+      "properties": {
+        "adapter_mode": {
+          "$ref": "#/$defs/AdapterMode",
+          "default": "fixture"
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/Attempt"
+          },
+          "title": "Attempts",
+          "type": "array"
+        },
+        "blocker": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blocker"
+        },
+        "completion_criterion": {
+          "maxLength": 2000,
+          "title": "Completion Criterion",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current_state": {
+          "maxLength": 4000,
+          "title": "Current State",
+          "type": "string"
+        },
+        "estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Estimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "input_revisions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Input Revisions",
+          "type": "object"
+        },
+        "next_action": {
+          "maxLength": 2000,
+          "title": "Next Action",
+          "type": "string"
+        },
+        "objective": {
+          "maxLength": 2000,
+          "title": "Objective",
+          "type": "string"
+        },
+        "project_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Project Id",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "created_at",
+        "updated_at",
+        "project_id",
+        "objective",
+        "current_state",
+        "next_action",
+        "completion_criterion",
+        "generated_at"
+      ],
+      "title": "WorkPacket",
+      "type": "object"
+    }
+  },
+  "$id": "https://metis.local/schemas/v1/ProjectDetail.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "open_tasks": {
+      "items": {
+        "$ref": "#/$defs/Task"
+      },
+      "title": "Open Tasks",
+      "type": "array"
+    },
+    "project": {
+      "$ref": "#/$defs/Project"
+    },
+    "recent_memories": {
+      "items": {
+        "$ref": "#/$defs/SearchResult"
+      },
+      "title": "Recent Memories",
+      "type": "array"
+    },
+    "work_packet": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WorkPacket"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "work_packet_stale": {
+      "default": false,
+      "title": "Work Packet Stale",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "project"
+  ],
+  "title": "ProjectDetail",
+  "type": "object",
+  "x-contract-version": 1
+}
