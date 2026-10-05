@@ -88,7 +88,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       await refreshNotifications();
     };
     void load();
-    const timer = window.setInterval(() => void refreshNotifications(), 15_000);
+    // Only poll while the tab is actually being looked at: a backgrounded PWA
+    // polling every 15 seconds is pure waste on a phone.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshNotifications();
+    }, 15_000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);

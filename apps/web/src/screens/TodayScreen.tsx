@@ -116,7 +116,7 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
               <Card as="li" key={task.id}>
                 <p className="text-sm font-medium text-ink">{task.title}</p>
                 <p className="text-xs text-muted">
-                  {task.deadline_local_date ? `due ${task.deadline_local_date}` : "no deadline"} ·{" "}
+                  {task.state} · {task.deadline_local_date ? `due ${task.deadline_local_date}` : "no deadline"} ·{" "}
                   {task.duration_estimate
                     ? `${task.duration_estimate.minutes} min (${task.duration_estimate.provenance} estimate)`
                     : "no estimate"}
