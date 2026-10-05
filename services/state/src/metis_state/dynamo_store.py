@@ -382,6 +382,14 @@ class DynamoStateStore:
         items, next_cursor, complete = self._query_kind(user_id, "notification", cursor=cursor, limit=limit)
         return Page(items=items, next_cursor=next_cursor, complete=complete)
 
+    def list_projects(self, user_id: str, *, cursor: str | None = None, limit: int = 100) -> Page[Any]:
+        items, next_cursor, complete = self._query_kind(user_id, "project", cursor=cursor, limit=limit)
+        return Page(items=items, next_cursor=next_cursor, complete=complete)
+
+    def list_push_subscriptions(self, user_id: str) -> list[Any]:
+        items, _, _ = self._query_kind(user_id, "push_subscription", cursor=None, limit=50)
+        return items
+
     def list_memories(
         self, user_id: str, *, project_id: str | None = None, cursor: str | None = None, limit: int = 100
     ) -> Page[Any]:

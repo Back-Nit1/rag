@@ -398,6 +398,13 @@ class SqliteStateStore:
     ) -> Page[Notification]:
         return self._page("notification", user_id, "", [], cursor=cursor, limit=limit)
 
+    def list_projects(self, user_id: str, *, cursor: str | None = None, limit: int = 100) -> Page[Any]:
+        return self._page("project", user_id, "", [], cursor=cursor, limit=limit)
+
+    def list_push_subscriptions(self, user_id: str) -> list[Any]:
+        page = self._page("push_subscription", user_id, "", [], cursor=None, limit=50)
+        return list(page.items)
+
     def list_memories(
         self, user_id: str, *, project_id: str | None = None, cursor: str | None = None, limit: int = 100
     ) -> Page[Any]:

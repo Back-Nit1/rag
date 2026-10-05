@@ -72,6 +72,7 @@ class Limits:
     planning_max_output_tokens: int = field(default_factory=lambda: _env_int("METIS_PLAN_OUT_TOKENS", 2000))
     planning_max_candidate_tasks: int = field(default_factory=lambda: _env_int("METIS_PLAN_CANDIDATES", 8))
     planning_max_tool_iterations: int = field(default_factory=lambda: _env_int("METIS_PLAN_TOOL_ITERS", 4))
+    planning_horizon_days: int = field(default_factory=lambda: _env_int("METIS_PLAN_HORIZON_DAYS", 7))
     planning_read_page_limit: int = field(default_factory=lambda: _env_int("METIS_PLAN_READ_PAGES", 20))
     planning_epoch_retries: int = field(default_factory=lambda: _env_int("METIS_PLAN_EPOCH_RETRIES", 3))
 
