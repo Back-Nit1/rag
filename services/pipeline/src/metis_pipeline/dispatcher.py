@@ -21,6 +21,7 @@ import socket
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from metis_contracts import (
     RETRYABLE_FAILURES,
@@ -29,6 +30,7 @@ from metis_contracts import (
     FailureCategory,
     MetisError,
     OutboxEvent,
+    new_id,
     settings,
 )
 from metis_contracts.ports import (
@@ -68,6 +70,8 @@ class DispatchContext:
     notification_transports: dict[str, NotificationTransport] = field(default_factory=dict)
     memory_store: MemoryStore | None = None
     embedder: Embedder | None = None
+    #: Set in cloud mode only; None means transcription runs inline (fixture).
+    asr_launcher: Any | None = None
     worker_id: str = field(default_factory=lambda: f"{socket.gethostname()}:{int(time.time())}")
 
 
@@ -138,6 +142,33 @@ def is_fresh(event: EventEnvelope, context: DispatchContext, *, kind: str) -> bo
     if current is None:
         return False  # deleted or tombstoned
     return int(current.revision) >= int(event.target_revision)
+
+
+def outbox_event(
+    envelope: EventEnvelope,
+    *,
+    event_type: str,
+    payload: dict[str, Any],
+    target_id: str | None = None,
+    target_revision: int | None = None,
+    idempotency_key: str,
+    clock: Any,
+) -> OutboxEvent:
+    """Follow-up event inheriting owner and correlation from ``envelope``."""
+    now = clock.now()
+    return OutboxEvent(
+        id=new_id("obx"),
+        user_id=envelope.user_id,
+        created_at=now,
+        updated_at=now,
+        event_type=event_type,
+        target_id=target_id,
+        target_revision=target_revision,
+        correlation_id=envelope.correlation_id,
+        idempotency_key=idempotency_key,
+        payload=payload,
+        available_at=now,
+    )
 
 
 @dataclass

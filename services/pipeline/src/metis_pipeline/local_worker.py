@@ -46,6 +46,10 @@ def build_context() -> Any:
         inference=build_inference_client(),
     )
 
+    from .transcription import build_asr_launcher
+
+    context.asr_launcher = build_asr_launcher()  # None outside cloud mode
+
     try:
         from metis_speech import build_transcriber
 

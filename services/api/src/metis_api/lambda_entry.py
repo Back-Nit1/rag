@@ -66,6 +66,20 @@ def outbox(event: dict[str, Any], context: Any) -> dict[str, Any]:
     return {"batchItemFailures": []}
 
 
+def speech_finalize(event: dict[str, Any], context: Any) -> dict[str, Any]:
+    """Step Functions task-end hook: verify and apply the ASR result.
+
+    ``event`` is an ``AsrTaskOutcome``: ``user_id``, ``job_id``, ``status`` of
+    ``succeeded|failed|timed_out|aborted`` and optional ``failure`` /
+    ``error_message``. The result location is derived server-side from the
+    stored source, never read from this payload.
+    """
+    from metis_pipeline.transcription import AsrTaskOutcome, finalize_transcription
+
+    job = finalize_transcription(_worker_context(), AsrTaskOutcome.model_validate(event))
+    return {"job_id": job.id, "state": job.state.value, "failure": job.failure}
+
+
 def reminder_due(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """EventBridge Scheduler target for one due reminder occurrence.
 

@@ -14,49 +14,18 @@ from metis_contracts import (
     ErrorCode,
     EventEnvelope,
     EventType,
-    JobState,
     MetisError,
-    OutboxEvent,
-    SourceLifecycle,
-    TranscriptionJobInput,
-    new_id,
     settings,
 )
-from metis_contracts.entities import Job, TranscriptRevision
 from metis_contracts.events import ExtractionRequestedPayload, PurgePayload, TranscriptFinalizedPayload
 
-from .dispatcher import DispatchContext, HandlerRegistry, is_fresh
+from .dispatcher import DispatchContext, HandlerRegistry, is_fresh, outbox_event
 from .extraction import ExtractionService
+from .transcription import launch_transcription, transcribe_inline
 
 log = logging.getLogger("metis.pipeline.handlers")
 
 registry = HandlerRegistry()
-
-
-def _outbox(
-    envelope: EventEnvelope,
-    *,
-    event_type: str,
-    payload: dict[str, Any],
-    target_id: str | None = None,
-    target_revision: int | None = None,
-    idempotency_key: str,
-    clock: Any,
-) -> OutboxEvent:
-    now = clock.now()
-    return OutboxEvent(
-        id=new_id("obx"),
-        user_id=envelope.user_id,
-        created_at=now,
-        updated_at=now,
-        event_type=event_type,
-        target_id=target_id,
-        target_revision=target_revision,
-        correlation_id=envelope.correlation_id,
-        idempotency_key=idempotency_key,
-        payload=payload,
-        available_at=now,
-    )
 
 
 # --------------------------------------------------------------------------- #
@@ -68,135 +37,14 @@ def _outbox(
 def handle_capture_completed(envelope: EventEnvelope, context: DispatchContext) -> None:
     """Transcribe an uploaded recording, then finalize exactly one text revision.
 
-    In local/fixture mode the decode happens inline. In cloud mode this is where
-    the Step Functions execution (`ecs:runTask.sync`) is started instead; either
-    way the result is only accepted after the worker's output is verified, since
-    a successful launch is not a successful transcription.
+    Local/fixture mode decodes inline. With an ``asr_launcher`` (cloud) this
+    only launches bounded external work; the transcript is finalized later by
+    ``finalize_transcription`` once the persisted worker result is verified.
     """
-    state = context.state_store
-    source = state.get(envelope.user_id, "source", envelope.target_id or "")
-    if source is None:
-        raise MetisError(ErrorCode.TOMBSTONED, "the capture was deleted before transcription")
-    if source.current_version != envelope.target_revision:
-        raise MetisError(
-            ErrorCode.REVISION_CONFLICT,
-            f"capture moved to version {source.current_version}; this job is superseded",
-        )
-    if source.object_ref is None:
-        raise MetisError(ErrorCode.VALIDATION_FAILED, "audio capture has no object reference")
-    if not context.source_store.owns_key(envelope.user_id, source.object_ref.key):
-        raise MetisError(ErrorCode.FORBIDDEN, "object key is outside the owner's prefix")
-
-    job_id = str(envelope.payload.get("job_id") or new_id("job"))
-    job = state.get(envelope.user_id, "job", job_id)
-    if job is None:
-        now = context.clock.now()
-        job = Job(
-            id=job_id,
-            user_id=envelope.user_id,
-            created_at=now,
-            updated_at=now,
-            job_type="transcribe",
-            state=JobState.TRANSCRIBING,
-            target_id=source.id,
-            target_revision=source.current_version,
-            correlation_id=envelope.correlation_id,
-            idempotency_key=envelope.idempotency_key,
-        )
-        with state.transaction(envelope.user_id) as tx:
-            job = tx.put("job", job)
+    if context.asr_launcher is None:
+        transcribe_inline(envelope, context)
     else:
-        job = state.set_job_state(job_id, user_id=envelope.user_id, state=JobState.TRANSCRIBING)
-
-    job_input = TranscriptionJobInput(
-        recording_id=source.id,
-        user_id=envelope.user_id,
-        source_version=source.current_version,
-        s3_bucket=source.object_ref.bucket,
-        s3_key=source.object_ref.key,
-        model_id=settings().speech.model_id,
-        max_audio_seconds=settings().limits.max_audio_seconds,
-        idempotency_key=envelope.idempotency_key,
-        correlation_id=envelope.correlation_id,
-        job_id=job.id,
-    )
-
-    if context.transcriber is None:
-        raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, "no transcriber is configured")
-
-    body = context.source_store.get_bytes(source.object_ref)
-    text, segments, meta = context.transcriber.transcribe(
-        body,
-        language=job_input.language or settings().speech.language,
-        glossary=tuple(job_input.glossary),
-        max_seconds=job_input.max_audio_seconds,
-    )
-
-    state.record_speech_usage(
-        envelope.user_id,
-        local_date=context.clock.today_local(source.capture_timezone),
-        audio_seconds=float(meta.get("audio_seconds", 0.0)),
-    )
-
-    # Save the transcript BEFORE extraction: speech errors affect dates, names
-    # and intent, so the user must be able to correct it first.
-    revision = TranscriptRevision(
-        source_version=source.current_version,
-        text=text,
-        asr_text=text,
-        edited_by_user=False,
-        segments=segments,
-        speech=_speech_metadata(meta),
-        created_at=context.clock.now(),
-    )
-    updated = source.model_copy(
-        update={
-            "lifecycle": SourceLifecycle.READY,
-            "transcripts": [*source.transcripts, revision],
-            "duration_seconds": float(meta.get("audio_seconds", 0.0)) or source.duration_seconds,
-        }
-    )
-    with state.transaction(envelope.user_id) as tx:
-        stored = tx.put("source", updated, expected_revision=source.revision)
-        if text.strip():
-            tx.append_outbox(
-                _outbox(
-                    envelope,
-                    event_type=EventType.TRANSCRIPT_FINALIZED,
-                    target_id=stored.id,
-                    target_revision=stored.current_version,
-                    payload=TranscriptFinalizedPayload(
-                        recording_id=stored.id,
-                        source_version=stored.current_version,
-                        text_length=len(text),
-                    ).model_dump(mode="json"),
-                    # Exactly one logical transcript.finalized per accepted
-                    # text revision, no matter how many retries happened.
-                    idempotency_key=f"transcript:{stored.id}:{stored.current_version}",
-                    clock=context.clock,
-                )
-            )
-
-    state.set_job_state(
-        job.id,
-        user_id=envelope.user_id,
-        state=JobState.READY,
-        result_refs={"source_id": source.id, "source_version": str(source.current_version)},
-        metrics={
-            "audio_seconds": float(meta.get("audio_seconds", 0.0)),
-            "decode_seconds": float(meta.get("decode_seconds", 0.0)),
-            "model_load_seconds": float(meta.get("model_load_seconds", 0.0) or 0.0),
-        },
-    )
-    if not text.strip():
-        log.info("source %s decoded to no speech; nothing downstream was enqueued", source.id)
-
-
-def _speech_metadata(meta: dict[str, Any]) -> Any:
-    from metis_contracts.entities import SpeechMetadata
-
-    known = {k: v for k, v in meta.items() if k in SpeechMetadata.model_fields}
-    return SpeechMetadata.model_validate(known)
+        launch_transcription(envelope, context)
 
 
 # --------------------------------------------------------------------------- #
@@ -230,7 +78,7 @@ def handle_transcript_finalized(envelope: EventEnvelope, context: DispatchContex
     with context.state_store.transaction(envelope.user_id) as tx:
         for index, (start, end) in enumerate(ranges):
             tx.append_outbox(
-                _outbox(
+                outbox_event(
                     envelope,
                     event_type=EventType.EXTRACTION_REQUESTED,
                     target_id=source.id,
@@ -282,7 +130,7 @@ def handle_extraction_requested(envelope: EventEnvelope, context: DispatchContex
     with context.state_store.transaction(envelope.user_id) as tx:
         tx.put("proposal", outcome.proposal)
         tx.append_outbox(
-            _outbox(
+            outbox_event(
                 envelope,
                 event_type=EventType.EXTRACTION_COMPLETED,
                 target_id=outcome.proposal.id,
