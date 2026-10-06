@@ -120,6 +120,10 @@ class StateStore(Protocol):
         self, user_id: str, *, project_id: str | None = None, cursor: str | None = None, limit: int = 100
     ) -> Page[Memory]: ...
 
+    def list_jobs(
+        self, user_id: str, *, state: JobState | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Job]: ...
+
     def get_revisions(self, user_id: str, kind: str, entity_id: str) -> list[dict[str, Any]]:
         """Source-linked change history, newest first."""
         ...

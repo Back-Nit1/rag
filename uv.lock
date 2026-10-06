@@ -1161,22 +1161,19 @@ name = "metis-pipeline"
 version = "0.1.0"
 source = { editable = "services/pipeline" }
 dependencies = [
-    { name = "metis-contracts" },
-    { name = "metis-state" },
-]
-
-[package.optional-dependencies]
-cloud = [
     { name = "boto3" },
+    { name = "metis-contracts" },
+    { name = "metis-speech" },
+    { name = "metis-state" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", marker = "extra == 'cloud'", specifier = ">=1.35" },
+    { name = "boto3", specifier = ">=1.35" },
     { name = "metis-contracts", editable = "packages/contracts" },
+    { name = "metis-speech", editable = "services/speech" },
     { name = "metis-state", editable = "services/state" },
 ]
-provides-extras = ["cloud"]
 
 [[package]]
 name = "metis-planner"

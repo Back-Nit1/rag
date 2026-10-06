@@ -20,11 +20,12 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Literal, Protocol
+from typing import Any, Protocol
 
 from metis_contracts import (
     RETRYABLE_FAILURES,
     TERMINAL_JOB_STATES,
+    AsrTaskOutcome,
     ErrorCode,
     EventEnvelope,
     EventType,
@@ -36,7 +37,6 @@ from metis_contracts import (
     new_id,
     settings,
 )
-from metis_contracts.common import StrictModel
 from metis_contracts.entities import (
     Job,
     SourceArtifact,
@@ -49,16 +49,6 @@ from metis_contracts.events import TranscriptFinalizedPayload
 from .dispatcher import DispatchContext, classify, outbox_event
 
 log = logging.getLogger("metis.pipeline.transcription")
-
-
-class AsrTaskOutcome(StrictModel):
-    """What the state machine reports when the ASR task ends, however it ends."""
-
-    user_id: str
-    job_id: str
-    status: Literal["succeeded", "failed", "timed_out", "aborted"]
-    failure: str | None = None  # ErrorCode value from the worker's stderr result
-    error_message: str | None = None
 
 
 class AsrLauncher(Protocol):
@@ -432,7 +422,7 @@ def _fail_outcome(context: DispatchContext, job: Job, source: SourceArtifact, ou
         return _end(context, job, JobState.CANCELED, None, "transcription was canceled")
     if outcome.status == "timed_out":
         category, msg = (
-            FailureCategory.TRANSIENT,
+            FailureCategory.TIMEOUT,
             (f"transcription exceeded {settings().limits.speech_wall_clock_seconds}s; try again"),
         )
     else:

@@ -289,7 +289,7 @@
       "type": "string"
     }
   },
-  "$id": "https://metis.local/schemas/v1/Page[Task].json",
+  "$id": "https://metis.local/schemas/v1/TaskPage.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -321,7 +321,7 @@
   "required": [
     "items"
   ],
-  "title": "Page[Task]",
+  "title": "TaskPage",
   "type": "object",
   "x-contract-version": 1
 }

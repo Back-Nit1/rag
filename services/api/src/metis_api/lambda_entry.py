@@ -74,7 +74,8 @@ def speech_finalize(event: dict[str, Any], context: Any) -> dict[str, Any]:
     ``error_message``. The result location is derived server-side from the
     stored source, never read from this payload.
     """
-    from metis_pipeline.transcription import AsrTaskOutcome, finalize_transcription
+    from metis_contracts import AsrTaskOutcome
+    from metis_pipeline.transcription import finalize_transcription
 
     job = finalize_transcription(_worker_context(), AsrTaskOutcome.model_validate(event))
     return {"job_id": job.id, "state": job.state.value, "failure": job.failure}

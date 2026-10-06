@@ -44,9 +44,11 @@ TERMINAL_JOB_STATES = frozenset({JobState.READY, JobState.FAILED, JobState.CANCE
 
 
 class FailureCategory(StrEnum):
-    """Drives retry policy. Only TRANSIENT and THROTTLED are retryable."""
+    """Drives retry policy. Only TRANSIENT and THROTTLED are retryable. TIMEOUT is
+    terminal: the work exceeded its wall-clock budget; the user may retry."""
 
     TRANSIENT = "transient"
+    TIMEOUT = "timeout"
     THROTTLED = "throttled"
     VALIDATION = "validation"
     UNSUPPORTED_MEDIA = "unsupported_media"

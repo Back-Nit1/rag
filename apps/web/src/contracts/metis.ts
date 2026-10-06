@@ -67,6 +67,7 @@ export enum ExtractedItemKind {
 
 export enum FailureCategory {
   TRANSIENT = "transient",
+  TIMEOUT = "timeout",
   THROTTLED = "throttled",
   VALIDATION = "validation",
   UNSUPPORTED_MEDIA = "unsupported_media",
@@ -238,6 +239,15 @@ export interface AcceptPlanRequest {
   expected_planning_epoch: number;
 }
 
+/** What the speech state machine reports when the ASR task ends, however it */
+export interface AsrTaskOutcome {
+  user_id: string;
+  job_id: string;
+  status: "succeeded" | "failed" | "timed_out" | "aborted";
+  failure?: string | null;
+  error_message?: string | null;
+}
+
 /** A tried-and-failed approach. Preserved so it is not re-suggested. */
 export interface Attempt {
   summary: string;
@@ -305,6 +315,12 @@ export interface CaptureDetail {
   jobs?: Job[];
   created_task_ids?: string[];
   created_event_ids?: string[];
+}
+
+export interface CapturePage {
+  items: SourceArtifact[];
+  next_cursor?: string | null;
+  complete?: boolean;
 }
 
 /** At most one active thread per captured item, with batched fields. */
@@ -489,6 +505,12 @@ export interface EventEnvelope {
   payload?: { [key: string]: unknown };
 }
 
+export interface EventPage {
+  items: Event[];
+  next_cursor?: string | null;
+  complete?: boolean;
+}
+
 /** One retrieved, source-backed justification shown to the user. */
 export interface Evidence {
   source_id: string;
@@ -665,6 +687,12 @@ export interface Notification {
   generated?: boolean;
 }
 
+export interface NotificationPage {
+  items: Notification[];
+  next_cursor?: string | null;
+  complete?: boolean;
+}
+
 /** Private object-storage reference. Never a public or presigned URL at rest. */
 export interface ObjectRef {
   bucket: string;
@@ -696,42 +724,6 @@ export interface OutboxEvent {
   lease_expires_at?: string | null;
   failure?: FailureCategory | null;
   error_message?: string | null;
-}
-
-export interface EventPage {
-  items: Event[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface NotificationPage {
-  items: Notification[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface ProjectPage {
-  items: Project[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface ReminderPage {
-  items: Reminder[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface CapturePage {
-  items: SourceArtifact[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface TaskPage {
-  items: Task[];
-  next_cursor?: string | null;
-  complete?: boolean;
 }
 
 export interface PatchEventRequest {
@@ -898,6 +890,12 @@ export interface ProjectDetail {
   work_packet_stale?: boolean;
 }
 
+export interface ProjectPage {
+  items: Project[];
+  next_cursor?: string | null;
+  complete?: boolean;
+}
+
 /** Resumable derived-data deletion. `cursor` lets a retry continue. */
 export interface PurgePayload {
   target_id: string;
@@ -965,6 +963,12 @@ export interface ReminderDuePayload {
   reminder_id: string;
   occurrence_key: string;
   scheduled_for: string;
+}
+
+export interface ReminderPage {
+  items: Reminder[];
+  next_cursor?: string | null;
+  complete?: boolean;
 }
 
 export interface ReminderSyncPayload {
@@ -1105,6 +1109,12 @@ export interface Task {
   canceled_at?: string | null;
   user_edited_fields?: string[];
   source_unavailable?: boolean;
+}
+
+export interface TaskPage {
+  items: Task[];
+  next_cursor?: string | null;
+  complete?: boolean;
 }
 
 /** Local wall-clock window, e.g. 09:00-17:00. Not an instant. */

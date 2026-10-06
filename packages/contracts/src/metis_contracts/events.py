@@ -122,6 +122,18 @@ class TranscriptionJobResult(StrictModel):
     error_message: Annotated[str | None, Field(default=None, max_length=1000)] = None
 
 
+class AsrTaskOutcome(StrictModel):
+    """What the speech state machine reports when the ASR task ends, however it
+    ends. `failure` is the worker's ErrorCode value; it stays a string because
+    the worker's stderr is untrusted and may carry an unknown code."""
+
+    user_id: UserId
+    job_id: EntityId
+    status: Literal["succeeded", "failed", "timed_out", "aborted"]
+    failure: str | None = None
+    error_message: Annotated[str | None, Field(default=None, max_length=1000)] = None
+
+
 class TranscriptFinalizedPayload(StrictModel):
     recording_id: EntityId
     source_version: Revision

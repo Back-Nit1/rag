@@ -11,9 +11,10 @@
       "type": "string"
     },
     "FailureCategory": {
-      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable.",
+      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable. TIMEOUT is\nterminal: the work exceeded its wall-clock budget; the user may retry.",
       "enum": [
         "transient",
+        "timeout",
         "throttled",
         "validation",
         "unsupported_media",
@@ -544,7 +545,7 @@
       "type": "object"
     }
   },
-  "$id": "https://metis.local/schemas/v1/Page[SourceArtifact].json",
+  "$id": "https://metis.local/schemas/v1/CapturePage.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -576,7 +577,7 @@
   "required": [
     "items"
   ],
-  "title": "Page[SourceArtifact]",
+  "title": "CapturePage",
   "type": "object",
   "x-contract-version": 1
 }

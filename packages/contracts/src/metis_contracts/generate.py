@@ -58,6 +58,13 @@ def models() -> dict[str, type[BaseModel]]:
         out.update(_collected(mod, BaseModel))
     for name in SKIP_MODELS:
         out.pop(name, None)
+    # Parametrised generics are named "Page[Event]" by pydantic, which is not a
+    # legal identifier. Re-key them under the public alias that api.py exports.
+    out = {n: o for n, o in out.items() if "[" not in n}
+    for name in dir(api):
+        obj = getattr(api, name)
+        if isinstance(obj, type) and issubclass(obj, BaseModel) and "[" in obj.__name__:
+            out[name] = obj
     return dict(sorted(out.items()))
 
 
@@ -78,6 +85,7 @@ def build_schemas() -> dict[str, str]:
     defs: dict[str, Any] = {}
     for name, model in models().items():
         schema = model.model_json_schema(ref_template="#/$defs/{model}")
+        schema["title"] = name  # generic aliases would otherwise read "Page[Event]"
         schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
         schema["$id"] = f"https://metis.local/schemas/v{CONTRACT_VERSION}/{name}.json"
         schema["x-contract-version"] = CONTRACT_VERSION
@@ -120,8 +128,8 @@ def _ts_type(schema: dict[str, Any], model_names: set[str]) -> str:
     if t == "object":
         extra = schema.get("additionalProperties")
         if isinstance(extra, dict):
-            return f"Record<string, {_ts_type(extra, model_names)}>"
-        return "Record<string, unknown>"
+            return f"{{ [key: string]: {_ts_type(extra, model_names)} }}"
+        return "{ [key: string]: unknown }"
     if isinstance(t, list):
         return " | ".join(PY_TO_TS.get(x, "unknown") for x in t)
     if t in PY_TO_TS:
@@ -155,7 +163,7 @@ def build_typescript() -> str:
     lines.append("] as const;")
     lines.append("export type EventTypeName = (typeof EVENT_TYPES)[number];")
     lines.append("")
-    lines.append("export const HTTP_STATUS_BY_ERROR: Record<string, number> = {")
+    lines.append("export const HTTP_STATUS_BY_ERROR: { [key: string]: number } = {")
     lines.extend(f'  "{code.value}": {status},' for code, status in sorted(errors.HTTP_STATUS.items()))
     lines.append("};")
     lines.append("")

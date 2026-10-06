@@ -87,6 +87,10 @@ owner. Contract changes go only through the coordinator.
 | Production `mypy --strict` clean; remaining port drift reconciled | coordinator | `2f6c675` | |
 | `pnpm-lock.yaml`, infra typecheck fix, honest outbox batch contract | coordinator | `265196e` | |
 | README, this ledger, ADR 0003, frozen base | coordinator | `cec682d` | |
+| Web local capture slice (React/TS/Vite PWA against the local API) | frontend | `d9e9bb9` | handoff `f331b25` |
+| Web: Today shows a task's state; no polling of a hidden tab | frontend | `c8d7939` | |
+| Cloud ASR launch/finalize boundary with verified results | pipeline | `f3cd777`, `189aee8` | **provisional**: no real ASR or AWS run; `f3cd777` did not pass mypy, `189aee8` fixed typing. Counts as done only after `make check` passes on the integrated tree |
+| Generator: `*Page` aliases, index signatures, `AsrTaskOutcome` and `FailureCategory.TIMEOUT` in contracts, `StateStore.list_jobs`, boto3 + metis-speech deps | coordinator | integration commit | web `metis.ts` no longer hand-patched |
 
 ## ready
 

@@ -229,7 +229,7 @@
       "type": "object"
     }
   },
-  "$id": "https://metis.local/schemas/v1/Page[Notification].json",
+  "$id": "https://metis.local/schemas/v1/NotificationPage.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -261,7 +261,7 @@
   "required": [
     "items"
   ],
-  "title": "Page[Notification]",
+  "title": "NotificationPage",
   "type": "object",
   "x-contract-version": 1
 }

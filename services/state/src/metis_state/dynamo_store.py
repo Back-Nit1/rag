@@ -380,6 +380,13 @@ class DynamoStateStore:
         filtered = [e for e in items if lo is None or (e.local_date and lo <= e.local_date <= (hi or lo))]
         return Page(items=filtered, next_cursor=next_cursor, complete=complete)
 
+    def list_jobs(
+        self, user_id: str, *, state: JobState | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Job]:
+        items, next_cursor, complete = self._query_kind(user_id, "job", cursor=cursor, limit=limit)
+        filtered = [j for j in items if state is None or j.state == state]
+        return Page(items=filtered, next_cursor=next_cursor, complete=complete)
+
     def list_availability(self, user_id: str, local_date: date) -> list[AvailabilityBlock]:
         items, _, _ = self._query_kind(user_id, "availability", cursor=None, limit=200)
         return [a for a in items if a.local_date == local_date]

@@ -67,6 +67,7 @@ export enum ExtractedItemKind {
 
 export enum FailureCategory {
   TRANSIENT = "transient",
+  TIMEOUT = "timeout",
   THROTTLED = "throttled",
   VALIDATION = "validation",
   UNSUPPORTED_MEDIA = "unsupported_media",
@@ -209,7 +210,7 @@ export const EVENT_TYPES = [
 ] as const;
 export type EventTypeName = (typeof EVENT_TYPES)[number];
 
-export const HTTP_STATUS_BY_ERROR: Record<string, number> = {
+export const HTTP_STATUS_BY_ERROR: { [key: string]: number } = {
   "ambiguous_target": 409,
   "budget_exceeded": 402,
   "dependency_cycle": 422,
@@ -236,6 +237,15 @@ export const HTTP_STATUS_BY_ERROR: Record<string, number> = {
 export interface AcceptPlanRequest {
   expected_revision: number;
   expected_planning_epoch: number;
+}
+
+/** What the speech state machine reports when the ASR task ends, however it */
+export interface AsrTaskOutcome {
+  user_id: string;
+  job_id: string;
+  status: "succeeded" | "failed" | "timed_out" | "aborted";
+  failure?: string | null;
+  error_message?: string | null;
 }
 
 /** A tried-and-failed approach. Preserved so it is not re-suggested. */
@@ -305,6 +315,12 @@ export interface CaptureDetail {
   jobs?: Job[];
   created_task_ids?: string[];
   created_event_ids?: string[];
+}
+
+export interface CapturePage {
+  items: SourceArtifact[];
+  next_cursor?: string | null;
+  complete?: boolean;
 }
 
 /** At most one active thread per captured item, with batched fields. */
@@ -439,7 +455,7 @@ export interface ErrorBody {
   correlation_id?: string | null;
   current_revision?: number | null;
   retry_after_seconds?: number | null;
-  details?: Record<string, string>;
+  details?: { [key: string]: string };
 }
 
 /** A duration estimate that always declares where it came from. */
@@ -486,7 +502,13 @@ export interface EventEnvelope {
   target_id?: string | null;
   target_revision?: number | null;
   idempotency_key: string;
-  payload?: Record<string, unknown>;
+  payload?: { [key: string]: unknown };
+}
+
+export interface EventPage {
+  items: Event[];
+  next_cursor?: string | null;
+  complete?: boolean;
 }
 
 /** One retrieved, source-backed justification shown to the user. */
@@ -558,7 +580,7 @@ export interface ExtractionRequestedPayload {
 export interface HealthResponse {
   status: "ok" | "degraded";
   mode: string;
-  adapters: Record<string, string>;
+  adapters: { [key: string]: string };
   contract_version: number;
   build?: string | null;
 }
@@ -588,11 +610,11 @@ export interface Job {
   lease_expires_at?: string | null;
   failure?: FailureCategory | null;
   error_message?: string | null;
-  result_refs?: Record<string, string>;
+  result_refs?: { [key: string]: string };
   adapter_mode?: AdapterMode;
   started_at?: string | null;
   finished_at?: string | null;
-  metrics?: Record<string, number>;
+  metrics?: { [key: string]: number };
 }
 
 export interface JobAccepted {
@@ -665,6 +687,12 @@ export interface Notification {
   generated?: boolean;
 }
 
+export interface NotificationPage {
+  items: Notification[];
+  next_cursor?: string | null;
+  complete?: boolean;
+}
+
 /** Private object-storage reference. Never a public or presigned URL at rest. */
 export interface ObjectRef {
   bucket: string;
@@ -688,7 +716,7 @@ export interface OutboxEvent {
   target_revision?: number | null;
   correlation_id: string;
   idempotency_key: string;
-  payload?: Record<string, unknown>;
+  payload?: { [key: string]: unknown };
   state?: OutboxState;
   attempts?: number;
   available_at: string;
@@ -696,42 +724,6 @@ export interface OutboxEvent {
   lease_expires_at?: string | null;
   failure?: FailureCategory | null;
   error_message?: string | null;
-}
-
-export interface Page[Event] {
-  items: Event[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface Page[Notification] {
-  items: Notification[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface Page[Project] {
-  items: Project[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface Page[Reminder] {
-  items: Reminder[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface Page[SourceArtifact] {
-  items: SourceArtifact[];
-  next_cursor?: string | null;
-  complete?: boolean;
-}
-
-export interface Page[Task] {
-  items: Task[];
-  next_cursor?: string | null;
-  complete?: boolean;
 }
 
 export interface PatchEventRequest {
@@ -802,7 +794,7 @@ export interface Plan {
   local_date: string;
   timezone: string;
   planning_epoch: number;
-  input_revisions?: Record<string, number>;
+  input_revisions?: { [key: string]: number };
   time_budget_minutes: number;
   status?: PlanStatus;
   blocks?: PlanBlock[];
@@ -898,6 +890,12 @@ export interface ProjectDetail {
   work_packet_stale?: boolean;
 }
 
+export interface ProjectPage {
+  items: Project[];
+  next_cursor?: string | null;
+  complete?: boolean;
+}
+
 /** Resumable derived-data deletion. `cursor` lets a retry continue. */
 export interface PurgePayload {
   target_id: string;
@@ -965,6 +963,12 @@ export interface ReminderDuePayload {
   reminder_id: string;
   occurrence_key: string;
   scheduled_for: string;
+}
+
+export interface ReminderPage {
+  items: Reminder[];
+  next_cursor?: string | null;
+  complete?: boolean;
 }
 
 export interface ReminderSyncPayload {
@@ -1107,6 +1111,12 @@ export interface Task {
   source_unavailable?: boolean;
 }
 
+export interface TaskPage {
+  items: Task[];
+  next_cursor?: string | null;
+  complete?: boolean;
+}
+
 /** Local wall-clock window, e.g. 09:00-17:00. Not an instant. */
 export interface TimeWindow {
   start: string;
@@ -1205,8 +1215,8 @@ export interface TranscriptionJobResult {
 export interface UploadInstructions {
   url: string;
   method?: "PUT" | "POST";
-  fields?: Record<string, string>;
-  headers?: Record<string, string>;
+  fields?: { [key: string]: string };
+  headers?: { [key: string]: string };
   object_key: string;
   expires_at: string;
   max_bytes: number;
@@ -1267,7 +1277,7 @@ export interface WorkPacket {
   completion_criterion: string;
   estimate?: Estimate | null;
   evidence?: Evidence[];
-  input_revisions?: Record<string, number>;
+  input_revisions?: { [key: string]: number };
   adapter_mode?: AdapterMode;
   generated_at: string;
 }

@@ -391,3 +391,52 @@ def test_default_preferences_are_editable_defaults_not_inferred_availability(sto
     prefs = store.get_preferences(USER)
     assert prefs.revision == 1 and prefs.max_focus_tasks == 3
     assert prefs.work_hours[0].start == "09:00"
+
+
+def test_list_jobs_filters_by_state_and_owner(store):
+    def put(user, job_id):
+        with store.transaction(user) as tx:
+            tx.put(
+                "job",
+                Job(
+                    id=job_id,
+                    user_id=user,
+                    created_at=T0,
+                    updated_at=T0,
+                    job_type="transcribe",
+                    correlation_id="c1",
+                    idempotency_key=f"k:{job_id}",
+                ),
+            )
+
+    put(USER, "job_1")
+    put(USER, "job_2")
+    put("user_b", "job_3")
+    store.set_job_state("job_2", user_id=USER, state=JobState.FAILED)
+    assert [j.id for j in store.list_jobs(USER).items] == ["job_1", "job_2"]
+    assert [j.id for j in store.list_jobs(USER, state=JobState.QUEUED).items] == ["job_1"]
+    assert [j.id for j in store.list_jobs(USER, state=JobState.FAILED).items] == ["job_2"]
+    assert store.list_jobs("user_b", state=JobState.FAILED).items == []
+
+
+def test_dynamo_list_jobs_filters_by_state():
+    from metis_contracts import Page
+    from metis_state.dynamo_store import DynamoStateStore
+
+    jobs = [
+        Job(
+            id=i,
+            user_id=USER,
+            created_at=T0,
+            updated_at=T0,
+            job_type="t",
+            state=s,
+            correlation_id="c",
+            idempotency_key=i,
+        )
+        for i, s in (("job_1", JobState.QUEUED), ("job_2", JobState.FAILED))
+    ]
+    s = object.__new__(DynamoStateStore)
+    s._query_kind = lambda *a, **k: (jobs, None, True)  # type: ignore[method-assign]
+    page = s.list_jobs(USER, state=JobState.FAILED)
+    assert isinstance(page, Page) and [j.id for j in page.items] == ["job_2"]

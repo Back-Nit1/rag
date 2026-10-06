@@ -8,9 +8,11 @@ from types import SimpleNamespace
 
 import pytest
 from metis_contracts import (
+    AsrTaskOutcome,
     ErrorCode,
     EventEnvelope,
     EventType,
+    FailureCategory,
     FixedClock,
     JobState,
     MetisError,
@@ -23,7 +25,6 @@ from metis_contracts import (
 from metis_contracts.entities import SourceArtifact
 from metis_pipeline.dispatcher import DispatchContext
 from metis_pipeline.transcription import (
-    AsrTaskOutcome,
     StepFunctionsLauncher,
     finalize_transcription,
     launch_transcription,
@@ -222,6 +223,7 @@ def test_timeout_and_worker_failure_become_failed_jobs(env):
     launch_transcription(envelope(src), ctx)
     job = finalize_transcription(ctx, outcome("timed_out"))
     assert job.state is JobState.FAILED and "exceeded" in job.error_message
+    assert job.failure is FailureCategory.TIMEOUT
     assert ctx.state_store.get(USER, "source", src.id).lifecycle is SourceLifecycle.FAILED
 
 

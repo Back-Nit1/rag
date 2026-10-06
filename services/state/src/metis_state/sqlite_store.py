@@ -392,6 +392,12 @@ class SqliteStateStore:
             params.append(local_date.isoformat())
         return self._page("event", user_id, " ".join(clauses), params, cursor=cursor, limit=limit)
 
+    def list_jobs(
+        self, user_id: str, *, state: JobState | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Job]:
+        where, params = ("AND state = ?", [JobState(state).value]) if state else ("", [])
+        return self._page("job", user_id, where, params, cursor=cursor, limit=limit)
+
     def list_availability(self, user_id: str, local_date: date) -> list[AvailabilityBlock]:
         page = self._page(
             "availability", user_id, "AND local_date = ?", [local_date.isoformat()], cursor=None, limit=200

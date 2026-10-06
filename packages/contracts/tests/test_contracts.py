@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -226,3 +227,38 @@ def test_overflow_plan_does_not_hide_unscheduled_work() -> None:
     assert plan.overflow_task_ids, "overflow must stay visible"
     assert plan.validation and plan.validation.checked_by == "application"
     assert plan.adapter_mode == m.AdapterMode.FIXTURE
+
+
+# --- generator regressions -------------------------------------------------- #
+
+
+def test_generated_ts_has_no_illegal_identifiers_and_keeps_page_aliases() -> None:
+    ts = build_typescript()
+    assert "[" not in "".join(re.findall(r"export interface (\S+)", ts))
+    for alias in ("TaskPage", "EventPage", "NotificationPage", "ReminderPage", "ProjectPage", "CapturePage"):
+        assert f"export interface {alias} {{" in ts
+
+
+def test_generated_ts_never_uses_record_generic() -> None:
+    # The contract model named `Record` shadows TypeScript's Record<K, V>.
+    ts = build_typescript()
+    assert "export interface Record {" in ts
+    assert "Record<" not in ts
+    assert "{ [key: string]: number }" in ts
+
+
+def test_asr_task_outcome_contract() -> None:
+    ok = m.AsrTaskOutcome(user_id="u", job_id="job_1", status="timed_out")
+    assert ok.failure is None and ok.error_message is None
+    with pytest.raises(ValidationError):
+        m.AsrTaskOutcome(user_id="u", job_id="job_1", status="exploded")
+    assert "AsrTaskOutcome" in models()
+
+
+def test_timeout_failure_is_terminal() -> None:
+    assert m.FailureCategory.TIMEOUT.value == "timeout"
+    assert m.FailureCategory.TIMEOUT not in m.RETRYABLE_FAILURES
+
+
+def test_state_store_port_lists_jobs() -> None:
+    assert "list_jobs" in dir(m.ports.StateStore)

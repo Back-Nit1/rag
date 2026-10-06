@@ -165,7 +165,7 @@
       "type": "object"
     }
   },
-  "$id": "https://metis.local/schemas/v1/Page[Project].json",
+  "$id": "https://metis.local/schemas/v1/ProjectPage.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -197,7 +197,7 @@
   "required": [
     "items"
   ],
-  "title": "Page[Project]",
+  "title": "ProjectPage",
   "type": "object",
   "x-contract-version": 1
 }

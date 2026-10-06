@@ -1,0 +1,63 @@
+{
+  "$id": "https://metis.local/schemas/v1/AsrTaskOutcome.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "What the speech state machine reports when the ASR task ends, however it\nends. `failure` is the worker's ErrorCode value; it stays a string because\nthe worker's stderr is untrusted and may carry an unknown code.",
+  "properties": {
+    "error_message": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Message"
+    },
+    "failure": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Failure"
+    },
+    "job_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Job Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "succeeded",
+        "failed",
+        "timed_out",
+        "aborted"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "user_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "job_id",
+    "status"
+  ],
+  "title": "AsrTaskOutcome",
+  "type": "object",
+  "x-contract-version": 1
+}

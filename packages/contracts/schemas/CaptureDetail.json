@@ -446,9 +446,10 @@
       "type": "object"
     },
     "FailureCategory": {
-      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable.",
+      "description": "Drives retry policy. Only TRANSIENT and THROTTLED are retryable. TIMEOUT is\nterminal: the work exceeded its wall-clock budget; the user may retry.",
       "enum": [
         "transient",
+        "timeout",
         "throttled",
         "validation",
         "unsupported_media",
