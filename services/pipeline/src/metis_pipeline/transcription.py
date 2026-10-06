@@ -37,7 +37,13 @@ from metis_contracts import (
     settings,
 )
 from metis_contracts.common import StrictModel
-from metis_contracts.entities import Job, SpeechMetadata, TranscriptRevision, TranscriptSegment
+from metis_contracts.entities import (
+    Job,
+    SourceArtifact,
+    SpeechMetadata,
+    TranscriptRevision,
+    TranscriptSegment,
+)
 from metis_contracts.events import TranscriptFinalizedPayload
 
 from .dispatcher import DispatchContext, classify, outbox_event
@@ -85,9 +91,11 @@ class StepFunctionsLauncher:
         ):
             raise MetisError(ErrorCode.RATE_LIMITED, "speech concurrency cap reached; deferred")
         try:
-            return self._sfn.start_execution(
-                stateMachineArn=self._arn, name=job.job_id, input=job.model_dump_json()
-            )["executionArn"]
+            return str(
+                self._sfn.start_execution(
+                    stateMachineArn=self._arn, name=job.job_id, input=job.model_dump_json()
+                )["executionArn"]
+            )
         except self._sfn.exceptions.ExecutionAlreadyExists:
             return self._arn.replace(":stateMachine:", ":execution:") + ":" + job.job_id
         except self._sfn.exceptions.ClientError as exc:
@@ -117,9 +125,9 @@ def build_asr_launcher() -> StepFunctionsLauncher | None:
 # --------------------------------------------------------------------------- #
 
 
-def _source_for(envelope: EventEnvelope, context: DispatchContext) -> Any:
+def _source_for(envelope: EventEnvelope, context: DispatchContext) -> SourceArtifact:
     state = context.state_store
-    source = state.get(envelope.user_id, "source", envelope.target_id or "")
+    source: SourceArtifact | None = state.get(envelope.user_id, "source", envelope.target_id or "")
     if source is None:
         raise MetisError(ErrorCode.TOMBSTONED, "the capture was deleted before transcription")
     if source.current_version != envelope.target_revision:
@@ -134,12 +142,14 @@ def _source_for(envelope: EventEnvelope, context: DispatchContext) -> Any:
     return source
 
 
-def _job_for(envelope: EventEnvelope, context: DispatchContext, source: Any, state: JobState) -> Job:
+def _job_for(
+    envelope: EventEnvelope, context: DispatchContext, source: SourceArtifact, state: JobState
+) -> Job:
     """Existing job (duplicate completion / retry) or a new one."""
     job_id = str(envelope.payload.get("job_id") or new_id("job"))
-    job = context.state_store.get(envelope.user_id, "job", job_id)
-    if job is not None:
-        return job
+    existing: Job | None = context.state_store.get(envelope.user_id, "job", job_id)
+    if existing is not None:
+        return existing
     now = context.clock.now()
     job = Job(
         id=job_id,
@@ -154,11 +164,14 @@ def _job_for(envelope: EventEnvelope, context: DispatchContext, source: Any, sta
         idempotency_key=envelope.idempotency_key,
     )
     with context.state_store.transaction(envelope.user_id) as tx:
-        return tx.put("job", job)
+        stored: Job = tx.put("job", job)
+    return stored
 
 
-def _job_input(source: Any, job: Job) -> TranscriptionJobInput:
+def _job_input(source: SourceArtifact, job: Job) -> TranscriptionJobInput:
     cfg = settings()
+    if source.object_ref is None:
+        raise MetisError(ErrorCode.VALIDATION_FAILED, "audio capture has no object reference")
     return TranscriptionJobInput(
         recording_id=source.id,
         user_id=job.user_id,
@@ -177,20 +190,21 @@ def _end(
     context: DispatchContext, job: Job, state: JobState, category: FailureCategory | None, msg: str
 ) -> Job:
     """Move a job to a terminal state once; never overwrite an earlier terminal one."""
-    fresh = context.state_store.get(job.user_id, "job", job.id)
+    fresh: Job | None = context.state_store.get(job.user_id, "job", job.id)
     if fresh is not None and fresh.state in TERMINAL_JOB_STATES:
         return fresh
-    return context.state_store.set_job_state(
+    ended: Job = context.state_store.set_job_state(
         job.id,
         user_id=job.user_id,
         state=state,
         failure=category if category else None,
         error_message=msg,
     )
+    return ended
 
 
 def _mark_source_failed(context: DispatchContext, user_id: str, source_id: str, version: int) -> None:
-    source = context.state_store.get(user_id, "source", source_id)
+    source: SourceArtifact | None = context.state_store.get(user_id, "source", source_id)
     if source is None or source.current_version != version or source.lifecycle is SourceLifecycle.FAILED:
         return
     with context.state_store.transaction(user_id) as tx:
@@ -204,7 +218,7 @@ def _mark_source_failed(context: DispatchContext, user_id: str, source_id: str, 
 def commit_transcript(
     context: DispatchContext,
     envelope: EventEnvelope,
-    source: Any,
+    source: SourceArtifact,
     job: Job,
     text: str,
     segments: list[TranscriptSegment],
@@ -281,6 +295,7 @@ def commit_transcript(
 def transcribe_inline(envelope: EventEnvelope, context: DispatchContext) -> None:
     source = _source_for(envelope, context)
     job = _job_for(envelope, context, source, JobState.TRANSCRIBING)
+    assert source.object_ref is not None  # _source_for guarantees it
     if job.state in TERMINAL_JOB_STATES:
         return  # duplicate completion; the first run already decided
     if job.state is not JobState.TRANSCRIBING:
@@ -306,7 +321,11 @@ def transcribe_inline(envelope: EventEnvelope, context: DispatchContext) -> None
 
 def launch_transcription(envelope: EventEnvelope, context: DispatchContext) -> None:
     state = context.state_store
+    launcher = context.asr_launcher
+    if launcher is None:
+        raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, "no ASR launcher is configured")
     source = _source_for(envelope, context)
+    assert source.object_ref is not None  # _source_for guarantees it
     job = _job_for(envelope, context, source, JobState.QUEUED)
     if job.state in TERMINAL_JOB_STATES or "execution_ref" in job.result_refs:
         return  # duplicate completion: never launch a second task for one job
@@ -324,24 +343,26 @@ def launch_transcription(envelope: EventEnvelope, context: DispatchContext) -> N
             raise MetisError(ErrorCode.UNSUPPORTED_MEDIA, "unsupported or empty recording")
 
         state.set_job_state(job.id, user_id=job.user_id, state=JobState.STARTING)
-        ref = context.asr_launcher.start(_job_input(source, job))
+        ref = launcher.start(_job_input(source, job))
     except MetisError as exc:
         category = classify(exc)
         attempts = job.attempts + 1
         if category in RETRYABLE_FAILURES and attempts < limits.job_max_attempts:
             # Let the outbox retry with backoff; the user sees a queued job.
-            fresh = state.get(job.user_id, "job", job.id)
+            current: Job | None = state.get(job.user_id, "job", job.id)
+            if current is None:
+                raise
             with state.transaction(job.user_id) as tx:
                 tx.put(
                     "job",
-                    fresh.model_copy(
+                    current.model_copy(
                         update={
                             "state": JobState.QUEUED,
                             "attempts": attempts,
                             "error_message": f"launch deferred: {exc.message}"[:1000],
                         }
                     ),
-                    expected_revision=fresh.revision,
+                    expected_revision=current.revision,
                 )
             raise
         _end(context, job, JobState.FAILED, category, exc.message)
@@ -363,13 +384,13 @@ def launch_transcription(envelope: EventEnvelope, context: DispatchContext) -> N
 def finalize_transcription(context: DispatchContext, outcome: AsrTaskOutcome) -> Job:
     """Verify and apply the ASR task result. Safe to call more than once."""
     state = context.state_store
-    job = state.get(outcome.user_id, "job", outcome.job_id)
+    job: Job | None = state.get(outcome.user_id, "job", outcome.job_id)
     if job is None or job.job_type != "transcribe":
         raise MetisError(ErrorCode.NOT_FOUND, f"job {outcome.job_id} not found")
     if job.state in TERMINAL_JOB_STATES:
         return job  # duplicate task completion, or already canceled
 
-    source = state.get(job.user_id, "source", job.target_id or "")
+    source: SourceArtifact | None = state.get(job.user_id, "source", job.target_id or "")
     if source is None or source.current_version != job.target_revision:
         return _end(
             context,
@@ -400,10 +421,13 @@ def finalize_transcription(context: DispatchContext, outcome: AsrTaskOutcome) ->
             return _end(context, job, JobState.CANCELED, FailureCategory.SUPERSEDED, exc.message)
         _mark_source_failed(context, job.user_id, source.id, source.current_version)
         return _end(context, job, JobState.FAILED, classify(exc), exc.message)
-    return state.get(job.user_id, "job", job.id)
+    final: Job | None = state.get(job.user_id, "job", job.id)
+    if final is None:
+        raise MetisError(ErrorCode.NOT_FOUND, f"job {job.id} vanished")
+    return final
 
 
-def _fail_outcome(context: DispatchContext, job: Job, source: Any, outcome: AsrTaskOutcome) -> Job:
+def _fail_outcome(context: DispatchContext, job: Job, source: SourceArtifact, outcome: AsrTaskOutcome) -> Job:
     if outcome.status == "aborted":
         return _end(context, job, JobState.CANCELED, None, "transcription was canceled")
     if outcome.status == "timed_out":
@@ -422,8 +446,8 @@ def _fail_outcome(context: DispatchContext, job: Job, source: Any, outcome: AsrT
 
 
 def _read_result(
-    context: DispatchContext, job: Job, source: Any
-) -> tuple[str, list[TranscriptSegment], dict]:
+    context: DispatchContext, job: Job, source: SourceArtifact
+) -> tuple[str, list[TranscriptSegment], dict[str, Any]]:
     from metis_contracts import ObjectRef
     from metis_speech.worker import result_key
 

@@ -314,3 +314,37 @@ def test_the_prompt_carries_the_capture_date_and_timezone_only():
     assert "2026-10-05" in prompt and NY in prompt
     assert "leave it null" in prompt
     assert len(prompt) < 1000, "the prompt is bounded, not a history dump"
+
+
+def test_extraction_handler_commits_proposal_and_completed_event_together(store, clock):
+    """Regression: the cloud ASR refactor must not break the extraction outbox transaction."""
+    from metis_contracts import EventEnvelope, EventType, new_id
+    from metis_pipeline.dispatcher import DispatchContext
+    from metis_pipeline.handlers import handle_extraction_requested
+
+    with store.transaction(USER) as tx:
+        tx.put("source", source())
+    context = DispatchContext(
+        state_store=store,
+        source_store=None,
+        clock=clock,
+        inference=FixtureInferenceClient(),
+        worker_id="w1",
+    )
+    envelope = EventEnvelope(
+        event_id=new_id("evt"),
+        event_type=EventType.EXTRACTION_REQUESTED,
+        user_id=USER,
+        correlation_id="corr_1",
+        target_id="src_1",
+        target_revision=1,
+        idempotency_key="extract:src_1:1:0",
+        payload={"source_id": "src_1", "source_version": 1, "range_index": 0, "range_count": 1},
+    )
+
+    handle_extraction_requested(envelope, context)
+
+    events = store.claim_outbox(owner="w1", limit=10, lease_seconds=30)
+    assert [e.event_type for e in events] == [EventType.EXTRACTION_COMPLETED]
+    proposal_id = events[0].payload["proposal_id"]
+    assert store.get(USER, "proposal", proposal_id) is not None
