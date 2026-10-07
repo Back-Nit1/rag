@@ -30,12 +30,12 @@ export function SectionHeading({
   as?: "h2" | "h3";
 }) {
   return (
-    <div className="mb-3 flex items-center gap-3">
-      <Tag id={id} className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-ink">
+    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+      <Tag id={id} className="font-mono text-xs font-semibold uppercase tracking-[0.12em] whitespace-nowrap text-ink">
         {children}
       </Tag>
-      <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-line-strong" />
-      {hint && <span className="text-right text-xs text-muted">{hint}</span>}
+      <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-line-strong" />
+      {hint && <span className="text-xs text-muted max-sm:order-last max-sm:basis-full">{hint}</span>}
     </div>
   );
 }

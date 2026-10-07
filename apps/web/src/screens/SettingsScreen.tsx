@@ -268,10 +268,10 @@ function Windows({ legend, hint, value, onChange }: { legend: string; hint?: str
       <legend className="mb-1 font-medium text-ink">{legend}</legend>
       {value.length === 0 && <p className="text-muted">none</p>}
       {value.map((w, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          <input aria-label={`${legend} ${i + 1} start`} className={`${inputClass} min-w-0 flex-1`} type="time" value={w.start} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))} />
+        <div key={i} className="flex flex-wrap items-center gap-1.5">
+          <input aria-label={`${legend} ${i + 1} start`} className={`${inputClass} min-w-[7.5rem] flex-1`} type="time" value={w.start} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))} />
           <span aria-hidden="true">–</span>
-          <input aria-label={`${legend} ${i + 1} end`} className={`${inputClass} min-w-0 flex-1`} type="time" value={w.end} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))} />
+          <input aria-label={`${legend} ${i + 1} end`} className={`${inputClass} min-w-[7.5rem] flex-1`} type="time" value={w.end} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))} />
           <Button variant="quiet" aria-label={`Remove ${legend} ${i + 1}`} onClick={() => onChange(value.filter((_, j) => j !== i))}>Remove</Button>
         </div>
       ))}
