@@ -72,12 +72,6 @@ def test_unsupported_registration_and_commitment_claims_are_downgraded(h, monkey
     assert item["attendance_status"] == "tentative"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D6: semantic validation only rejects deadlines beyond a horizon; a plausible "
-    "deadline the note never states (2026-10-20) is accepted as fact "
-    "(services/pipeline/src/metis_pipeline/extraction.py:365-373, owner: pipeline)",
-)
 def test_a_plausible_deadline_the_note_never_states_is_rejected(h, monkeypatch):
     proposal = _model_says(h, monkeypatch, {"deadline_local_date": "2026-10-20"})
     assert all(i["deadline_local_date"] is None for i in proposal["items"])
@@ -113,13 +107,6 @@ def _event_with_reminder(h):
     return event, rem
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D10 (medium): evaluate_due suppresses on registration_status=registered only when the "
-    "literal text 'regist' is in the reminder's target_id (services/scheduler/src/metis_scheduler/"
-    "service.py:357), so real ids (event_<hex>) never suppress and a registered event still nags "
-    "(owner: scheduler)",
-)
 def test_marking_registered_removes_the_now_useless_registration_reminder(h):
     event, rem = _event_with_reminder(h)
     patch(h, f"/v1/events/{event['id']}", event, registration_status="registered")

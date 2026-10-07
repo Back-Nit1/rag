@@ -354,7 +354,7 @@ def evaluate_due(state: StateStore, reminder: Reminder, *, occurrence: str, cloc
     if attendance in ("canceled", "declined"):
         return DueDecision(False, f"the event is {attendance}")
     registration = getattr(getattr(target, "registration_status", None), "value", None)
-    if registration == "registered" and "regist" in reminder.target_id.lower():
+    if registration == "registered":
         return DueDecision(False, "registration is already complete")
 
     preferences = state.get_preferences(reminder.user_id)

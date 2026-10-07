@@ -88,12 +88,6 @@ def test_purge_retries_after_a_mid_purge_failure_and_access_stays_removed(h, mon
     assert h.client.get(f"/v1/jobs/{job_id}").json()["state"] == "ready"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D4 (high, privacy): when the vector delete fails mid-purge the retry no longer "
-    "finds the already-tombstoned memories, so the vector is never deleted yet the job ends READY "
-    "(services/pipeline/src/metis_pipeline/handlers.py:200-208, 290-310, owner: pipeline)",
-)
 def test_resumed_purge_actually_removes_the_vector(h, monkeypatch):
     cap, _ = _indexed_capture(h)
     h.client.delete(f"/v1/captures/{cap}")
@@ -116,12 +110,6 @@ def test_independently_edited_task_survives_purge_with_a_disclosed_missing_sourc
     assert after["title"] == "My own wording" and after["source_unavailable"] is True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D5: the purge job reports transcripts and proposals as 'not_purged'; extracted "
-    "proposal items derived from the deleted source remain in state "
-    "(services/pipeline/src/metis_pipeline/handlers.py:277, owner: pipeline)",
-)
 def test_purge_also_removes_derived_proposals(h):
     cap, _ = _indexed_capture(h)
     h.client.delete(f"/v1/captures/{cap}")

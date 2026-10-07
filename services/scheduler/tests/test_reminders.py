@@ -283,7 +283,7 @@ def test_a_canceled_event_suppresses_its_reminder(store, clock, context):
 
 
 def test_completed_registration_suppresses_the_registration_reminder(store, clock, context):
-    event = make_event(store, clock, event_id="event_registration_target")
+    event = make_event(store, clock, event_id="event_0a1b2c3d")
     reminder = add_reminder(store, clock, event, kind="event")
     with store.transaction(USER) as tx:
         tx.put(

@@ -371,6 +371,9 @@ class ExtractionService:
                 elif parsed > horizon:
                     issues.append(f"item {index}: deadline {parsed} is beyond the supported horizon")
                     cleaned["deadline_local_date"] = None
+                elif not _deadline_is_grounded(parsed, lowered):
+                    issues.append(f"item {index}: deadline {parsed} is not stated in the note")
+                    cleaned["deadline_local_date"] = None
 
             # Semantic check: registration is never inferred from intent.
             if cleaned.get("registration_status") == RegistrationStatus.REGISTERED.value and not any(
@@ -456,6 +459,19 @@ class ExtractionService:
 
 def _ranges_needed(text: str, max_chars: int) -> int:
     return max(1, -(-len(text) // max_chars))
+
+
+_DATE_WORDS = re.compile(
+    r"\b(today|tonight|tomorrow|week|weekend|month|eod|eow|end of|next|monday|tuesday|wednesday|thursday"
+    r"|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|jan(uary)?|feb(ruary)?|mar(ch)?"
+    r"|apr(il)?|may|june?|july?|aug(ust)?|sep(t|tember)?|oct(ober)?|nov(ember)?|dec(ember)?"
+    r"|in \d+ (day|week|month)s?)\b|\d{1,4}[/.-]\d{1,2}"
+)
+
+
+def _deadline_is_grounded(parsed: date, lowered: str) -> bool:
+    """A deadline must come from the note: its ISO form, or explicit/relative date words."""
+    return parsed.isoformat() in lowered or _DATE_WORDS.search(lowered) is not None
 
 
 def _as_date(value: Any) -> date | None:
