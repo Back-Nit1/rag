@@ -11,6 +11,7 @@ from metis_contracts import (
     Notification,
     PushSubscription,
     Reminder,
+    ReminderState,
     new_id,
     resolve_timezone,
 )
@@ -18,6 +19,7 @@ from metis_contracts.api import (
     CreateReminderRequest,
     NotificationPage,
     RegisterPushRequest,
+    ReminderPage,
     SnoozeReminderRequest,
 )
 from metis_pipeline.timeref import to_instant
@@ -83,6 +85,16 @@ def create_reminder(body: CreateReminderRequest, ctx: Context) -> Reminder:
     )
     ctx.remember(reminder.model_dump(mode="json"))
     return reminder
+
+
+@router.get("/reminders", response_model=ReminderPage)
+def list_reminders(
+    ctx: Context,
+    state: ReminderState | None = None,
+    cursor: str | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> ReminderPage:
+    return ctx.state.list_reminders(ctx.user_id, state=state, cursor=cursor, limit=limit)
 
 
 @router.get("/reminders/{reminder_id}", response_model=Reminder)
