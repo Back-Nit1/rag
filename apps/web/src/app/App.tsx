@@ -67,7 +67,7 @@ function Shell() {
   const session = useSession();
   const [surface, setSurface] = useState<Surface>(surfaceFromHash);
   const main = useRef<HTMLElement>(null);
-  const first = useRef(true);
+  const shown = useRef(surface);
 
   useEffect(() => {
     const sync = () => setSurface(surfaceFromHash());
@@ -78,10 +78,8 @@ function Shell() {
   // After a navigation, move focus to the new surface so keyboard and screen
   // reader users land on it; skip the very first render.
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
+    if (shown.current === surface) return;
+    shown.current = surface;
     main.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0 });
   }, [surface]);
