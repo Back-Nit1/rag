@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "hud-window",
+  "description": "HUD window (created by the HUD owner): capture state, cancel, and listening to capture state events only.",
+  "local": true,
+  "windows": [
+    "hud"
+  ],
+  "permissions": [
+    "allow-capture-state",
+    "allow-capture-cancel",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten"
+  ]
+}
