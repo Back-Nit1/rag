@@ -225,9 +225,9 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
                 {events.map((event) => (
                   <li
                     key={event.id}
-                    className="grid grid-cols-[4.25rem_1fr] gap-3 rounded-lg border border-line border-l-[3px] border-l-ink bg-surface p-3.5"
+                    className="grid grid-cols-[4.5rem_1fr] gap-3 rounded-lg border border-line border-l-[3px] border-l-ink bg-surface p-3.5"
                   >
-                    <p className="font-mono text-sm font-medium text-ink">
+                    <p className="font-mono text-base font-semibold leading-snug text-ink">
                       {hourLabel(event.starts_at, event.timezone || timezone)}
                     </p>
                     <div className="min-w-0">

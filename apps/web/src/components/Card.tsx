@@ -14,7 +14,10 @@ export function Card({
   return <Tag className={`rounded-lg border border-line bg-surface p-4 md:p-5 ${className}`}>{children}</Tag>;
 }
 
-/** Section title in the serif voice; the hint is a plain-language qualifier, not decoration. */
+/**
+ * Section title as a ruled eyebrow: small mono label, a hairline rule, then the
+ * plain-language qualifier. Reads as a notebook tab and stays scannable in grayscale.
+ */
 export function SectionHeading({
   children,
   hint,
@@ -27,11 +30,12 @@ export function SectionHeading({
   as?: "h2" | "h3";
 }) {
   return (
-    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-      <Tag id={id} className="font-serif text-lg font-semibold tracking-tight text-ink">
+    <div className="mb-3 flex items-center gap-3">
+      <Tag id={id} className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-ink">
         {children}
       </Tag>
-      {hint && <span className="text-xs text-muted">{hint}</span>}
+      <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-line-strong" />
+      {hint && <span className="text-right text-xs text-muted">{hint}</span>}
     </div>
   );
 }
@@ -47,7 +51,7 @@ export function Empty({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-line-strong px-4 py-5 text-sm text-muted">
+    <div className="rounded-lg border border-dashed border-line-strong bg-surface/40 px-4 py-6 text-sm text-muted">
       {title && <p className="mb-0.5 font-serif text-base font-semibold text-ink">{title}</p>}
       <p className="max-w-prose">{children}</p>
       {action && <div className="mt-3">{action}</div>}
@@ -137,8 +141,8 @@ export function PageHeader({
 }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
-      <div className="min-w-0">
-        <h1 className="font-serif text-xl font-semibold tracking-tight text-ink md:text-2xl">{title}</h1>
+      <div className="min-w-0 border-l-2 border-accent pl-3.5">
+        <h1 className="font-serif text-2xl font-semibold leading-tight tracking-tight text-ink md:text-[2rem]">{title}</h1>
         {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
       </div>
       {action}
