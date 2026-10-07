@@ -28,11 +28,15 @@ from metis_contracts import (
     AdapterMode,
     ErrorCode,
     Event,
+    ExtractionProposal,
     JobState,
     MetisError,
     OutboxEvent,
     Page,
+    Plan,
+    PlanStatus,
     Preferences,
+    SourceArtifact,
     SystemClock,
     Task,
     TaskState,
@@ -397,6 +401,29 @@ class SqliteStateStore:
     ) -> Page[Job]:
         where, params = ("AND state = ?", [JobState(state).value]) if state else ("", [])
         return self._page("job", user_id, where, params, cursor=cursor, limit=limit)
+
+    def find_source_by_client_id(self, user_id: str, client_capture_id: str) -> SourceArtifact | None:
+        page = self._page(
+            "source",
+            user_id,
+            "AND json_extract(body, '$.client_capture_id') = ?",
+            [client_capture_id],
+            cursor=None,
+            limit=1,
+        )
+        return page.items[0] if page.items else None
+
+    def list_proposals(
+        self, user_id: str, *, source_id: str | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[ExtractionProposal]:
+        where, params = ("AND json_extract(body, '$.source_id') = ?", [source_id]) if source_id else ("", [])
+        return self._page("proposal", user_id, where, params, cursor=cursor, limit=limit)
+
+    def list_plans(
+        self, user_id: str, *, status: PlanStatus | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Plan]:
+        where, params = ("AND state = ?", [PlanStatus(status).value]) if status else ("", [])
+        return self._page("plan", user_id, where, params, cursor=cursor, limit=limit)
 
     def list_availability(self, user_id: str, local_date: date) -> list[AvailabilityBlock]:
         page = self._page(

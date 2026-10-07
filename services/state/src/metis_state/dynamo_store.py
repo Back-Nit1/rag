@@ -40,11 +40,15 @@ from metis_contracts import (
     AdapterMode,
     ErrorCode,
     Event,
+    ExtractionProposal,
     JobState,
     MetisError,
     OutboxEvent,
     Page,
+    Plan,
+    PlanStatus,
     Preferences,
+    SourceArtifact,
     SystemClock,
     Task,
     TaskState,
@@ -385,6 +389,30 @@ class DynamoStateStore:
     ) -> Page[Job]:
         items, next_cursor, complete = self._query_kind(user_id, "job", cursor=cursor, limit=limit)
         filtered = [j for j in items if state is None or j.state == state]
+        return Page(items=filtered, next_cursor=next_cursor, complete=complete)
+
+    def find_source_by_client_id(self, user_id: str, client_capture_id: str) -> SourceArtifact | None:
+        cursor: str | None = None
+        while True:
+            items, cursor, _ = self._query_kind(user_id, "source", cursor=cursor, limit=200)
+            for source in items:
+                if source.client_capture_id == client_capture_id:
+                    return source  # type: ignore[no-any-return]
+            if not cursor:
+                return None
+
+    def list_proposals(
+        self, user_id: str, *, source_id: str | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[ExtractionProposal]:
+        items, next_cursor, complete = self._query_kind(user_id, "proposal", cursor=cursor, limit=limit)
+        filtered = [p for p in items if source_id is None or p.source_id == source_id]
+        return Page(items=filtered, next_cursor=next_cursor, complete=complete)
+
+    def list_plans(
+        self, user_id: str, *, status: PlanStatus | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Plan]:
+        items, next_cursor, complete = self._query_kind(user_id, "plan", cursor=cursor, limit=limit)
+        filtered = [p for p in items if status is None or p.status == status]
         return Page(items=filtered, next_cursor=next_cursor, complete=complete)
 
     def list_availability(self, user_id: str, local_date: date) -> list[AvailabilityBlock]:
