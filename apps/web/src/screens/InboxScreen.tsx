@@ -9,7 +9,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { type Event as MetisEvent, RegistrationStatus, type Task, TaskState } from "../contracts/metis";
 import { Button } from "../components/Button";
-import { Chip, Empty, Loading, Notice, PageHeader, SectionHeading } from "../components/Card";
+import { Empty, Loading, Notice, PageHeader, SectionHeading } from "../components/Card";
+import { EvidenceLink } from "../components/EvidenceLink";
 import { Field, inputClass } from "../components/Field";
 import { useSession } from "../app/session";
 import { api } from "../lib/api";
@@ -147,7 +148,7 @@ function InboxTask({
           <span aria-hidden="true" className="font-semibold text-warn">? </span>
           {task.deadline_local_date ? `due ${task.deadline_local_date}` : "No deadline. Nothing was assumed."}
         </span>
-        {task.source_refs?.[0] && <Chip>from {task.source_refs[0].source_id.slice(0, 12)}…</Chip>}
+        {task.source_refs?.[0] && <EvidenceLink evidence={task.source_refs[0]} label={`from ${task.source_refs[0].source_id.slice(0, 12)}…`} />}
       </p>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <Field label="Deadline">

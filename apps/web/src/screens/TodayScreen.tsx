@@ -8,15 +8,16 @@
  * backlog instead of disappearing.
  */
 import { useCallback, useEffect, useState } from "react";
-import { PlanStatus, TaskState, type TodayResponse } from "../contracts/metis";
+import { TaskState, type TodayResponse } from "../contracts/metis";
 import { Button } from "../components/Button";
-import { Chip, Empty, Loading, Notice, PageHeader, SectionHeading } from "../components/Card";
+import { Empty, Loading, Notice, PageHeader, SectionHeading } from "../components/Card";
 import { Icon } from "../components/Icon";
 import { useSession } from "../app/session";
 import { api } from "../lib/api";
-import { dateLabel, timeLabel } from "../lib/format";
-import { FLOW_STATUS } from "../lib/status";
-import { StatusPill } from "../components/StatusPill";
+import { dateLabel } from "../lib/format";
+import { AvailabilityPanel } from "../components/AvailabilityPanel";
+import { EvidenceLink } from "../components/EvidenceLink";
+import { PlanPanel } from "../components/PlanPanel";
 
 const hourLabel = (iso: string | null | undefined, tz: string) =>
   iso
@@ -148,9 +149,7 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
                         </p>
                         {task.source_refs?.[0] && (
                           <p className="mt-1.5">
-                            <Chip title={`${task.source_refs[0].source_id} v${task.source_refs[0].source_version}`}>
-                              from {task.source_refs[0].source_id.slice(0, 12)}…
-                            </Chip>
+                            <EvidenceLink evidence={task.source_refs[0]} label={`from ${task.source_refs[0].source_id.slice(0, 12)}…`} />
                           </p>
                         )}
                       </div>
@@ -247,50 +246,8 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
             )}
           </section>
 
-          <section aria-labelledby="h-plan" className="order-5">
-            <SectionHeading id="h-plan" hint={today.plan ? `revision ${today.plan.revision}` : "none generated"}>
-              Plan
-            </SectionHeading>
-            {!today.plan ? (
-              <Empty title="No plan for today">
-                Planning is a separate step and nothing here was invented in its place.
-              </Empty>
-            ) : (
-              <div className="rounded-lg border border-line bg-surface p-4">
-                <StatusPill
-                  status={
-                    today.plan_stale
-                      ? FLOW_STATUS.plan_conflict
-                      : {
-                          label: today.plan.status ?? PlanStatus.PROPOSED,
-                          detail: today.plan.change_summary ?? "No material change explained.",
-                          tone: "neutral",
-                          cue: "·",
-                          busy: false,
-                        }
-                  }
-                />
-                {today.plan_stale_reason && <p className="mt-2 text-xs text-warn">{today.plan_stale_reason}</p>}
-                <ol className="mt-3 flex flex-col gap-2">
-                  {(today.plan.blocks ?? []).map((block, index) => (
-                    <li
-                      key={index}
-                      className={`rounded-md border-l-[3px] bg-canvas px-3 py-2 ${
-                        block.fixed ? "border-l-ink" : "border-l-accent [border-left-style:dashed]"
-                      }`}
-                    >
-                      <p className="text-sm font-medium text-ink">{block.title}</p>
-                      <p className="font-mono text-xs text-muted">
-                        {timeLabel(block.starts_at, today.timezone)} – {timeLabel(block.ends_at, today.timezone)}{" "}
-                        <span className="font-sans">{block.fixed ? "fixed" : "flexible"}</span>
-                      </p>
-                      {block.rationale && <p className="mt-1 text-xs text-muted">{block.rationale}</p>}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </section>
+          <PlanPanel today={today} onChanged={load} />
+          <AvailabilityPanel today={today} onChanged={load} />
         </div>
       </div>
     </div>
