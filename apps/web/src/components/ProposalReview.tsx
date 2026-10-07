@@ -19,6 +19,7 @@ import {
 import { Button } from "./Button";
 import { Card, Notice, SectionHeading } from "./Card";
 import { Field, inputClass } from "./Field";
+import { UPDATE_LABEL, updateTarget, updateTargetText } from "../lib/statusUpdate";
 
 const KIND_LABEL: Record<ExtractedItemKind, string> = {
   [ExtractedItemKind.TASK]: "Task",
@@ -29,6 +30,7 @@ const KIND_LABEL: Record<ExtractedItemKind, string> = {
   [ExtractedItemKind.REMINDER_REQUEST]: "Reminder",
   [ExtractedItemKind.PREFERENCE]: "Preference",
   [ExtractedItemKind.PROJECT_HINT]: "Project",
+  [ExtractedItemKind.STATUS_UPDATE]: "Update",
 };
 
 type Draft = {
@@ -149,6 +151,9 @@ export function ProposalReview({
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="rounded-sm border border-line-strong bg-surface px-2 py-0.5 text-xs font-medium text-ink">
                     {KIND_LABEL[item.kind]}
+                    {item.kind === ExtractedItemKind.STATUS_UPDATE && item.update_action
+                      ? `: ${UPDATE_LABEL[item.update_action]}`
+                      : ""}
                   </span>
                   {draft.dismissed ? (
                     <span className="text-xs text-muted">Dismissed</span>
@@ -239,6 +244,12 @@ export function ProposalReview({
                   </Field>
                 )}
               </div>
+
+              {item.kind === ExtractedItemKind.STATUS_UPDATE && (
+                <p className={`text-sm ${updateTarget(item) ? "text-muted" : "font-medium text-warn"}`}>
+                  {updateTargetText(item)}
+                </p>
+              )}
 
               <div className="mt-3 rounded-md border border-line bg-surface p-3">
                 <label className="flex min-h-8 items-center gap-2.5 text-sm font-medium">

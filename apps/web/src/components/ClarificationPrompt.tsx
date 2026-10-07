@@ -10,6 +10,7 @@ import { useState } from "react";
 import type { ClarificationRequest, Reminder } from "../contracts/metis";
 import { DeliveryChannel, ReminderState } from "../contracts/metis";
 import { api, ApiError } from "../lib/api";
+import { targetCandidates } from "../lib/statusUpdate";
 import { REMINDER_STATUS } from "../lib/status";
 import { Button } from "./Button";
 import { Card, Notice, SectionHeading } from "./Card";
@@ -33,6 +34,7 @@ export function ClarificationPrompt({
   const [error, setError] = useState<string | null>(null);
   const [reminder, setReminder] = useState<Reminder | null>(null);
 
+  const candidates = targetCandidates(clarification);
   const answerable =
     !!clarification.target_id && clarification.missing_fields.some((f) => REMINDER_FIELDS.includes(f));
 
@@ -77,6 +79,19 @@ export function ClarificationPrompt({
       <p className="mt-1 text-xs text-muted">
         Missing: {clarification.missing_fields.join(", ")}. Nothing was assumed in the meantime.
       </p>
+
+      {candidates.length > 0 && (
+        <div className="mt-2 text-sm">
+          <p className="text-muted">Possible records (nothing was changed):</p>
+          <ul className="list-disc pl-5">
+            {candidates.map((id) => (
+              <li key={id}>
+                <code className="font-mono">{id}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {reminder ? (
         <div className="mt-3">
