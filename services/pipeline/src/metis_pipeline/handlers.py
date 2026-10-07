@@ -20,6 +20,7 @@ from metis_contracts import (
 from metis_contracts.events import ExtractionRequestedPayload, PurgePayload, TranscriptFinalizedPayload
 
 from .dispatcher import DispatchContext, HandlerRegistry, is_fresh, outbox_event
+from .export import handle_export_requested
 from .extraction import ExtractionService
 from .transcription import launch_transcription, transcribe_inline
 
@@ -162,6 +163,9 @@ def handle_extraction_completed(envelope: EventEnvelope, context: DispatchContex
         envelope.payload.get("items"),
         envelope.payload.get("requires_clarification"),
     )
+
+
+registry.register(EventType.EXPORT_REQUESTED)(handle_export_requested)
 
 
 # --------------------------------------------------------------------------- #
