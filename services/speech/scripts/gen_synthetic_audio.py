@@ -1,8 +1,10 @@
+# Run from the repo root with a scratch cwd OUTSIDE git for ./audio (stays uncommitted).
+# Needs macOS `say` + ffmpeg with libopus. Output: audio/<id>.webm, synthetic TTS only.
 import json, subprocess, sys
 from pathlib import Path
 out = Path("audio"); out.mkdir(exist_ok=True)
-ev = json.load(open("/Users/nityanthmaramreddy/Downloads/Metis/services/speech/fixtures/evaluation_set.json"))["items"]
-FF = "/opt/homebrew/opt/ffmpeg@6/bin/ffmpeg"
+ev = json.load(open("services/speech/fixtures/evaluation_set.json"))["items"]
+FF = "ffmpeg"
 def run(*a): subprocess.run(a, check=True, capture_output=True)
 for it in ev:
     i, cat, ref = it["id"], it["category"], it["reference"]

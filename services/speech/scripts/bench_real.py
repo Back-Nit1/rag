@@ -1,3 +1,4 @@
+# Usage: METIS_SPEECH_MODEL_DIR=<dir containing small.en/> METIS_SPEECH_ARTIFACT_REVISION=<sha> python bench_real.py <audio_dir> <out_dir>
 """Warm in-process bench: load time, first (cold) decode, 3 warm passes, hypotheses."""
 import json, platform, sys, time, statistics, os
 from pathlib import Path
