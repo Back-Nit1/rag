@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "hud-window",
-  "description": "HUD window (created by the HUD owner): capture state, cancel, and listening to capture state events only.",
+  "description": "HUD window (created by the HUD owner): capture state, cancel, show_main_window, and listening to capture state events. Deliberately NOT capture_prepare_mic: mic onboarding blocks the controller up to 30 s behind an OS prompt and belongs in the main window, where the user can see why.",
   "local": true,
   "windows": [
     "hud"
@@ -9,6 +9,7 @@
   "permissions": [
     "allow-capture-state",
     "allow-capture-cancel",
+    "allow-show-main-window",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]
