@@ -40,6 +40,9 @@ def limits(request: Request) -> dict[str, Any]:
         "max_text_chars": limits.max_text_chars,
         "allowed_audio_types": list(limits.allowed_audio_types),
         "max_focus_tasks_default": 3,
+        # Public by design; null means web push is not configured. The private
+        # key parameter is never exposed.
+        "vapid_public_key": settings().aws.vapid_public_key,
     }
 
 

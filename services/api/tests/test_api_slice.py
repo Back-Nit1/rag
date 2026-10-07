@@ -674,3 +674,70 @@ def test_image_capture_is_declined_plainly_rather_than_faked(client):
 def test_every_response_carries_a_correlation_id(client):
     response = client.get("/v1/health")
     assert response.headers["X-Correlation-Id"]
+
+
+# --- backend gaps: purge job, capture list, availability edit/delete, vapid -- #
+
+
+def test_purge_job_is_queued_until_the_worker_finishes_then_ready(client, worker):
+    capture_id = capture_text(client).json()["capture_id"]
+    worker()
+    job_id = client.delete(f"/v1/captures/{capture_id}").json()["purge_job_id"]
+    assert client.get(f"/v1/jobs/{job_id}").json()["state"] == "queued"
+    worker()
+    job = client.get(f"/v1/jobs/{job_id}").json()
+    assert job["state"] == JobState.READY.value
+    assert job["finished_at"] is not None
+    assert job["result_refs"]["not_purged"] == "transcripts,proposals"
+
+
+def test_list_captures_is_owner_scoped_paged_and_hides_deleted(client):
+    ids = [capture_text(client, f"note {i}", idem=f"k{i}").json()["capture_id"] for i in range(3)]
+    first = client.get("/v1/captures?limit=2").json()
+    assert len(first["items"]) == 2 and first["next_cursor"]
+    rest = client.get(f"/v1/captures?limit=2&cursor={first['next_cursor']}").json()
+    assert {i["id"] for i in first["items"] + rest["items"]} == set(ids)
+    client.delete(f"/v1/captures/{ids[0]}")
+    assert ids[0] not in {i["id"] for i in client.get("/v1/captures").json()["items"]}
+
+
+def _avail(**over):
+    return {
+        "id": "avail_e",
+        "user_id": "x",
+        "created_at": T0.isoformat(),
+        "updated_at": T0.isoformat(),
+        "local_date": "2026-10-05",
+        "timezone": NY,
+        "window": {"start": "09:00", "end": "10:00"},
+        "kind": "available",
+        **over,
+    }
+
+
+def test_availability_patch_and_delete_are_revision_checked(client):
+    client.post("/v1/availability", json=_avail())
+    stale = client.patch("/v1/availability/avail_e?expected_revision=9", json=_avail(kind="busy"))
+    assert stale.status_code == 409
+    ok = client.patch("/v1/availability/avail_e?expected_revision=1", json=_avail(kind="busy"))
+    assert ok.status_code == 200 and ok.json()["kind"] == "busy" and ok.json()["revision"] == 2
+    assert client.delete("/v1/availability/avail_e?expected_revision=1").status_code == 409
+    assert client.delete("/v1/availability/avail_e?expected_revision=2").status_code == 204
+    assert client.get("/v1/availability?local_date=2026-10-05").json() == []
+    assert client.delete("/v1/availability/avail_e?expected_revision=2").status_code == 404
+
+
+def test_limits_expose_only_the_public_vapid_key(client, monkeypatch):
+    body = client.get("/v1/limits").json()
+    assert body["vapid_public_key"] is None
+    assert not any("private" in k for k in body)
+
+
+def test_limits_publish_the_vapid_public_key_when_configured(client, monkeypatch):
+    from metis_contracts import reset_settings_cache
+
+    monkeypatch.setenv("METIS_VAPID_PUBLIC_KEY", "BPublicKey")
+    reset_settings_cache()
+    body = client.get("/v1/limits").json()
+    assert body["vapid_public_key"] == "BPublicKey"
+    assert "vapid_private_key_param" not in body

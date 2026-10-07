@@ -11,9 +11,11 @@ import logging
 from typing import Any
 
 from metis_contracts import (
+    TERMINAL_JOB_STATES,
     ErrorCode,
     EventEnvelope,
     EventType,
+    JobState,
     MetisError,
     settings,
 )
@@ -241,6 +243,46 @@ def handle_capture_deleted(envelope: EventEnvelope, context: DispatchContext) ->
         len(memory_ids),
         payload.delete_commitments,
     )
+    _finish_purge_job(
+        state,
+        envelope.user_id,
+        payload.target_id,
+        memory_ids=len(memory_ids),
+        vectors_deleted=bool(memory_ids) and context.memory_store is not None,
+    )
+
+
+def _finish_purge_job(
+    state: Any, user_id: str, capture_id: str, *, memory_ids: int, vectors_deleted: bool
+) -> None:
+    """Mark the owner's purge job READY, only after the purge steps completed.
+
+    The result states what was and was not done: memories are tombstoned (not
+    hard-deleted) and transcripts/proposals are not removed by this handler.
+    """
+    cursor: str | None = None
+    while True:
+        page = state.list_jobs(user_id, cursor=cursor, limit=200)
+        for job in page.items:
+            if job.job_type == "purge_capture" and job.target_id == capture_id:
+                if job.state in TERMINAL_JOB_STATES:
+                    return
+                state.set_job_state(
+                    job.id,
+                    user_id=user_id,
+                    state=JobState.READY,
+                    result_refs={
+                        "purged": "source_record,source_object,reminders,tasks",
+                        "memory_records": "tombstoned_not_hard_deleted",
+                        "not_purged": "transcripts,proposals",
+                        "vectors": "deleted" if vectors_deleted else "none_to_delete_or_no_vector_store",
+                    },
+                    metrics={"memories": float(memory_ids)},
+                )
+                return
+        if not page.next_cursor:
+            return
+        cursor = page.next_cursor
 
 
 def _memories_for_source(state: Any, user_id: str, source_id: str) -> list[Any]:

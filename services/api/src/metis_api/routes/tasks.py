@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Response, status
 from metis_contracts import (
     AvailabilityBlock,
+    ErrorCode,
     Event,
+    MetisError,
     Preferences,
     Task,
     TaskState,
@@ -148,6 +150,46 @@ def create_availability(body: AvailabilityBlock, ctx: Context) -> AvailabilityBl
     existing = ctx.state.get(ctx.user_id, "availability", block.id)
     with ctx.state.transaction(ctx.user_id) as tx:
         return tx.put("availability", block, expected_revision=existing.revision if existing else None)
+
+
+def _live_block(ctx: Context, block_id: str, expected_revision: int) -> AvailabilityBlock:
+    block = ctx.state.get(ctx.user_id, "availability", block_id)
+    if not isinstance(block, AvailabilityBlock):
+        raise MetisError(ErrorCode.NOT_FOUND, f"availability {block_id} not found")
+    if block.revision != expected_revision:
+        raise MetisError(
+            ErrorCode.REVISION_CONFLICT,
+            f"availability {block_id} is at revision {block.revision}",
+            current_revision=block.revision,
+        )
+    return block
+
+
+@router.patch("/availability/{block_id}", response_model=AvailabilityBlock)
+def patch_availability(
+    block_id: str, body: AvailabilityBlock, ctx: Context, expected_revision: int = Query(ge=1)
+) -> AvailabilityBlock:
+    """Replace a block's editable fields. Identity and ownership stay server-owned."""
+    current = _live_block(ctx, block_id, expected_revision)
+    updated = body.model_copy(
+        update={
+            "id": current.id,
+            "user_id": ctx.user_id,
+            "created_at": current.created_at,
+            "updated_at": ctx.adapters.clock.now(),
+            "revision": current.revision,
+        }
+    )
+    with ctx.state.transaction(ctx.user_id) as tx:
+        return tx.put("availability", updated, expected_revision=current.revision)
+
+
+@router.delete("/availability/{block_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_availability(block_id: str, ctx: Context, expected_revision: int = Query(ge=1)) -> Response:
+    """Tombstone a block (revision-checked); it no longer appears in listings."""
+    _live_block(ctx, block_id, expected_revision)
+    ctx.state.tombstone(ctx.user_id, "availability", block_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/preferences", response_model=Preferences)

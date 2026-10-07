@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 from metis_contracts import ErrorCode, MetisError, ObjectRef, settings
 from metis_contracts.api import (
     CaptureDetail,
+    CapturePage,
     CompleteCaptureRequest,
     CompleteCaptureResponse,
     CreateCaptureRequest,
@@ -42,6 +43,16 @@ def complete_capture(capture_id: str, body: CompleteCaptureRequest, ctx: Context
     result = services.complete_capture(ctx, capture_id, body)
     ctx.remember(result.model_dump(mode="json"))
     return result
+
+
+@router.get("/captures", response_model=CapturePage)
+def list_captures(
+    ctx: Context,
+    cursor: str | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> CapturePage:
+    """The owner's live (non-deleted) captures."""
+    return ctx.state.list_sources(ctx.user_id, cursor=cursor, limit=limit)
 
 
 @router.get("/captures/{capture_id}", response_model=CaptureDetail)
