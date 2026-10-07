@@ -32,9 +32,9 @@ fi
 "$work/venv/bin/python" -m PyInstaller --noconfirm --clean --onefile \
   --name "metis-backend" --distpath "$work/dist" --workpath "$work/pyi" --specpath "$work" \
   --paths "$here" \
-  --collect-submodules metis_api --collect-submodules metis_pipeline --collect-submodules metis_state \
-  --collect-submodules metis_scheduler --collect-submodules metis_retrieval --collect-submodules metis_planner \
-  --collect-submodules metis_speech --collect-all metis_contracts --collect-submodules uvicorn \
+  --collect-all metis_api --collect-all metis_pipeline --collect-all metis_state \
+  --collect-all metis_scheduler --collect-all metis_retrieval --collect-all metis_planner \
+  --collect-all metis_speech --collect-all metis_contracts --collect-submodules uvicorn \
   --hidden-import uvloop --hidden-import httptools --hidden-import websockets \
   $collect "$here/metis_backend.py"
 cp "$work/dist/metis-backend$ext" "$out/metis-backend-$triple$ext"

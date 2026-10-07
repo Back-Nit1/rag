@@ -31,8 +31,11 @@ SERVICES = ("api", "worker", "speech")
 def _on_stdin_eof(action: Callable[[], None]) -> None:
     def watch() -> None:
         try:
-            sys.stdin.buffer.read()  # blocks until EOF
-        except (OSError, ValueError):
+            # Raw fd reads: a buffered reader's lock aborts interpreter shutdown
+            # ("could not acquire lock for <stdin>") while this thread is blocked.
+            while os.read(0, 4096):
+                pass
+        except OSError:
             pass
         action()
 
