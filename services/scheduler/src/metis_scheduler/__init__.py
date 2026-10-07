@@ -4,6 +4,7 @@ from .schedule_store import (
     EventBridgeScheduleStore,
     LocalScheduleStore,
     build_schedule_store,
+    daily_schedule_name,
     schedule_name,
 )
 from .service import (
@@ -40,6 +41,7 @@ __all__ = [
     "build_notification_transports",
     "build_schedule_store",
     "cancel_reminder",
+    "daily_schedule_name",
     "evaluate_due",
     "in_quiet_hours",
     "next_allowed_time",

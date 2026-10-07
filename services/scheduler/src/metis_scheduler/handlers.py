@@ -88,6 +88,34 @@ def handle_schedule_sync(envelope: EventEnvelope, context: DispatchContext) -> N
     log.info("reminder %s scheduled ref=%s", reminder.id, scheduler_ref)
 
 
+@registry.register(EventType.DAILY_PLAN_SCHEDULE_SYNC)
+def handle_daily_schedule_sync(envelope: EventEnvelope, context: DispatchContext) -> None:
+    """Make the provider match current preferences: upsert, or delete if disabled.
+
+    Always syncs the CURRENT preferences (not the event's snapshot), and an
+    event older than the stored revision is superseded by the newer one.
+    ``payload.enabled`` (default true) false means planning is off. Failures
+    raise, so the outbox retries and then dead-letters: never reported as synced.
+    """
+    store = context.schedule_store
+    if store is None:
+        raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, "no schedule store is configured")
+    prefs = context.state_store.get_preferences(envelope.user_id)
+    if envelope.target_revision is not None and int(prefs.revision) > int(envelope.target_revision):
+        raise MetisError(ErrorCode.REVISION_CONFLICT, "preferences changed; this sync is superseded")
+    if envelope.payload.get("enabled", True) is False:
+        store.delete_daily(user_id=envelope.user_id, scheduler_ref=envelope.payload.get("scheduler_ref"))
+        log.info("daily plan schedule removed for %s", envelope.user_id)
+        return
+    ref = store.upsert_daily(
+        user_id=envelope.user_id,
+        local_time=prefs.daily_planning_local_time,
+        timezone=prefs.timezone,
+        payload={"user_id": envelope.user_id},
+    )
+    log.info("daily plan scheduled for %s ref=%s", envelope.user_id, ref)
+
+
 @registry.register(EventType.REMINDER_CANCEL_SYNC)
 def handle_cancel_sync(envelope: EventEnvelope, context: DispatchContext) -> None:
     """Request deletion of a provider schedule. Deletion is idempotent."""
