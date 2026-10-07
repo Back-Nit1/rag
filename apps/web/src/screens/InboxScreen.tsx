@@ -75,7 +75,7 @@ export function InboxScreen() {
           Needs a detail
         </SectionHeading>
         {tasks.length === 0 ? (
-          <Empty title="Nothing is waiting on you">Captured tasks that need a deadline will collect here.</Empty>
+          <Empty icon="inbox" title="Nothing is waiting on you">Captured tasks that need a deadline will collect here.</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
             {tasks.map((task) => (
@@ -90,13 +90,13 @@ export function InboxScreen() {
           Registration unknown
         </SectionHeading>
         {events.length === 0 ? (
-          <Empty>No event is waiting on a registration answer.</Empty>
+          <Empty icon="pin">No event is waiting on a registration answer.</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
             {events.map((event) => (
               <li
                 key={event.id}
-                className="rounded-lg border border-line border-l-[3px] border-l-ink bg-surface p-4"
+                className="rounded-lg border border-line border-l-[4px] shadow-card border-l-ink bg-surface p-4"
               >
                 <p className="font-serif text-base font-semibold text-ink">{event.title}</p>
                 <p className="text-xs text-muted">
@@ -141,7 +141,7 @@ function InboxTask({
 }) {
   const [deadline, setDeadline] = useState(task.deadline_local_date ?? "");
   return (
-    <li className="rounded-lg border border-line border-l-[3px] border-l-warn bg-surface p-4 [border-left-style:dashed]">
+    <li className="rounded-lg border border-line border-l-[4px] shadow-card border-l-warn bg-surface p-4 [border-left-style:dashed]">
       <p className="font-serif text-base font-semibold text-ink">{task.title}</p>
       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
         <span>

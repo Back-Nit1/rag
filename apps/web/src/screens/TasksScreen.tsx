@@ -95,7 +95,7 @@ export function TasksScreen() {
             </Notice>
           )}
           {tasks.length === 0 ? (
-            <Empty title="No task matches this filter">
+            <Empty icon="tasks" title="No task matches this filter">
               {filter === "all" ? "Captured tasks will appear here." : "Try another state, or show all tasks."}
             </Empty>
           ) : (
@@ -105,7 +105,7 @@ export function TasksScreen() {
                   key={task.id}
                   className={`defer-paint rounded-lg border bg-surface p-4 ${
                     selected?.id === task.id ? "border-accent" : "border-line"
-                  } border-l-[3px] border-l-accent [border-left-style:dashed]`}
+                  } border-l-[4px] shadow-card border-l-accent [border-left-style:dashed]`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                     <button
@@ -176,13 +176,13 @@ export function TasksScreen() {
             Events
           </SectionHeading>
           {events.length === 0 ? (
-            <Empty title="No events yet">Dated things you capture will be listed here with their exact times.</Empty>
+            <Empty icon="today" title="No events yet">Dated things you capture will be listed here with their exact times.</Empty>
           ) : (
             <ul className="flex flex-col gap-2">
               {events.map((event) => (
                 <li
                   key={event.id}
-                  className="defer-paint rounded-lg border border-line border-l-[3px] border-l-ink bg-surface p-4"
+                  className="defer-paint rounded-lg border border-line border-l-[4px] shadow-card border-l-ink bg-surface p-4"
                 >
                   <p className="font-serif text-base font-semibold text-ink">{event.title}</p>
                   <p className="mt-0.5 font-mono text-xs text-ink">

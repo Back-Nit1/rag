@@ -102,7 +102,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
       <section aria-labelledby="h-open">
         <SectionHeading id="h-open" hint={`${detail.open_tasks?.length ?? 0} open`}>Open tasks</SectionHeading>
         {(detail.open_tasks ?? []).length === 0 ? (
-          <Empty>No open tasks are linked to this project.</Empty>
+          <Empty icon="pin">No open tasks are linked to this project.</Empty>
         ) : (
           <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
             {(detail.open_tasks ?? []).map((t) => (
@@ -117,7 +117,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
       <section aria-labelledby="h-time">
         <SectionHeading id="h-time" hint="newest recorded first, each with its source">Timeline</SectionHeading>
         {(detail.recent_memories ?? []).length === 0 ? (
-          <Empty title="Nothing recorded yet">Capture a note that mentions this project; the server decides what it links.</Empty>
+          <Empty icon="pin" title="Nothing recorded yet">Capture a note that mentions this project; the server decides what it links.</Empty>
         ) : (
           <ol className="flex flex-col gap-2">
             {[...(detail.recent_memories ?? [])]
@@ -156,7 +156,7 @@ export function ProjectsScreen() {
     <div className="flex flex-col gap-5">
       <PageHeader title="Projects" sub="Longer work, with what you recorded about it." />
       {projects.length === 0 ? (
-        <Empty title="No projects yet">Projects appear when a captured note is linked to one. This build cannot create one by hand.</Empty>
+        <Empty icon="pin" title="No projects yet">Projects appear when a captured note is linked to one. This build cannot create one by hand.</Empty>
       ) : (
         <ul className="flex flex-col gap-2">
           {projects.map((p) => (

@@ -139,6 +139,7 @@ export function PlanPanel({ today, onChanged }: { today: TodayResponse; onChange
       )}
       {!plan ? (
         <Empty
+          icon="tasks"
           title="No plan for today"
           action={
             <div className="flex flex-col gap-3">

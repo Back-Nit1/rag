@@ -5,7 +5,7 @@ type Variant = "primary" | "secondary" | "quiet" | "danger";
 // Primary is the only filled control; everything else is outlined or text, so
 // the single most important action per surface is obvious even in grayscale.
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-accent text-on-accent border-accent hover:brightness-110 active:brightness-95",
+  primary: "bg-accent text-on-accent border-accent font-semibold shadow-card hover:brightness-110 active:brightness-95",
   secondary: "bg-surface text-ink border-line-strong hover:bg-raised",
   quiet: "bg-transparent text-muted border-transparent hover:text-ink hover:bg-raised",
   danger: "bg-transparent text-bad border-bad/50 hover:bg-bad-soft",

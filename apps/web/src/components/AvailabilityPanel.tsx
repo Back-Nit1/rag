@@ -55,7 +55,7 @@ export function AvailabilityPanel({ today, onChanged }: { today: TodayResponse; 
         Availability
       </SectionHeading>
       {blocks.length === 0 ? (
-        <Empty>No availability entered for {today.local_date}.</Empty>
+        <Empty icon="today">No availability entered for {today.local_date}.</Empty>
       ) : (
         <ul className="flex flex-col gap-2">
           {blocks.map((b) => (

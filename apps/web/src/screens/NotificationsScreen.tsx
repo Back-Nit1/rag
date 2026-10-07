@@ -31,7 +31,7 @@ export function NotificationsScreen() {
         </Notice>
       )}
       {notifications.length === 0 ? (
-        <Empty title="No reminders have fired yet">
+        <Empty icon="bell" title="No reminders have fired yet">
           When a reminder comes due it is recorded here first, whether or not your device could show it.
         </Empty>
       ) : (
@@ -41,7 +41,7 @@ export function NotificationsScreen() {
               key={notification.id}
               className={`defer-paint rounded-lg border p-4 ${
                 notification.read_at
-                  ? "border-line bg-surface"
+                  ? "border-line bg-surface shadow-card"
                   : "border-accent/60 border-l-4 bg-accent-soft"
               }`}
             >

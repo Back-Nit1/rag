@@ -74,7 +74,7 @@ export function SearchScreen() {
           )}
           {response.index_stale && <Notice tone="info">The index may be behind your latest notes.</Notice>}
           {results.length === 0 ? (
-            <Empty title="No relevant memory">
+            <Empty icon="search" title="No relevant memory">
               Nothing recorded matches &ldquo;{asked}&rdquo;. That is not the same as it never happening: it may simply not have been captured.
             </Empty>
           ) : (

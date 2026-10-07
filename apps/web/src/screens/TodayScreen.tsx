@@ -112,7 +112,23 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
         {notice}
       </p>
 
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8">
+      <dl className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-lg border border-line bg-surface shadow-card">
+        {[
+          ["Appointments", events.length, "fixed"],
+          ["Focus", focus.length, `of ${open.length} open`],
+          ["Overdue", overdue.length, overdue.length ? "needs a decision" : "none"],
+        ].map(([label, n, note]) => (
+          <div key={label} className="px-4 py-3 md:px-5">
+            <dt className="font-mono text-2xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</dt>
+            <dd className={`font-serif text-3xl font-semibold leading-none ${label === "Overdue" && n ? "text-warn" : "text-ink"}`}>
+              {n}
+              <span className="ml-2 font-sans text-xs font-normal text-muted">{note}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
         <div className="contents lg:flex lg:flex-col lg:gap-6">
           <section aria-labelledby="h-focus" className="order-2">
             <SectionHeading id="h-focus" hint={`${focus.length} of ${open.length} open tasks`}>
@@ -120,6 +136,7 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
             </SectionHeading>
             {focus.length === 0 ? (
               <Empty
+                icon="tasks"
                 title="No focus work yet"
                 action={
                   <Button onClick={onOpenCapture}>
@@ -134,7 +151,7 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
                 {focus.map((task) => (
                   <li
                     key={task.id}
-                    className="rounded-lg border border-line border-l-[3px] border-l-accent bg-surface p-4 [border-left-style:dashed]"
+                    className="rounded-lg border border-line border-l-[4px] border-l-accent bg-surface p-4 shadow-card [border-left-style:dashed]"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
                       <div className="min-w-0 flex-1 basis-56">
@@ -219,15 +236,15 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
               Appointments
             </SectionHeading>
             {events.length === 0 ? (
-              <Empty>No fixed appointments known for today.</Empty>
+              <Empty icon="today">No fixed appointments known for today.</Empty>
             ) : (
               <ol className="flex flex-col gap-2">
                 {events.map((event) => (
                   <li
                     key={event.id}
-                    className="grid grid-cols-[4.5rem_1fr] gap-3 rounded-lg border border-line border-l-[3px] border-l-ink bg-surface p-3.5"
+                    className="grid grid-cols-[4.75rem_1fr] gap-3 rounded-lg border border-line border-l-[4px] border-l-ink bg-surface p-3.5 shadow-card"
                   >
-                    <p className="font-mono text-base font-semibold leading-snug text-ink">
+                    <p className="font-mono text-lg font-bold leading-snug text-ink">
                       {hourLabel(event.starts_at, event.timezone || timezone)}
                     </p>
                     <div className="min-w-0">
