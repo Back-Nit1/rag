@@ -9,42 +9,35 @@ full specification is `prompt (1).md`; role-scoped extracts are in
 `docs/spec/`. Agent instructions are in `CLAUDE.md` / `AGENTS.md`, and the live
 work ledger is `docs/progress.md`.
 
-## Status: foundations, local mode only
+## Status: local mode works end to end; nothing is deployed
 
-What works end to end, right now, on a laptop with no cloud account and no AI
-provider key:
+What runs on a laptop with no cloud account and no AI provider key (fixture
+inference and fixture transcription are labelled as such in the UI):
 
 | Area | State |
 | --- | --- |
-| Contracts | v1 frozen. 89 JSON Schemas + a bundle + `metis.ts` (91 artifacts), all generated from Pydantic and verified by `make contracts-check`. |
-| API | FastAPI, 33 paths / 43 operations, bearer auth, `Idempotency-Key` replay, optimistic concurrency with `409`, rate limiting. |
-| State | SQLite store with transactional outbox, revision log, tombstones, budget reservations. |
-| Pipeline | Outbox dispatcher with leases, retry classification, dead-lettering and freshness suppression; a local worker loop. |
-| Scheduler | Reminder lifecycle with `pending_schedule` / `schedule_failed`, suppression re-checked at dispatch, in-app delivery. |
-| Retrieval | Deterministic fixture embedder, local memory store, scoped search, authoritative-state hydration of every hit. |
-| Planner | Snapshot assembly with planning-epoch checks, a greedy packer and a deterministic validator. |
-| Checks | `make check` (contracts, ruff, ruff format, mypy --strict, tsc) and `make test` (266 tests) both pass. |
+| Contracts | v1, generated from Pydantic (93 artifacts), verified by `make contracts-check`. |
+| API | FastAPI with bearer auth, `Idempotency-Key` replay, `409` on stale revisions, durable exports, daily-plan enqueueing, desktop-local auth. |
+| State / pipeline / scheduler / retrieval / planner | SQLite store with transactional outbox, local worker loop, honest reminder states, scoped search, deterministic plan validation. |
+| Web | React/Vite PWA: capture, proposals, Today, plans, projects, search, settings, export, optional Cognito PKCE (only when `VITE_METIS_COGNITO_*` is set), desktop HUD route. |
+| Desktop | Tauri v2 shell with a packaged `metis-backend` (api/worker/speech) supervised by Rust, hold-to-talk state machine and uploader, HUD window. Built and tested on aarch64 macOS only. |
+| Infra | CDK app synthesizes 7 stacks (`make synth`), template assertions pass. `ops/` has runbook, cost worksheet and procedures. |
+| Checks | `make check`, `make test` (python, web, E2E in `tests/e2e`) and `pnpm --filter @metis/desktop test` pass. Exact counts: `docs/progress.md`. |
 
-What is **not** built yet, stated plainly so nobody mistakes a fixture for a
-feature:
+What is **not** done or **not verified**, stated plainly:
 
-- **No web app.** `apps/web/` contains only the generated `metis.ts`. There is
-  no `package.json`, no UI, no capture button.
-- **No deployable infrastructure.** `infra/lib/` has CDK stacks for network,
-  data, auth and API, but `infra/bin/metis.ts` — the CDK app entry point — does
-  not exist, so `make synth` cannot run. Only the HTTP Lambda is wired; the
-  outbox, reminder-due and daily-planning handlers exist in Python with no
-  function defined for them.
-- **No real speech recognition has ever run here.** The local transcriber is a
-  fixture. `make speech-bench` without `--hypotheses` echoes the reference text
-  and says so in its own output; it measures the metric code, not a decoder.
-  The real ASR path needs the `asr` extra and a model artifact.
-- **The cloud path is unexercised.** DynamoDB, S3, Bedrock and EventBridge
-  Scheduler adapters are written and type-checked against `boto3-stubs`, but
-  `boto3` is not even installed locally and no cloud test has been run. Tests
-  marked `cloud` are deselected by default.
-- **No end-to-end tests.** `tests/e2e/` is empty.
-- **No runbooks or cost worksheet.** `ops/` is empty.
+- **No real speech recognition has run.** No model artifact is pinned or fetched;
+  `make speech-bench` without `--hypotheses` echoes the reference text. The
+  desktop app refuses to record until a model is placed in `<app-data>/models`.
+- **No hardware pass.** The global shortcut, microphone capture and the HUD
+  window have not been exercised by a person. Steps are in the desktop handoff.
+- **Nothing is deployed.** Every cloud check is UNRUN (`ops/runbook.md`).
+  DynamoDB parity is tested against a SQLite-backed stand-in, not DynamoDB.
+- **Known product defects** are strict `xfail` tests in `tests/e2e/` (spoken
+  "already registered"/"cancel that", registration-reminder suppression,
+  duplicate registration task, project attachment of captured notes).
+- **Desktop packaging** is unsigned, un-notarized, one target triple, ~100 MB.
+- **Fixture extraction** is the only extraction in local mode.
 
 ## Requirements
 
@@ -93,7 +86,7 @@ make api / worker  # just one of them
 make test          # python unit tests + web unit tests
 make check         # contracts-check, ruff, ruff format, mypy, tsc
 make fmt           # autoformat
-make synth         # cdk synth — blocked until infra/bin/metis.ts exists
+make synth         # cdk synth (no AWS calls, no deploy)
 make speech-bench  # WER + name/date/negation fidelity on the fixture set
 make clean         # remove caches and local build output
 ```
@@ -101,7 +94,8 @@ make clean         # remove caches and local build output
 ## Layout
 
 ```
-apps/web/            React + TS + Vite PWA  (contracts only, so far)
+apps/web/            React + TS + Vite PWA
+apps/desktop/        Tauri v2 shell, supervisor, hold-to-talk, packaged backend
 packages/contracts/  JSON Schema, generated TS, Pydantic, fixtures
 services/api/        FastAPI app + Lambda adapter
 services/state/      StateStore: SQLite (local) + DynamoDB (cloud)
@@ -110,9 +104,9 @@ services/scheduler/  schedule sync + reminder dispatch
 services/speech/     owned faster-whisper ASR worker + Dockerfile
 services/retrieval/  memory ingestion, embeddings, scoped search
 services/planner/    context assembly, plan generation, validation
-infra/               AWS CDK stacks  (no app entry point yet)
-ops/                 runbooks, cost worksheet  (empty)
-tests/e2e/           cross-feature scenarios  (empty)
+infra/               AWS CDK stacks
+ops/                 runbooks, cost worksheet, procedures
+tests/e2e/           cross-feature scenarios (fixture adapters)
 docs/                spec extracts, ADRs, progress ledger
 ```
 
