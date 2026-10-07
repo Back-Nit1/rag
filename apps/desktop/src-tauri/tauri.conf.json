@@ -21,7 +21,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app"],
     "icon": ["icons/icon.png"],
     "externalBin": ["binaries/metis-health-sidecar"],
     "macOS": { "minimumSystemVersion": "11.0" }
