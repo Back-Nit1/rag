@@ -67,7 +67,7 @@ export function SettingsScreen() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Field label="Timezone" hint="Used for every local date and reminder time.">
-                <input className={inputClass} value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+                <input className={inputClass} name="timezone" autoComplete="off" spellCheck={false} value={timezone} onChange={(e) => setTimezone(e.target.value)} />
               </Field>
             </div>
             <Field label="Focus tasks per day" hint="Read only here.">

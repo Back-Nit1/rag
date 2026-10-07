@@ -111,6 +111,18 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+button,
+a,
+summary,
+.control {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
 h1,
 h2,
 h3 {

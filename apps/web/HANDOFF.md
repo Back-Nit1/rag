@@ -86,3 +86,13 @@ without seven more dev dependencies.
   is exposed to the client).
 * No component-level DOM tests; the logic is tested instead (`src/lib/*.test.ts`)
   and the UI was verified in a real browser.
+
+## UI overhaul (ui/10-ui-overhaul)
+
+Visual system and rationale live in the header comment of `src/styles.css`
+(cool-neutral paper, one cobalt accent, record-red only for the live mic,
+serif for notes/titles, system fonts only so desktop works offline). Shell is a
+left rail on wide screens and a tab bar with a raised Capture control on small
+ones. No new dependencies, no behaviour or API changes. Not covered: audio
+recording was only exercised with Chromium's fake media device; no plan
+accept/adjust/regenerate or push-subscription UI exists to restyle.
