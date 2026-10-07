@@ -22,6 +22,7 @@ import { SearchScreen } from "../screens/SearchScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { TasksScreen } from "../screens/TasksScreen";
 import { TodayScreen } from "../screens/TodayScreen";
+import { useOpenReviewListener } from "../lib/openReview";
 import { AuthGate } from "./AuthGate";
 import { SessionProvider, useSession } from "./session";
 
@@ -84,6 +85,8 @@ function Shell() {
     window.location.hash = `#/${next}`;
     setSurface(next);
   };
+
+  useOpenReviewListener(() => go("capture"));
 
   const offline = !session.online || !session.reachable;
   const fixtures = Object.entries(session.health?.adapters ?? {}).filter(([, v]) => v === "fixture");

@@ -172,8 +172,22 @@ export function describe(s: HudSnapshot): HudView {
 
 // ---- Tauri adapter ------------------------------------------------------ //
 
+export const OPEN_REVIEW_EVENT = "hud:open-review";
+export const OPEN_ERROR_COPY = "Could not open the Metis window. Open it from the Dock or menu bar.";
+const CAPTURE_ID = /^[A-Za-z0-9_-]{3,128}$/;
+
+/** `{ captureId: string|null }` or nothing: malformed payloads are ignored, never guessed at. */
+export function parseOpenReview(raw: unknown): { captureId: string | null } | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const id = (raw as Record<string, unknown>).captureId;
+  if (id === null) return { captureId: null };
+  return typeof id === "string" && CAPTURE_ID.test(id) ? { captureId: id } : null;
+}
+
 export type HudAdapter = {
   getSnapshot(): Promise<unknown>;
+  /** Asks the desktop shell to show the main window; rejects on failure. */
+  openMain(captureId: string | null): Promise<void>;
   cancel(): Promise<void>;
   /** Resolves to an unlisten function. */
   listen(onSnapshot: (raw: unknown) => void): Promise<() => void>;
@@ -190,23 +204,29 @@ type Internals = {
  * {event, target:{kind:"Any"}, handler}; the returned id is released with
  * `plugin:event|unlisten` and the page-side listener table.
  */
+const internals = () => (window as unknown as { __TAURI_INTERNALS__: Internals }).__TAURI_INTERNALS__;
+
+/** Listen to a Tauri event through the internals; resolves to an unlisten function. */
+export async function tauriListen(event: string, on: (payload: unknown) => void): Promise<() => void> {
+  const t = internals();
+  const eventId = await t.invoke("plugin:event|listen", {
+    event,
+    target: { kind: "Any" },
+    handler: t.transformCallback((e) => on(e.payload)),
+  });
+  return () => {
+    (window as unknown as { __TAURI_EVENT_PLUGIN_INTERNALS__?: { unregisterListener?: (e: string, id: unknown) => void } })
+      .__TAURI_EVENT_PLUGIN_INTERNALS__?.unregisterListener?.(event, eventId);
+    void t.invoke("plugin:event|unlisten", { event, eventId }).catch(() => undefined);
+  };
+}
+
 export function tauriHudAdapter(): HudAdapter {
-  const t = () => (window as unknown as { __TAURI_INTERNALS__: Internals }).__TAURI_INTERNALS__;
   return {
-    getSnapshot: () => t().invoke("capture_state"),
-    cancel: async () => void (await t().invoke("capture_cancel")),
-    async listen(onSnapshot) {
-      const internals = t();
-      const eventId = await internals.invoke("plugin:event|listen", {
-        event: HUD_EVENT,
-        target: { kind: "Any" },
-        handler: internals.transformCallback((e) => onSnapshot(e.payload)),
-      });
-      return () => {
-        (window as unknown as { __TAURI_EVENT_PLUGIN_INTERNALS__?: { unregisterListener?: (e: string, id: unknown) => void } })
-          .__TAURI_EVENT_PLUGIN_INTERNALS__?.unregisterListener?.(HUD_EVENT, eventId);
-        void internals.invoke("plugin:event|unlisten", { event: HUD_EVENT, eventId }).catch(() => undefined);
-      };
-    },
+    getSnapshot: () => internals().invoke("capture_state"),
+    cancel: async () => void (await internals().invoke("capture_cancel")),
+    openMain: async (captureId) =>
+      void (await internals().invoke("show_main_window", captureId ? { captureId } : undefined)),
+    listen: (onSnapshot) => tauriListen(HUD_EVENT, onSnapshot),
   };
 }

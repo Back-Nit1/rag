@@ -41,6 +41,7 @@ import { Outbox, newClientCaptureId, type OutboxEntry } from "../lib/outbox";
 import { FLOW_STATUS, type FlowState } from "../lib/status";
 import { prepareMic, useRecordingGate } from "../lib/recordingGate";
 import { isDesktop } from "../lib/desktop";
+import { takePendingReview, usePendingReview } from "../lib/openReview";
 import { useRecorder, type Recording } from "../lib/useRecorder";
 
 export function CaptureScreen() {
@@ -72,6 +73,20 @@ export function CaptureScreen() {
   }, [timezone]);
 
   useEffect(() => setQueued(outbox.current.list()), []);
+
+  // Desktop HUD "open for review": load that capture through the normal flow.
+  const requested = usePendingReview();
+  useEffect(() => {
+    const id = takePendingReview();
+    if (!id) return;
+    reset();
+    setFlow("queued");
+    pollCapture(deps.current, id, progress).catch((cause) => {
+      setFlow(errorState(cause));
+      setError(describe(cause));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requested]);
 
   const progress = useCallback((state: FlowState, detail?: CaptureDetail) => {
     setFlow(state);
