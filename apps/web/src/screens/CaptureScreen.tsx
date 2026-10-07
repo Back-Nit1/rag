@@ -257,6 +257,26 @@ export function CaptureScreen() {
         sub="Speak or type. Nothing becomes a task until you have reviewed it."
       />
 
+      {proposal && (
+        <ProposalReview
+          key={`${proposal.id}:${proposal.revision}`}
+          proposal={proposal}
+          timezone={timezone}
+          busy={resolving}
+          onResolve={(decisions) => void resolve(decisions)}
+          onShowEvidence={(span) => setHighlightSpan(span ?? null)}
+        />
+      )}
+
+      {clarifications.map((clarification) => (
+        <ClarificationPrompt
+          key={clarification.clarification_id}
+          clarification={clarification}
+          timezone={timezone}
+          onAnswered={(reminder) => setReminders((current) => [...current, reminder])}
+        />
+      ))}
+
       <Card>
         <label className="flex flex-col gap-1.5">
           <span className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
@@ -471,26 +491,6 @@ export function CaptureScreen() {
           onSave={(value) => void saveCorrection(value)}
         />
       )}
-
-      {proposal && (
-        <ProposalReview
-          key={`${proposal.id}:${proposal.revision}`}
-          proposal={proposal}
-          timezone={timezone}
-          busy={resolving}
-          onResolve={(decisions) => void resolve(decisions)}
-          onShowEvidence={(span) => setHighlightSpan(span ?? null)}
-        />
-      )}
-
-      {clarifications.map((clarification) => (
-        <ClarificationPrompt
-          key={clarification.clarification_id}
-          clarification={clarification}
-          timezone={timezone}
-          onAnswered={(reminder) => setReminders((current) => [...current, reminder])}
-        />
-      ))}
 
       <CreatedRecords
         tasks={tasks}
