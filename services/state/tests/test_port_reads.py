@@ -106,3 +106,17 @@ def test_list_plans_filters_by_status_and_owner(store):
     assert [p.id for p in store.list_plans(USER, status=PlanStatus.PROPOSED).items] == ["plan_1"]
     assert len(store.list_plans(USER).items) == 2
     assert [p.id for p in store.list_plans(OTHER).items] == ["plan_o"]
+
+
+def test_list_sources_is_owner_scoped_and_cursor_is_stable(store):
+    assert [s.id for s in store.list_sources(USER).items] == ["src_1", "src_2"]
+    assert [s.id for s in store.list_sources(OTHER).items] == ["src_o"]
+    first = store.list_sources(USER, limit=1)
+    assert [s.id for s in first.items] == ["src_1"] and first.next_cursor
+    rest = store.list_sources(USER, cursor=first.next_cursor, limit=1)
+    assert [s.id for s in rest.items] == ["src_2"]
+
+
+def test_list_sources_excludes_tombstoned(sqlite):
+    sqlite.tombstone(USER, "source", "src_1")
+    assert [s.id for s in sqlite.list_sources(USER).items] == ["src_2"]

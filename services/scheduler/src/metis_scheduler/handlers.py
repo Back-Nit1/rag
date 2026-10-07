@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from metis_contracts import (
     DeliveryStatus,
@@ -20,6 +21,8 @@ from metis_pipeline.dispatcher import DispatchContext, HandlerRegistry
 from .service import build_notification, evaluate_due, occurrence_key
 
 log = logging.getLogger("metis.scheduler.handlers")
+
+DailyState = Literal["disabled", "pending_schedule", "scheduled", "schedule_failed"]
 
 registry = HandlerRegistry()
 
@@ -101,19 +104,51 @@ def handle_daily_schedule_sync(envelope: EventEnvelope, context: DispatchContext
     if store is None:
         raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, "no schedule store is configured")
     prefs = context.state_store.get_preferences(envelope.user_id)
-    if envelope.target_revision is not None and int(prefs.revision) > int(envelope.target_revision):
+    # Our own bookkeeping below bumps the preferences revision, so a bare
+    # revision comparison would wrongly supersede a retry or duplicate delivery
+    # of this very event. Whoever enqueues a sync resets daily_schedule_state to
+    # pending_schedule in the same transaction; only while it is still pending
+    # does a newer revision mean a user edit this event has not covered yet.
+    if (
+        envelope.target_revision is not None
+        and prefs.daily_schedule_state == "pending_schedule"
+        and int(prefs.revision) > int(envelope.target_revision)
+    ):
         raise MetisError(ErrorCode.REVISION_CONFLICT, "preferences changed; this sync is superseded")
     if envelope.payload.get("enabled", True) is False:
         store.delete_daily(user_id=envelope.user_id, scheduler_ref=envelope.payload.get("scheduler_ref"))
+        _record_daily_state(context, envelope.user_id, "disabled")
         log.info("daily plan schedule removed for %s", envelope.user_id)
         return
-    ref = store.upsert_daily(
-        user_id=envelope.user_id,
-        local_time=prefs.daily_planning_local_time,
-        timezone=prefs.timezone,
-        payload={"user_id": envelope.user_id},
-    )
+    try:
+        ref = store.upsert_daily(
+            user_id=envelope.user_id,
+            local_time=prefs.daily_planning_local_time,
+            timezone=prefs.timezone,
+            payload={"user_id": envelope.user_id},
+        )
+    except MetisError:
+        # Handlers cannot see the attempt number, so every provider failure is
+        # shown honestly as schedule_failed; a retry that succeeds replaces it.
+        _record_daily_state(context, envelope.user_id, "schedule_failed")
+        raise
+    _record_daily_state(context, envelope.user_id, "scheduled")
     log.info("daily plan scheduled for %s ref=%s", envelope.user_id, ref)
+
+
+def _record_daily_state(context: DispatchContext, user_id: str, new_state: DailyState) -> None:
+    """Revision-checked write of Preferences.daily_schedule_state (no-op if equal)."""
+    state = context.state_store
+    prefs = state.get_preferences(user_id)
+    if prefs.daily_schedule_state == new_state:
+        return
+    stored = state.get(user_id, "preferences", prefs.id) is not None
+    with state.transaction(user_id) as tx:
+        tx.put(
+            "preferences",
+            prefs.model_copy(update={"daily_schedule_state": new_state}),
+            expected_revision=prefs.revision if stored else None,
+        )
 
 
 @registry.register(EventType.REMINDER_CANCEL_SYNC)

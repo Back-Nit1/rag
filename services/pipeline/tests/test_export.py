@@ -127,7 +127,7 @@ def test_ready_result_refs_and_manifest(ctx):
     assert manifest["contract_version"] == 1 and "schema_version" in manifest and "build" in manifest
     assert manifest["sections"]["tasks.jsonl"]["records"] == 1
     assert "pay rent" in zf.read("tasks.jsonl").decode()
-    assert manifest["sections"]["sources.jsonl"]["status"] == "unavailable"
+    assert manifest["sections"]["sources.jsonl"]["status"] == "included"
 
 
 def test_exclusions_are_honoured(ctx):
@@ -261,11 +261,39 @@ def test_deleted_source_during_export_is_skipped(ctx, monkeypatch):
             ),
         )
     listed = ctx.state_store._page("source", USER, "", [], cursor=None, limit=10)
-    monkeypatch.setattr(
-        ctx.state_store, "list_sources", lambda u, cursor=None, limit=100: listed, raising=False
-    )
+    monkeypatch.setattr(ctx.state_store, "list_sources", lambda u, cursor=None, limit=100: listed)
     ctx.state_store.purge(USER, "source", s.id)  # vanishes between listing and read
     job = make_job(ctx)
     run(ctx, env(job))
     _, _, zf = zip_of(ctx, job)
     assert zf.read("sources.jsonl") == b""
+
+
+def test_sources_are_exported_owner_scoped_without_audio(ctx):
+    from metis_contracts.entities import SourceArtifact
+    from metis_contracts.enums import SourceKind, SourceLifecycle
+
+    now = ctx.clock.now()
+    for user in (USER, OTHER):
+        with ctx.state_store.transaction(user) as tx:
+            tx.put(
+                "source",
+                SourceArtifact(
+                    id=f"src_{user}", user_id=user, created_at=now, updated_at=now,
+                    kind=SourceKind.AUDIO, lifecycle=SourceLifecycle.READY,
+                    capture_timezone="UTC", captured_at=now,
+                    object_ref=ObjectRef(bucket="", key=f"{owner_prefix(user)}/a.wav", content_type="audio/wav"),
+                ),
+            )  # fmt: skip
+    job = make_job(ctx)
+    run(ctx, env(job))
+    _, _, zf = zip_of(ctx, job)
+    manifest = json.loads(zf.read("manifest.json"))
+    body = zf.read("sources.jsonl").decode()
+    assert manifest["sections"]["sources.jsonl"] == {
+        "status": "included",
+        "records": 1,
+        "sha256": hashlib.sha256(body.encode()).hexdigest(),
+    }
+    assert f"src_{USER}" in body and f"src_{OTHER}" not in body
+    assert "object_ref" not in body and "a.wav" not in body

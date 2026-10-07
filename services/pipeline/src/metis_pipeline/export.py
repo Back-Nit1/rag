@@ -86,17 +86,12 @@ def _collect(
         return body
 
     if payload.include_sources:
-        lister = getattr(state, "list_sources", None)
-        if lister is None:
-            # The StateStore port has no source listing yet; say so, never imply it was exported.
-            files["sources.jsonl"] = (b"", "unavailable")
-        else:
-            live: list[SourceArtifact] = []
-            for s in _pages(lister, user_id, budget):
-                fresh = state.get(user_id, "source", s.id)  # deletion race: skip what vanished
-                if fresh is not None and fresh.tombstoned_at is None:
-                    live.append(fresh)
-            files["sources.jsonl"] = (dump(live, exclude={"object_ref"}), "included")
+        live: list[SourceArtifact] = []
+        for s in _pages(state.list_sources, user_id, budget):
+            fresh = state.get(user_id, "source", s.id)  # deletion race: skip what vanished
+            if fresh is not None and fresh.tombstoned_at is None:
+                live.append(fresh)
+        files["sources.jsonl"] = (dump(live, exclude={"object_ref"}), "included")
     if payload.include_memories:
         files["memories.jsonl"] = (dump(_pages(state.list_memories, user_id, budget)), "included")
     if payload.include_commitments:
