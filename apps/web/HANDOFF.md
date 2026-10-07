@@ -78,12 +78,7 @@ without seven more dev dependencies.
   recording has not been run in this environment.
 * The offline outbox holds typed captures only. Audio stays in memory for an
   explicit retry and is never written to localStorage.
-* Projects / resume, plan generation and regeneration, memory search and the
-  export/delete confirmation flow are not built. Settings says so on the page
-  rather than showing dead controls.
-* Push is display-only: the service worker shows a push and the app can ask for
-  permission, but `POST /v1/push-subscriptions` is not called yet (no VAPID key
-  is exposed to the client).
+* Push registration is not built: no route exposes a VAPID public key (see Product gaps).
 * No component-level DOM tests; the logic is tested instead (`src/lib/*.test.ts`)
   and the UI was verified in a real browser.
 
@@ -96,3 +91,29 @@ left rail on wide screens and a tab bar with a raised Capture control on small
 ones. No new dependencies, no behaviour or API changes. Not covered: audio
 recording was only exercised with Chromium's fake media device; no plan
 accept/adjust/regenerate or push-subscription UI exists to restyle.
+
+## Product gaps (web/21-product-gaps)
+
+Built against existing contract v1 routes: Cognito PKCE gate (`lib/auth.ts`,
+`app/AuthGate.tsx`; only `VITE_METIS_COGNITO_{DOMAIN,CLIENT_ID,REDIRECT_URI}`;
+none set or desktop = no login; partial = refuses to open; tokens in
+sessionStorage), plans (request/poll/review/pin/shift/accept/regenerate with
+epoch-stale handling), manual availability, projects + resume packet +
+timeline, evidence-backed search, source viewer with delete + purge job state,
+editable preferences with the daily-plan schedule state, export job with
+authenticated Blob download, reminder snooze/cancel.
+
+Backend gaps (not invented around; each flow stops at an honest state):
+
+| Route | Gap |
+| --- | --- |
+| push | `METIS_VAPID_PUBLIC_KEY` exists in settings but no route/health field exposes it; no browser subscription possible |
+| `POST /v1/reminders/{id}/...` | no reschedule route (only snooze/cancel) |
+| `GET /v1/reminders` | no list; controls reachable only from a notification's `reminder_id` or a just-created reminder |
+| `/v1/availability` | no PATCH/DELETE; edits re-POST the same id, blocks cannot be removed |
+| `/v1/projects` | no PATCH (no update/archive); POST needs server-owned fields in the body, so the UI does not create projects; captures cannot be attached to a project |
+| purge job | `purge_capture` job stays `queued` after the worker logs the purge, so the UI can never show "purged" |
+| evidence | fixture memories cite `span_ref` values (e.g. `span_attempt`) absent from `source.spans`; UI falls back to full text and says so |
+| `POST /v1/projects/{id}/resume` | no response model in the contract (UI types it locally as `ResumePacket`); returns no next action/completion criterion |
+| `GET /v1/captures` | no list; deleted sources are reachable only via evidence links |
+| CORS/auth | local API rejects a Cognito-style bearer (401) as designed; sign-out confirm path could not be exercised in a browser without a real Cognito |
