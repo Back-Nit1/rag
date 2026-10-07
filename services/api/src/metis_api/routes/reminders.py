@@ -80,6 +80,7 @@ def create_reminder(body: CreateReminderRequest, ctx: Context) -> Reminder:
         timezone_name=body.timezone,
         channel=body.channel,
         requires_generation=body.requires_generation,
+        purpose=body.purpose,
         clock=ctx.adapters.clock,
         correlation_id=ctx.correlation_id,
     )

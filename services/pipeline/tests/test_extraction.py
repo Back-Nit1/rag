@@ -365,3 +365,60 @@ def test_fixture_project_hint_only_when_explicit():
     assert {i["project_hint"] for i in hinted} == {"Atlas"}
     plain = _fixture_extraction("NOTE:\nNext step is to test it.")["items"]
     assert all("project_hint" not in i for i in plain)
+
+
+# --- status_update target validation ---------------------------------------- #
+
+
+def _status_payload(text, action, targets):
+    return {
+        "items": [
+            {
+                "kind": "status_update",
+                "title": "status",
+                "update_action": action,
+                "target_ids": targets,
+                "missing_fields": [],
+                "evidence": [span(0, len(text))],
+            }
+        ],
+        "requires_clarification": False,
+    }
+
+
+def _event(store, event_id):
+    from metis_contracts import Event
+
+    with store.transaction(USER) as tx:
+        tx.put("event", Event(id=event_id, user_id=USER, created_at=T0, updated_at=T0, title="Briefing"))
+
+
+def test_status_update_drops_unoffered_targets_and_flags_missing_target(store, clock):
+    _event(store, "event_real")
+    text = "Cancel that briefing."
+    svc = forced(store, clock, _status_payload(text, "canceled", ["event_real", "event_invented"]))
+    outcome = svc.extract(source(text), source_version=1)
+    (item,) = outcome.proposal.items
+    assert item.target_ids == ["event_real"] and "target" not in item.missing_fields
+    assert "not among the offered candidates" in outcome.degraded_reason
+
+    svc = forced(store, clock, _status_payload(text, "canceled", ["event_invented"]))
+    (item,) = svc.extract(source(text), source_version=1).proposal.items
+    assert item.target_ids == [] and "target" in item.missing_fields
+
+
+def test_status_update_registered_needs_a_supporting_phrase(store, clock):
+    _event(store, "event_real")
+    text = "Thinking about that briefing."
+    outcome = forced(store, clock, _status_payload(text, "registered", ["event_real"])).extract(
+        source(text), source_version=1
+    )
+    assert outcome.proposal.items == []
+
+
+def test_candidates_block_precedes_note_marker():
+    prompt = build_prompt(
+        "hi", captured_local_date=T0.date(), capture_timezone=NY, candidates=[("event_1", "event", "X" * 99)]
+    )
+    assert prompt.index("event_1 | event | " + "X" * 80 + "\n") < prompt.index("NOTE:\n")
+    assert "CANDIDATES" not in build_prompt("hi", captured_local_date=T0.date(), capture_timezone=NY)

@@ -32,6 +32,7 @@ from metis_contracts import (
     Notification,
     OutboxEvent,
     Reminder,
+    ReminderPurpose,
     ReminderState,
     new_id,
     resolve_timezone,
@@ -103,6 +104,7 @@ def request_reminder(
     timezone_name: str,
     channel: DeliveryChannel = DeliveryChannel.IN_APP,
     requires_generation: bool = False,
+    purpose: ReminderPurpose = ReminderPurpose.GENERAL,
     clock: Clock,
     correlation_id: str,
 ) -> Reminder:
@@ -127,6 +129,7 @@ def request_reminder(
         channel=channel,
         occurrence_key=occurrence_key("pending", trigger_at),
         requires_generation=requires_generation,
+        purpose=purpose,
     )
     reminder = reminder.model_copy(update={"occurrence_key": occurrence_key(reminder.id, trigger_at)})
 
@@ -353,9 +356,17 @@ def evaluate_due(state: StateStore, reminder: Reminder, *, occurrence: str, cloc
     attendance = getattr(getattr(target, "attendance_status", None), "value", None)
     if attendance in ("canceled", "declined"):
         return DueDecision(False, f"the event is {attendance}")
-    registration = getattr(getattr(target, "registration_status", None), "value", None)
-    if registration == "registered" and "regist" in reminder.target_id.lower():
-        return DueDecision(False, "registration is already complete")
+    if reminder.purpose is ReminderPurpose.REGISTRATION:
+        # Only registration reminders are silenced by registration; general ones never are.
+        event = target
+        if reminder.target_kind != "event":
+            event_id = getattr(target, "event_id", None)
+            event = state.get(reminder.user_id, "event", event_id) if event_id else None
+        if event is not None:
+            if getattr(event.attendance_status, "value", None) in ("canceled", "declined"):
+                return DueDecision(False, "the event is canceled or declined")
+            if getattr(event.registration_status, "value", None) == "registered":
+                return DueDecision(False, "registration is already complete")
 
     preferences = state.get_preferences(reminder.user_id)
     if in_quiet_hours(clock.now(), timezone_name=reminder.timezone, windows=preferences.quiet_hours):

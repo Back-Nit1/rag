@@ -39,7 +39,12 @@ from metis_contracts import (
     new_id,
     settings,
 )
-from metis_contracts.enums import AttendanceStatus, ExtractedItemKind, RegistrationStatus
+from metis_contracts.enums import (
+    TASK_OPEN_STATES,
+    AttendanceStatus,
+    ExtractedItemKind,
+    RegistrationStatus,
+)
 
 from .budget import estimate_micro_usd, reserved
 from .inference import SYSTEM_GUARDRAIL, rough_token_count
@@ -94,6 +99,11 @@ def extraction_schema() -> dict[str, Any]:
                             "enum": [*[s.value for s in RegistrationStatus], None],
                         },
                         "requested_actions": {"type": "array", "items": {"type": "string"}},
+                        "update_action": {
+                            "type": ["string", "null"],
+                            "enum": ["registered", "canceled", None],
+                        },
+                        "target_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 20},
                         "missing_fields": {"type": "array", "items": {"type": "string"}},
                         "evidence": {
                             "type": "array",
@@ -145,13 +155,30 @@ def split_ranges(text: str, *, max_chars: int, max_ranges: int) -> list[tuple[in
     return ranges[:max_ranges]
 
 
-def build_prompt(text: str, *, captured_local_date: date, capture_timezone: str) -> str:
-    """Bounded, typed context — not a concatenation of the user's history."""
+def build_prompt(
+    text: str,
+    *,
+    captured_local_date: date,
+    capture_timezone: str,
+    candidates: list[tuple[str, str, str]] = (),  # type: ignore[assignment]
+) -> str:
+    """Bounded, typed context — not a concatenation of the user's history.
+
+    ``candidates`` are (id, "event"|"task", title) rows a status update may target.
+    """
+    block = ""
+    if candidates:
+        rows = "\n".join(f"{i} | {k} | {t[:80]}" for i, k, t in candidates)
+        block = (
+            "CANDIDATES (open records a status update such as 'I registered' or 'cancel that' may "
+            "target; return the ids in target_ids, never guess):\n" + rows + "\n\n"
+        )
     return (
         f"Captured on {captured_local_date.isoformat()} in timezone {capture_timezone}.\n"
         "Resolve any relative date against that capture date. If the note does not "
         "state a date, a time, a venue, a registration status or completion, leave it "
         "null and list it in missing_fields.\n\n"
+        f"{block}"
         "NOTE:\n"
         f"{text}"
     )
@@ -204,8 +231,10 @@ class ExtractionService:
         )
         deferred = max(0, _ranges_needed(window, limits.extraction_max_input_tokens * 3) - len(ranges))
 
+        candidates = self._candidates(source.user_id)
         prompt = build_prompt(
             window,
+            candidates=candidates,
             captured_local_date=capture_local_date(source.captured_at, source.capture_timezone),
             capture_timezone=source.capture_timezone,
         )
@@ -245,6 +274,7 @@ class ExtractionService:
             text=text,
             offset=char_start,
             window=window,
+            offered={c[0] for c in candidates},
         )
 
         requires_clarification = bool(payload.get("requires_clarification")) or any(
@@ -287,6 +317,16 @@ class ExtractionService:
 
     # ------------------------------------------------------------------ #
 
+    def _candidates(self, user_id: str) -> list[tuple[str, str, str]]:
+        """Open events then open tasks, at most 10 of each. Ids only ever come from here."""
+        events = [
+            e
+            for e in self._state.list_events(user_id, limit=100).items
+            if e.attendance_status not in (AttendanceStatus.CANCELED, AttendanceStatus.DECLINED)
+        ][:10]
+        tasks = self._state.list_tasks(user_id, states=sorted(TASK_OPEN_STATES), limit=10).items[:10]
+        return [(e.id, "event", e.title) for e in events] + [(t.id, "task", t.title) for t in tasks]
+
     def _text_for(self, source: SourceArtifact, source_version: int) -> str:
         for transcript in source.transcripts:
             if transcript.source_version == source_version:
@@ -326,6 +366,7 @@ class ExtractionService:
         text: str,
         offset: int,
         window: str,
+        offered: set[str] = frozenset(),  # type: ignore[assignment]
     ) -> tuple[list[ExtractedItem], list[SourceSpan], list[str]]:
         """Schema-shaped output still has to survive semantic checks."""
         raw_items = payload.get("items")
@@ -387,6 +428,20 @@ class ExtractionService:
                 elif not _deadline_is_grounded(parsed, lowered):
                     issues.append(f"item {index}: deadline {parsed} is not stated in the note")
                     cleaned["deadline_local_date"] = None
+
+            if cleaned.get("kind") == ExtractedItemKind.STATUS_UPDATE.value:
+                # Targets come only from the offered candidates; never matched by title.
+                given = list(cleaned.get("target_ids") or [])
+                cleaned["target_ids"] = [t for t in given if t in offered]
+                if len(cleaned["target_ids"]) != len(given):
+                    issues.append(f"item {index}: target_ids not among the offered candidates dropped")
+                if len(set(cleaned["target_ids"])) != 1:
+                    cleaned["missing_fields"] = [*(cleaned.get("missing_fields") or []), "target"]
+                if cleaned.get("update_action") == "registered" and not any(
+                    p in lowered for p in ("registered", "signed up", "got a ticket", "booked")
+                ):
+                    issues.append(f"item {index}: status_update registered is unsupported by the note")
+                    continue
 
             # Semantic check: registration is never inferred from intent.
             if cleaned.get("registration_status") == RegistrationStatus.REGISTERED.value and not any(

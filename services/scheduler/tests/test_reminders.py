@@ -111,7 +111,7 @@ def make_event(store, clock, **kw) -> Event:
         return tx.put("event", event)
 
 
-def add_reminder(store, clock, target, *, kind="task", trigger_at=DUE, channel="in_app"):
+def add_reminder(store, clock, target, *, kind="task", trigger_at=DUE, channel="in_app", purpose="general"):
     from metis_contracts import DeliveryChannel
 
     return request_reminder(
@@ -123,6 +123,7 @@ def add_reminder(store, clock, target, *, kind="task", trigger_at=DUE, channel="
         trigger_at=trigger_at,
         timezone_name=NY,
         channel=DeliveryChannel(channel),
+        purpose=purpose,
         clock=clock,
         correlation_id="corr_1",
     )
@@ -282,19 +283,41 @@ def test_a_canceled_event_suppresses_its_reminder(store, clock, context):
     assert decision.deliver is False and "canceled" in decision.reason
 
 
-def test_completed_registration_suppresses_the_registration_reminder(store, clock, context):
-    event = make_event(store, clock, event_id="event_registration_target")
-    reminder = add_reminder(store, clock, event, kind="event")
+def _register(store, event):
+    store_put = event.model_copy(update={"registration_status": RegistrationStatus.REGISTERED})
     with store.transaction(USER) as tx:
-        tx.put(
-            "event",
-            event.model_copy(update={"registration_status": RegistrationStatus.REGISTERED}),
-            expected_revision=event.revision,
-        )
+        tx.put("event", store_put, expected_revision=event.revision)
+
+
+def test_completed_registration_suppresses_the_registration_reminder(store, clock, context):
+    event = make_event(store, clock)
+    reminder = add_reminder(store, clock, event, kind="event", purpose="registration")
+    _register(store, event)
     clock.set(DUE)
     current = store.get(USER, "reminder", reminder.id)
     decision = evaluate_due(store, current, occurrence=current.occurrence_key, clock=clock)
     assert decision.deliver is False and "registration" in decision.reason
+
+
+def test_general_reminder_is_not_suppressed_by_registration(store, clock, context):
+    event = make_event(store, clock)
+    reminder = add_reminder(store, clock, event, kind="event")
+    _register(store, event)
+    clock.set(DUE)
+    current = store.get(USER, "reminder", reminder.id)
+    assert evaluate_due(store, current, occurrence=current.occurrence_key, clock=clock).deliver is True
+
+
+def test_registration_reminder_on_a_linked_task_follows_its_event(store, clock, context):
+    event = make_event(store, clock)
+    task = make_task(store, clock)
+    with store.transaction(USER) as tx:
+        task = tx.put("task", task.model_copy(update={"event_id": event.id}), expected_revision=task.revision)
+    reminder = add_reminder(store, clock, task, kind="task", purpose="registration")
+    _register(store, event)
+    clock.set(DUE)
+    current = store.get(USER, "reminder", reminder.id)
+    assert evaluate_due(store, current, occurrence=current.occurrence_key, clock=clock).deliver is False
 
 
 def test_a_deleted_target_suppresses_the_reminder(store, clock, context):

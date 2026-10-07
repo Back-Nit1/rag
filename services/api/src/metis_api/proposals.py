@@ -13,6 +13,7 @@ from datetime import datetime, time
 from typing import Any
 
 from metis_contracts import (
+    TASK_OPEN_STATES,
     AttendanceStatus,
     DeliveryChannel,
     ErrorCode,
@@ -23,9 +24,12 @@ from metis_contracts import (
     MetisError,
     ProposalDisposition,
     RegistrationStatus,
+    ReminderPurpose,
     RequestedAction,
     SourceRef,
+    StatusUpdateAction,
     Task,
+    TaskPurpose,
     TaskState,
     new_id,
 )
@@ -122,11 +126,15 @@ def resolve_proposal(
                     deadline_local_date=item.deadline_local_date,
                     timezone=item.timezone,
                     source_refs=[_ref(item, source)],
+                    event_id=stored_event.id,
+                    purpose=TaskPurpose.REGISTRATION,
                 )
                 with ctx.state.transaction(ctx.user_id) as tx:
                     stored_task = tx.put("task", registration_task)
                 created_tasks.append(stored_task.id)
-                reminder_id, clarification = _maybe_reminder(ctx, item, stored_task, kind="task")
+                reminder_id, clarification = _maybe_reminder(
+                    ctx, item, stored_task, kind="task", purpose=ReminderPurpose.REGISTRATION
+                )
                 if reminder_id:
                     created_reminders.append(reminder_id)
                 if clarification:
@@ -141,6 +149,8 @@ def resolve_proposal(
                     # A candidate, not an obligation: it starts in the inbox.
                     state=TaskState.INBOX,
                     source_refs=[_ref(item, source)],
+                    event_id=stored_event.id,
+                    purpose=TaskPurpose.PREPARATION,
                 )
                 with ctx.state.transaction(ctx.user_id) as tx:
                     created_tasks.append(tx.put("task", prep).id)
@@ -158,6 +168,11 @@ def resolve_proposal(
                         blocking=blocking,
                     )
                 )
+
+        elif item.kind is ExtractedItemKind.STATUS_UPDATE:
+            clarification = _apply_status_update(ctx, item, source, now)
+            if clarification:
+                clarifications.append(clarification)
 
         else:
             # Thoughts, decisions and work logs become memory, not obligations.
@@ -197,6 +212,80 @@ def resolve_proposal(
         created_reminder_ids=created_reminders,
         clarifications=clarifications,
     )
+
+
+def _apply_status_update(
+    ctx: RequestContext, item: ExtractedItem, source: Any, now: datetime
+) -> ClarificationRequest | None:
+    """Apply "registered" / "canceled" to exactly one owned target, else ask and change nothing.
+
+    The target ids come from the (validated) item; ownership is re-checked here with
+    the authenticated user_id. Nothing is matched by title.
+    """
+    state, uid = ctx.state, ctx.user_id
+    owned = [
+        (kind, row)
+        for tid in dict.fromkeys(item.target_ids)
+        for kind in ("event", "task")
+        if (row := state.get(uid, kind, tid)) is not None
+    ]
+    if "target" in item.missing_fields or len(owned) != 1:
+        titles = "; ".join(f"'{row.title}'" for _, row in owned) or "none found"
+        return ClarificationRequest(
+            clarification_id=new_id("clar"),
+            source_id=source.id,
+            target_id=None,
+            question=f"Which one did you mean? Candidates: {titles}"[:500],
+            missing_fields=["target"],
+            blocking=False,
+            candidate_ids=[row.id for _, row in owned],
+        )
+    kind, target = owned[0]
+    if item.update_action is StatusUpdateAction.CANCELED:
+        with state.transaction(uid) as tx:
+            if kind == "event":
+                tx.put(
+                    "event",
+                    target.model_copy(update={"attendance_status": AttendanceStatus.CANCELED}),
+                    expected_revision=target.revision,
+                )
+            else:
+                tx.put(
+                    "task",
+                    target.model_copy(update={"state": TaskState.CANCELED, "canceled_at": now}),
+                    expected_revision=target.revision,
+                )
+        return None
+    # registered: a task with an event resolves to that event; a bare task is just done.
+    if kind == "task" and target.event_id is None:
+        with state.transaction(uid) as tx:
+            tx.put(
+                "task",
+                target.model_copy(update={"state": TaskState.DONE, "completed_at": now}),
+                expected_revision=target.revision,
+            )
+        return None
+    event = target if kind == "event" else state.get(uid, "event", target.event_id)
+    if event is None:
+        return None
+    follow_ups = [
+        t
+        for t in state.list_tasks(uid, states=sorted(TASK_OPEN_STATES), limit=500).items
+        if t.event_id == event.id and t.purpose is TaskPurpose.REGISTRATION
+    ]
+    with state.transaction(uid) as tx:
+        tx.put(
+            "event",
+            event.model_copy(update={"registration_status": RegistrationStatus.REGISTERED}),
+            expected_revision=event.revision,
+        )
+        for t in follow_ups:
+            tx.put(
+                "task",
+                t.model_copy(update={"state": TaskState.DONE, "completed_at": now}),
+                expected_revision=t.revision,
+            )
+    return None
 
 
 def _ref(item: ExtractedItem, source: Any) -> SourceRef:
@@ -248,7 +337,12 @@ def _event_from(ctx: RequestContext, item: ExtractedItem, source: Any, now: date
 
 
 def _maybe_reminder(
-    ctx: RequestContext, item: ExtractedItem, target: Any, *, kind: str
+    ctx: RequestContext,
+    item: ExtractedItem,
+    target: Any,
+    *,
+    kind: str,
+    purpose: ReminderPurpose = ReminderPurpose.GENERAL,
 ) -> tuple[str | None, ClarificationRequest | None]:
     """Create a reminder only when its local date AND time actually resolve."""
     from metis_scheduler import request_reminder
@@ -305,6 +399,7 @@ def _maybe_reminder(
         trigger_at=trigger_at,
         timezone_name=timezone_name,
         channel=DeliveryChannel.IN_APP,
+        purpose=purpose,
         clock=ctx.adapters.clock,
         correlation_id=ctx.correlation_id,
     )

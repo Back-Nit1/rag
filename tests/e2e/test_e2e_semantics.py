@@ -80,7 +80,7 @@ def test_a_plausible_deadline_the_note_never_states_is_rejected(h, monkeypatch):
 # --- registration ------------------------------------------------------- #
 
 
-def _event_with_reminder(h):
+def _event_with_reminder(h, purpose="registration"):
     event = h.client.post(
         "/v1/events",
         json={
@@ -100,6 +100,7 @@ def _event_with_reminder(h):
             "local_date": "2026-10-07",
             "local_time": "09:00",
             "timezone": NY,
+            "purpose": purpose,
         },
         headers={"Idempotency-Key": key("rem")},
     ).json()
@@ -107,14 +108,6 @@ def _event_with_reminder(h):
     return event, rem
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D10 (medium, open): the scheduler's registered-suppression only matches the literal text "
-    "'regist' in target_id, so it never fires. Suppressing on event.registration_status alone was tried and "
-    "rejected: it would also silence ordinary event-time reminders on a registered event. A correct fix "
-    "needs the registration follow-up task linked to its event (or a reminder purpose field): a "
-    "coordinator contract decision (owner: contracts + scheduler)",
-)
 def test_marking_registered_removes_the_now_useless_registration_reminder(h):
     event, rem = _event_with_reminder(h)
     patch(h, f"/v1/events/{event['id']}", event, registration_status="registered")
@@ -123,12 +116,14 @@ def test_marking_registered_removes_the_now_useless_registration_reminder(h):
     assert [n for n in notifications(h) if n["reminder_id"] == rem["id"]] == [], "no stale nag"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D7: the spoken follow-up 'I already registered' is extracted for a NEW event intent; "
-    "nothing links it to the existing event/registration task, so the old follow-up stays open "
-    "(no target resolution in services/api/src/metis_api/proposals.py, owner: api/pipeline)",
-)
+def test_general_event_reminder_still_notifies_after_registration(h):
+    event, rem = _event_with_reminder(h, purpose="general")
+    patch(h, f"/v1/events/{event['id']}", event, registration_status="registered")
+    h.clock.set(DUE)
+    h.tick()
+    assert [n for n in notifications(h) if n["reminder_id"] == rem["id"]], "event-time reminder survives"
+
+
 def test_spoken_already_registered_closes_the_existing_registration_follow_up(h):
     cap = capture(h).json()["capture_id"]
     h.tick()
@@ -145,12 +140,6 @@ def test_spoken_already_registered_closes_the_existing_registration_follow_up(h)
     assert states and all(s in ("done", "canceled") for s in states)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D8: 'Cancel that' has no extraction kind or target resolution; it is stored as a "
-    "plain thought, never resolving its target nor asking when ambiguous "
-    "(ExtractedItemKind has no cancel; proposals.py, owner: contracts/api)",
-)
 def test_cancel_that_resolves_its_target_or_asks_and_never_cancels_similar_events(h):
     for i in range(2):
         h.client.post(
@@ -169,7 +158,23 @@ def test_cancel_that_resolves_its_target_or_asks_and_never_cancels_similar_event
     events = h.client.get("/v1/events").json()["items"]
     canceled = [e for e in events if e["attendance_status"] == "canceled"]
     assert len(canceled) <= 1, "never cancels every similar event"
-    assert canceled or body["clarifications"], "either resolved a target or asked which one"
+    assert not canceled, "ambiguous: nothing mutated"
+    (clar,) = body["clarifications"]
+    assert clar["target_id"] is None and clar["missing_fields"] == ["target"]
+    assert sorted(clar["candidate_ids"]) == sorted(e["id"] for e in events)
+
+
+def test_cancel_with_exactly_one_event_resolves_and_cancels_it(h):
+    h.client.post(
+        "/v1/events",
+        json={"title": "Bloomberg briefing", "local_date": "2026-10-08", "timezone": NY},
+        headers={"Idempotency-Key": key("ev")},
+    )
+    cap = capture(h, "Cancel that Bloomberg briefing.", idem=key("c")).json()["capture_id"]
+    h.tick()
+    body = accept_all(h, cap).json()
+    (event,) = h.client.get("/v1/events").json()["items"]
+    assert event["attendance_status"] == "canceled" and not body["clarifications"]
 
 
 # --- project resumption --------------------------------------------------- #

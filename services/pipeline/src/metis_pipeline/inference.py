@@ -137,7 +137,8 @@ def _fixture_extraction(user_content: str) -> dict[str, Any]:
     # The prompt carries a bounded header before the note; evidence offsets
     # must be relative to the note itself, which is what the span validator
     # checks against the immutable source text.
-    text = user_content.split("NOTE:\n", 1)[-1].strip()
+    head, _, note = user_content.partition("NOTE:\n")
+    text = (note or head).strip()
     lowered = text.lower()
     end = len(text)
     items: list[dict[str, Any]] = []
@@ -145,6 +146,36 @@ def _fixture_extraction(user_content: str) -> dict[str, Any]:
 
     def span(label: str) -> list[dict[str, Any]]:
         return [{"span_ref": label, "start_char": 0, "end_char": end}]
+
+    # Status updates ("I already registered", "cancel that") never create a record.
+    # Fixture behaviour: offer EVERY candidate of the right kind (events; for cancel,
+    # tasks only when there are no events), so more than one candidate makes the API ask.
+    action = (
+        "registered"
+        if any(p in lowered for p in ("already registered", "i registered", "signed up"))
+        else "canceled"
+        if "cancel" in lowered
+        else None
+    )
+    if action:
+        rows = re.findall(r"^(\S+) \| (event|task) \|", head, re.MULTILINE) if note else []
+        ids = [i for i, k in rows if k == "event"] or (
+            [i for i, k in rows if k == "task"] if action == "canceled" else []
+        )
+        return {
+            "items": [
+                {
+                    "kind": "status_update",
+                    "title": text[:120],
+                    "update_action": action,
+                    "target_ids": ids,
+                    "missing_fields": [],
+                    "evidence": span("span_status"),
+                }
+            ],
+            "requires_clarification": len(ids) != 1,
+            "notes": "fixture extraction: status update, candidates offered unfiltered",
+        }
 
     tentative = any(p in lowered for p in ("maybe", "might", "thinking about", "at some point"))
 
