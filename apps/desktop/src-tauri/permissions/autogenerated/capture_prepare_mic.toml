@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-capture-prepare-mic"
+description = "Enables the capture_prepare_mic command without any pre-configured scope."
+commands.allow = ["capture_prepare_mic"]
+
+[[permission]]
+identifier = "deny-capture-prepare-mic"
+description = "Denies the capture_prepare_mic command without any pre-configured scope."
+commands.deny = ["capture_prepare_mic"]
