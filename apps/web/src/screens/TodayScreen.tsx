@@ -74,7 +74,7 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
   const focus = open.slice(0, focusLimit);
   const backlog = open.slice(focusLimit);
   const overdue = today.overdue_tasks ?? [];
-  const events = today.fixed_events ?? [];
+  const events = [...(today.fixed_events ?? [])].sort((a, b) => (a.starts_at ?? "").localeCompare(b.starts_at ?? ""));
   const date = dateLabel(`${today.local_date}T12:00:00Z`, today.timezone);
 
   return (
@@ -87,7 +87,7 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
           </>
         }
         action={
-          <Button variant="primary" onClick={onOpenCapture} className="hidden lg:inline-flex">
+          <Button variant="primary" onClick={onOpenCapture} className="max-lg:hidden">
             <Icon name="mic" size={16} /> Capture a thought
           </Button>
         }
@@ -156,7 +156,6 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
                       </div>
                       <div className="flex gap-2">
                         <Button
-                          variant="primary"
                           disabled={busyTask === task.id}
                           onClick={() => void complete(task.id, task.revision ?? 1)}
                         >

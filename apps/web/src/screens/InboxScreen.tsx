@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { type Event as MetisEvent, RegistrationStatus, type Task, TaskState } from "../contracts/metis";
 import { Button } from "../components/Button";
-import { Card, Empty, SectionHeading } from "../components/Card";
+import { Chip, Empty, Loading, Notice, PageHeader, SectionHeading } from "../components/Card";
 import { Field, inputClass } from "../components/Field";
 import { useSession } from "../app/session";
 import { api } from "../lib/api";
@@ -20,6 +20,7 @@ export function InboxScreen() {
   const [events, setEvents] = useState<MetisEvent[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -27,6 +28,7 @@ export function InboxScreen() {
       setTasks(taskPage.items ?? []);
       setEvents((eventPage.items ?? []).filter((e) => e.registration_status === RegistrationStatus.UNKNOWN));
       setError(null);
+      setLoaded(true);
     } catch {
       setError("The inbox could not be loaded.");
     }
@@ -51,14 +53,28 @@ export function InboxScreen() {
     }
   };
 
-  if (error) return <Card>{error}</Card>;
+  if (error && !loaded)
+    return (
+      <Notice tone="bad" live action={<Button onClick={() => void load()}>Try again</Button>}>
+        {error}
+      </Notice>
+    );
+  if (!loaded) return <Loading label="Loading the inbox" />;
 
   return (
-    <div className="flex flex-col gap-4">
-      <section>
-        <SectionHeading hint="missing information, not an error">Needs a detail</SectionHeading>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Inbox" sub="Things that are captured but still missing a detail. Leaving one here is fine." />
+      {error && (
+        <Notice tone="warn" live>
+          {error}
+        </Notice>
+      )}
+      <section aria-labelledby="h-need">
+        <SectionHeading id="h-need" hint="missing information, not an error">
+          Needs a detail
+        </SectionHeading>
         {tasks.length === 0 ? (
-          <Empty>Nothing is waiting on you.</Empty>
+          <Empty title="Nothing is waiting on you">Captured tasks that need a deadline will collect here.</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
             {tasks.map((task) => (
@@ -68,19 +84,25 @@ export function InboxScreen() {
         )}
       </section>
 
-      <section>
-        <SectionHeading hint="interest is not registration">Registration unknown</SectionHeading>
+      <section aria-labelledby="h-reg">
+        <SectionHeading id="h-reg" hint="interest is not registration">
+          Registration unknown
+        </SectionHeading>
         {events.length === 0 ? (
           <Empty>No event is waiting on a registration answer.</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
             {events.map((event) => (
-              <Card as="li" key={event.id}>
-                <p className="text-sm font-medium text-ink">{event.title}</p>
+              <li
+                key={event.id}
+                className="rounded-lg border border-line border-l-[3px] border-l-ink bg-surface p-4"
+              >
+                <p className="font-serif text-base font-semibold text-ink">{event.title}</p>
                 <p className="text-xs text-muted">
-                  {event.local_date ?? "no date"} · attendance {event.attendance_status}
+                  {event.local_date ?? "no date"} <span aria-hidden="true">·</span> attendance{" "}
+                  {event.attendance_status} <span aria-hidden="true">·</span> registration not recorded
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {[RegistrationStatus.REGISTERED, RegistrationStatus.NOT_REGISTERED].map(
                     (status) => (
                       <Button
@@ -93,12 +115,12 @@ export function InboxScreen() {
                           await load();
                         }}
                       >
-                        {status.replace("_", " ")}
+                        <span className="capitalize">{status.replace("_", " ")}</span>
                       </Button>
                     ),
                   )}
                 </div>
-              </Card>
+              </li>
             ))}
           </ul>
         )}
@@ -118,21 +140,24 @@ function InboxTask({
 }) {
   const [deadline, setDeadline] = useState(task.deadline_local_date ?? "");
   return (
-    <Card as="li">
-      <p className="text-sm font-medium text-ink">{task.title}</p>
-      <p className="text-xs text-muted">
-        {task.deadline_local_date ? `due ${task.deadline_local_date}` : "no deadline — nothing was assumed"}
-        {task.source_refs?.[0] ? ` · from ${task.source_refs[0].source_id.slice(0, 12)}…` : ""}
+    <li className="rounded-lg border border-line border-l-[3px] border-l-warn bg-surface p-4 [border-left-style:dashed]">
+      <p className="font-serif text-base font-semibold text-ink">{task.title}</p>
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+        <span>
+          <span aria-hidden="true" className="font-semibold text-warn">? </span>
+          {task.deadline_local_date ? `due ${task.deadline_local_date}` : "No deadline. Nothing was assumed."}
+        </span>
+        {task.source_refs?.[0] && <Chip>from {task.source_refs[0].source_id.slice(0, 12)}…</Chip>}
       </p>
-      <div className="mt-2 flex flex-wrap items-end gap-2">
+      <div className="mt-3 flex flex-wrap items-end gap-3">
         <Field label="Deadline">
           <input type="date" className={inputClass} value={deadline} onChange={(e) => setDeadline(e.target.value)} />
         </Field>
         <Button variant="primary" disabled={busy || !deadline} onClick={() => void onCommit(task, deadline)}>
           Commit to it
         </Button>
-        <span className="text-xs text-muted">Or leave it here.</span>
+        <span className="pb-2 text-xs text-muted">Or leave it here.</span>
       </div>
-    </Card>
+    </li>
   );
 }

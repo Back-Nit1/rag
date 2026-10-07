@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CaptureDetail } from "../contracts/metis";
 import { SourceLifecycle } from "../contracts/metis";
 import { Button } from "./Button";
-import { Card, SectionHeading } from "./Card";
+import { Card, Notice, SectionHeading } from "./Card";
 
 export function TranscriptPanel({
   capture,
@@ -43,14 +43,14 @@ export function TranscriptPanel({
       </SectionHeading>
 
       {partial && (
-        <p className="mb-2 rounded-lg border border-line bg-raised px-3 py-2 text-xs text-muted">
-          Partial result — still processing. Corrections are best made once this finishes.
-        </p>
+        <Notice tone="info" className="mb-3">
+          Partial result: still processing. Corrections are best made once this finishes.
+        </Notice>
       )}
 
       {highlightSpan && (
-        <p className="mb-2 text-xs text-muted">
-          Evidence span <code className="text-ink">{highlightSpan}</code> — characters{" "}
+        <p className="mb-2 rounded-md border border-accent/40 bg-accent-soft px-3 py-2 text-xs text-accent-ink">
+          Evidence span <code className="font-mono">{highlightSpan}</code> — characters{" "}
           {capture.source.spans?.find((s) => s.span_ref === highlightSpan)?.start_char ?? 0}–
           {capture.source.spans?.find((s) => s.span_ref === highlightSpan)?.end_char ?? serverText.length} of
           version {capture.source.spans?.find((s) => s.span_ref === highlightSpan)?.source_version ?? version}.
@@ -60,7 +60,7 @@ export function TranscriptPanel({
       <label className="flex flex-col gap-1">
         <span className="visually-hidden">Transcript text</span>
         <textarea
-          className="min-h-28 w-full resize-y rounded-lg border border-line bg-canvas p-3 text-sm leading-relaxed text-ink"
+          className="note-field min-h-32"
           value={draft}
           onChange={(e) => {
             dirty.current = true;
@@ -70,10 +70,12 @@ export function TranscriptPanel({
       </label>
 
       {conflict && (
-        <p className="mt-2 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-xs text-warn">{conflict}</p>
+        <Notice tone="warn" live className="mt-3">
+          {conflict}
+        </Notice>
       )}
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button
           variant={edited ? "primary" : "secondary"}
           disabled={!edited || busy}

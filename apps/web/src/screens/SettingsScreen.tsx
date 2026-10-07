@@ -9,12 +9,21 @@
 import { useEffect, useState } from "react";
 import type { UsageResponse } from "../contracts/metis";
 import { Button } from "../components/Button";
-import { Card, SectionHeading } from "../components/Card";
+import { Card, Notice, PageHeader, SectionHeading } from "../components/Card";
 import { Field, inputClass } from "../components/Field";
 import { useSession } from "../app/session";
 import { api } from "../lib/api";
 
 const usd = (micro: number) => `$${(micro / 1_000_000).toFixed(2)}`;
+
+function Row({ k, v }: { k: string; v: string | number }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-0">
+      <dt className="shrink-0 text-muted">{k}</dt>
+      <dd className="min-w-0 break-words text-right font-mono text-xs text-ink">{v}</dd>
+    </div>
+  );
+}
 
 export function SettingsScreen() {
   const session = useSession();
@@ -45,122 +54,161 @@ export function SettingsScreen() {
     }
   };
 
+  const spent = usage ? usage.measured_model_micro_usd + usage.reserved_micro_usd : 0;
+  const pct = usage && usage.daily_limit_micro_usd > 0 ? Math.min(100, (spent / usage.daily_limit_micro_usd) * 100) : 0;
+
   return (
-    <div className="flex flex-col gap-4">
-      <Card>
-        <SectionHeading>Preferences</SectionHeading>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Timezone" hint="Used for every local date and reminder time.">
-            <input className={inputClass} value={timezone} onChange={(e) => setTimezone(e.target.value)} />
-          </Field>
-          <Field label="Focus tasks per day">
-            <input className={inputClass} value={preferences?.max_focus_tasks ?? ""} readOnly />
-          </Field>
-          <Field label="Quiet hours">
-            <input
-              className={inputClass}
-              readOnly
-              value={(preferences?.quiet_hours ?? []).map((w) => `${w.start}–${w.end}`).join(", ") || "none"}
-            />
-          </Field>
-          <Field label="Active hours">
-            <input
-              className={inputClass}
-              readOnly
-              value={(preferences?.work_hours ?? []).map((w) => `${w.start}–${w.end}`).join(", ") || "none"}
-            />
-          </Field>
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <Button variant="primary" disabled={saving || !timezone} onClick={() => void saveTimezone()}>
-            {saving ? "Saving…" : "Save timezone"}
-          </Button>
-          {notice && <span className="text-xs text-muted">{notice}</span>}
-        </div>
-      </Card>
+    <div className="flex flex-col gap-5">
+      <PageHeader title="Settings" sub="Preferences, notifications, usage and your data." />
 
-      <Card>
-        <SectionHeading hint={`channels: ${(preferences?.channels ?? []).join(", ") || "none"}`}>
-          Notifications
-        </SectionHeading>
-        <p className="text-sm text-ink">Permission: {notificationPermission}</p>
-        <p className="mt-1 text-xs text-muted">
-          Web push needs browser and platform support, and delivery is never guaranteed. Every reminder also lands in
-          the in-app feed, which is the record we can vouch for.
-        </p>
-        {notificationPermission !== "granted" && (
-          <Button className="mt-2" onClick={() => void session.requestNotificationPermission()}>
-            Ask for permission
-          </Button>
-        )}
-      </Card>
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <Card>
+          <SectionHeading>Preferences</SectionHeading>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Field label="Timezone" hint="Used for every local date and reminder time.">
+                <input className={inputClass} value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+              </Field>
+            </div>
+            <Field label="Focus tasks per day" hint="Read only here.">
+              <input className={inputClass} value={preferences?.max_focus_tasks ?? ""} readOnly />
+            </Field>
+            <Field label="Quiet hours" hint="Read only here.">
+              <input
+                className={inputClass}
+                readOnly
+                value={(preferences?.quiet_hours ?? []).map((w) => `${w.start}–${w.end}`).join(", ") || "none"}
+              />
+            </Field>
+            <Field label="Active hours" hint="Read only here.">
+              <input
+                className={inputClass}
+                readOnly
+                value={(preferences?.work_hours ?? []).map((w) => `${w.start}–${w.end}`).join(", ") || "none"}
+              />
+            </Field>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button variant="primary" disabled={saving || !timezone} onClick={() => void saveTimezone()}>
+              {saving ? "Saving…" : "Save timezone"}
+            </Button>
+            <span role="status" className="text-xs text-muted">
+              {notice}
+            </span>
+          </div>
+        </Card>
 
-      <Card>
-        <SectionHeading hint={usage ? `for ${usage.local_date}` : "unavailable"}>Usage and cost</SectionHeading>
-        {!usage ? (
-          <p className="text-sm text-muted">Usage could not be read.</p>
-        ) : (
-          <dl className="grid grid-cols-2 gap-2 text-sm">
-            <dt className="text-muted">Measured model spend</dt>
-            <dd className="text-ink">{usd(usage.measured_model_micro_usd)}</dd>
-            <dt className="text-muted">Reserved (in flight)</dt>
-            <dd className="text-ink">{usd(usage.reserved_micro_usd)}</dd>
-            <dt className="text-muted">Infrastructure (estimate)</dt>
-            <dd className="text-ink">
-              {usage.estimated_infra_micro_usd == null ? "not estimated" : `${usd(usage.estimated_infra_micro_usd)} — estimate`}
-            </dd>
-            <dt className="text-muted">Daily limit</dt>
-            <dd className="text-ink">{usd(usage.daily_limit_micro_usd)}</dd>
-            <dt className="text-muted">Model calls</dt>
-            <dd className="text-ink">{usage.model_calls}</dd>
-            <dt className="text-muted">Voice minutes</dt>
-            <dd className="text-ink">{(usage.audio_seconds / 60).toFixed(1)}</dd>
-            <dt className="text-muted">Speech jobs</dt>
-            <dd className="text-ink">{usage.speech_jobs}</dd>
-          </dl>
-        )}
-        {usage?.budget_exhausted && (
-          <p className="mt-2 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-xs text-warn">
-            The daily limit is reached. Paid steps are paused; typed capture and deterministic reminders still work.
+        <Card>
+          <SectionHeading hint={`channels: ${(preferences?.channels ?? []).join(", ") || "none"}`}>
+            Notifications
+          </SectionHeading>
+          <p className="text-sm text-ink">
+            Browser permission:{" "}
+            <strong className="font-semibold">
+              {notificationPermission === "unsupported" ? "not supported here" : notificationPermission}
+            </strong>
           </p>
+          {notificationPermission === "unsupported" && (
+            <Notice tone="warn" className="mt-3">
+              This browser or device cannot receive push. Reminders still appear in the Alerts feed.
+            </Notice>
+          )}
+          <p className="mt-3 max-w-prose text-sm text-muted">
+            Web push needs browser and platform support, and delivery is never guaranteed. Every reminder also lands
+            in the in-app feed, which is the record we can vouch for.
+          </p>
+          {(notificationPermission === "default" || notificationPermission === "denied") && (
+            <Button className="mt-3" onClick={() => void session.requestNotificationPermission()}>
+              Ask for permission
+            </Button>
+          )}
+          {notificationPermission === "denied" && (
+            <p className="mt-2 text-xs text-muted">Blocked sites can only be re-enabled in the browser&apos;s site settings.</p>
+          )}
+        </Card>
+
+        <Card>
+          <SectionHeading hint={usage ? `for ${usage.local_date}` : "unavailable"}>Usage and cost</SectionHeading>
+          {!usage ? (
+            <Notice tone="info">Usage could not be read right now.</Notice>
+          ) : (
+            <>
+              <div className="mb-3">
+                <div className="mb-1 flex justify-between text-xs text-muted">
+                  <span>Measured plus reserved: {usd(spent)}</span>
+                  <span>Daily limit {usd(usage.daily_limit_micro_usd)}</span>
+                </div>
+                <div
+                  className="h-2 overflow-hidden rounded-full bg-raised"
+                  role="progressbar"
+                  aria-label="Share of the daily limit used"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(pct)}
+                >
+                  <div className={`h-full ${pct >= 90 ? "bg-warn" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+              <dl className="text-sm">
+                <Row k="Measured model spend" v={usd(usage.measured_model_micro_usd)} />
+                <Row k="Reserved (in flight)" v={usd(usage.reserved_micro_usd)} />
+                <Row
+                  k="Infrastructure"
+                  v={
+                    usage.estimated_infra_micro_usd == null
+                      ? "not estimated"
+                      : `${usd(usage.estimated_infra_micro_usd)} (estimate)`
+                  }
+                />
+                <Row k="Model calls" v={usage.model_calls} />
+                <Row k="Voice minutes" v={(usage.audio_seconds / 60).toFixed(1)} />
+                <Row k="Speech jobs" v={usage.speech_jobs} />
+              </dl>
+            </>
+          )}
+          {usage?.budget_exhausted && (
+            <Notice tone="warn" className="mt-3">
+              The daily limit is reached. Paid steps are paused; typed capture and deterministic reminders still work.
+            </Notice>
+          )}
+          {usage?.unmeasured_components?.length ? (
+            <p className="mt-3 text-xs text-muted">Not measured here: {usage.unmeasured_components.join(", ")}.</p>
+          ) : null}
+        </Card>
+
+        <Card>
+          <SectionHeading hint="your data">Export and delete</SectionHeading>
+          <p className="max-w-prose text-sm text-muted">
+            An export is queued as a job on the server and takes a moment; a delete removes access immediately and the
+            derived copies are purged by a follow-up job. Neither is instant, and this screen will say which stage it
+            is in rather than claiming completion.
+          </p>
+          <Notice tone="info" className="mt-3">
+            Not available in this build: the export endpoint exists, the confirmation flow does not.
+          </Notice>
+        </Card>
+      </div>
+
+      <details className="group rounded-lg border border-line bg-surface p-4 md:p-5">
+        <summary className="flex min-h-8 cursor-pointer items-center justify-between font-serif text-lg font-semibold">
+          Diagnostics
+          <span className="font-sans text-xs font-normal text-muted">for troubleshooting</span>
+        </summary>
+        {health && Object.values(health.adapters ?? {}).includes("fixture" as never) && (
+          <Notice tone="info" className="mt-3">
+            Fixture adapters are labelled on purpose: a fixture result is never presented as production output.
+          </Notice>
         )}
-        {usage?.unmeasured_components?.length ? (
-          <p className="mt-2 text-xs text-muted">Not measured here: {usage.unmeasured_components.join(", ")}.</p>
-        ) : null}
-      </Card>
-
-      <Card>
-        <SectionHeading hint="your data">Export and delete</SectionHeading>
-        <p className="text-xs text-muted">
-          An export is queued as a job on the server and takes a moment; a delete removes access immediately and the
-          derived copies are purged by a follow-up job. Neither is instant, and the screen will say which stage it is
-          in rather than claiming completion.
-        </p>
-        <p className="mt-2 text-xs text-warn">
-          Not wired up in this build — the export endpoint exists, the confirmation flow does not.
-        </p>
-      </Card>
-
-      <details className="rounded-xl border border-line bg-surface p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-ink">Diagnostics</summary>
-        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <dt className="text-muted">Mode</dt>
-          <dd className="text-ink">{health?.mode ?? "unknown"}</dd>
-          <dt className="text-muted">Contract version</dt>
-          <dd className="text-ink">{health?.contract_version ?? "?"}</dd>
-          <dt className="text-muted">Adapters</dt>
-          <dd className="text-ink">
-            {health ? Object.entries(health.adapters ?? {}).map(([k, v]) => `${k}=${v}`).join(", ") : "unknown"}
-          </dd>
-          <dt className="text-muted">Upload limit</dt>
-          <dd className="text-ink">{limits.max_upload_bytes} bytes / {limits.max_audio_seconds}s</dd>
-          <dt className="text-muted">Speech model</dt>
-          <dd className="text-ink">{preferences?.speech_model_id ?? "unknown"}</dd>
+        <dl className="mt-3 text-sm">
+          <Row k="Mode" v={health?.mode ?? "unknown"} />
+          <Row k="Contract version" v={health?.contract_version ?? "?"} />
+          <Row
+            k="Adapters"
+            v={health ? Object.entries(health.adapters ?? {}).map(([k, v]) => `${k}=${v}`).join(", ") : "unknown"}
+          />
+          <Row k="Upload limit" v={`${limits.max_upload_bytes} bytes / ${limits.max_audio_seconds}s`} />
+          <Row k="Speech model" v={preferences?.speech_model_id ?? "unknown"} />
         </dl>
-        <p className="mt-2 text-xs text-muted">
-          Fixture adapters are labelled as fixtures here on purpose: a fixture result is never presented as production
-          output.
-        </p>
       </details>
     </div>
   );

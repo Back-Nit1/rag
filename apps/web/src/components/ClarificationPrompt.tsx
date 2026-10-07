@@ -12,7 +12,7 @@ import { DeliveryChannel, ReminderState } from "../contracts/metis";
 import { api, ApiError } from "../lib/api";
 import { REMINDER_STATUS } from "../lib/status";
 import { Button } from "./Button";
-import { Card, SectionHeading } from "./Card";
+import { Card, Notice, SectionHeading } from "./Card";
 import { Field, inputClass } from "./Field";
 import { StatusPill } from "./StatusPill";
 
@@ -69,11 +69,11 @@ export function ClarificationPrompt({
   };
 
   return (
-    <Card className={clarification.blocking ? "border-warn/50" : ""}>
+    <Card className={clarification.blocking ? "border-warn/60 border-l-4" : ""}>
       <SectionHeading hint={clarification.blocking ? "blocking" : "optional"}>
-        {clarification.missing_fields.length} missing detail
+        {clarification.missing_fields.length === 1 ? "A detail is missing" : `${clarification.missing_fields.length} details are missing`}
       </SectionHeading>
-      <p className="text-sm text-ink">{clarification.question}</p>
+      <p className="font-serif text-base text-ink">{clarification.question}</p>
       <p className="mt-1 text-xs text-muted">
         Missing: {clarification.missing_fields.join(", ")}. Nothing was assumed in the meantime.
       </p>
@@ -105,7 +105,11 @@ export function ClarificationPrompt({
         </p>
       )}
 
-      {error && <p className="mt-2 text-xs text-bad">{error}</p>}
+      {error && (
+        <Notice tone="bad" live className="mt-3">
+          {error}
+        </Notice>
+      )}
     </Card>
   );
 }

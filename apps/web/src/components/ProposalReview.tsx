@@ -17,7 +17,7 @@ import {
   RequestedAction,
 } from "../contracts/metis";
 import { Button } from "./Button";
-import { Card, SectionHeading } from "./Card";
+import { Card, Notice, SectionHeading } from "./Card";
 import { Field, inputClass } from "./Field";
 
 const KIND_LABEL: Record<ExtractedItemKind, string> = {
@@ -127,9 +127,12 @@ export function ProposalReview({
       <SectionHeading hint={`${proposal.items?.length ?? 0} found · ${proposal.extractor_version}`}>
         Review what was found
       </SectionHeading>
-      <p className="mb-3 text-xs text-muted">
-        Proposed by <code className="text-ink">{proposal.model_id}</code> ({proposal.adapter_mode}). Nothing below
-        exists yet — unknown fields were left empty on purpose.
+      <p className="mb-4 max-w-prose text-sm text-muted">
+        Nothing below exists yet. Unknown fields were left empty on purpose.{" "}
+        <span className="text-xs">
+          Proposed by <code className="font-mono">{proposal.model_id}</code> ({proposal.adapter_mode}
+          {proposal.adapter_mode === "fixture" ? ": test output, not a real model" : ""}).
+        </span>
       </p>
 
       <ul className="flex flex-col gap-3">
@@ -138,10 +141,24 @@ export function ProposalReview({
           const missing = new Set(item.missing_fields ?? []);
           const isEvent = item.kind === ExtractedItemKind.EVENT_INTENT;
           return (
-            <Card as="li" key={index} className={draft.dismissed ? "opacity-50" : ""}>
+            <li
+              key={index}
+              className={`rounded-lg border border-line bg-canvas p-3.5 ${draft.dismissed ? "opacity-60" : ""}`}
+            >
               <div className="mb-2 flex items-start justify-between gap-2">
-                <span className="rounded-md bg-raised px-2 py-0.5 text-[11px] font-medium text-muted">
-                  {KIND_LABEL[item.kind]}
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-sm border border-line-strong bg-surface px-2 py-0.5 text-xs font-medium text-ink">
+                    {KIND_LABEL[item.kind]}
+                  </span>
+                  {draft.dismissed ? (
+                    <span className="text-xs text-muted">Dismissed</span>
+                  ) : (
+                    (item.missing_fields ?? []).some((f) => !isFilled(item, f, draft.wantsReminder)) && (
+                      <span className="text-xs font-medium text-warn">
+                        <span aria-hidden="true">? </span>Missing a detail
+                      </span>
+                    )
+                  )}
                 </span>
                 <div className="flex gap-1">
                   <Button
@@ -223,9 +240,10 @@ export function ProposalReview({
                 )}
               </div>
 
-              <div className="mt-3 rounded-lg border border-line bg-canvas p-2">
-                <label className="flex items-center gap-2 text-sm">
+              <div className="mt-3 rounded-md border border-line bg-surface p-3">
+                <label className="flex min-h-8 items-center gap-2.5 text-sm font-medium">
                   <input
+                    className="size-5 accent-[var(--color-accent)]"
                     type="checkbox"
                     checked={draft.wantsReminder}
                     disabled={draft.dismissed}
@@ -272,16 +290,16 @@ export function ProposalReview({
                   Show the words this came from
                 </Button>
               )}
-            </Card>
+            </li>
           );
         })}
       </ul>
 
       {stillMissing.length > 0 && (
-        <p className="mt-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-xs text-warn">
+        <Notice tone="warn" className="mt-4">
           {stillMissing.length} field{stillMissing.length > 1 ? "s" : ""} still unanswered. Saving now keeps those
           items in the inbox instead of making them commitments.
-        </p>
+        </Notice>
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

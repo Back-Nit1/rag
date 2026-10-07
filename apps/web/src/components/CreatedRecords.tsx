@@ -28,26 +28,26 @@ export function CreatedRecords({
   const unsettled = reminders.some((r) => (r.state ?? ReminderState.PENDING_SCHEDULE) === ReminderState.PENDING_SCHEDULE);
   return (
     <Card>
-      <SectionHeading hint="now real records">Saved</SectionHeading>
+      <SectionHeading hint="these are now real records">Saved</SectionHeading>
       <ul className="flex flex-col gap-2">
         {tasks.map((task) => (
-          <li key={task.id} className="rounded-lg border border-line bg-canvas px-3 py-2">
-            <p className="text-sm font-medium text-ink">{task.title}</p>
+          <li key={task.id} className="rounded-md border border-line bg-canvas px-3 py-2.5">
+            <p className="font-serif text-base font-semibold text-ink">{task.title}</p>
             <p className="text-xs text-muted">
               Task · {task.state} · {task.deadline_local_date ? `due ${task.deadline_local_date}` : "no deadline"}
             </p>
           </li>
         ))}
         {events.map((event) => (
-          <li key={event.id} className="rounded-lg border border-line bg-canvas px-3 py-2">
-            <p className="text-sm font-medium text-ink">{event.title}</p>
+          <li key={event.id} className="rounded-md border border-line bg-canvas px-3 py-2.5">
+            <p className="font-serif text-base font-semibold text-ink">{event.title}</p>
             <p className="text-xs text-muted">
               Event · attendance {event.attendance_status} · registration {event.registration_status}
             </p>
           </li>
         ))}
         {reminders.map((reminder) => (
-          <li key={reminder.id} className="rounded-lg border border-line bg-canvas px-3 py-2">
+          <li key={reminder.id} className="rounded-md border border-line bg-canvas px-3 py-2.5">
             <StatusPill status={REMINDER_STATUS[reminder.state ?? ReminderState.PENDING_SCHEDULE]} detail={false} />
             <p className="mt-1 text-xs text-muted">
               {timeLabel(reminder.trigger_at, reminder.timezone || timezone)} · {reminder.channel}
@@ -59,7 +59,7 @@ export function CreatedRecords({
         <button
           type="button"
           onClick={onRefreshReminders}
-          className="mt-2 text-xs font-medium text-accent underline"
+          className="mt-3 min-h-10 text-sm font-medium text-accent underline underline-offset-2"
         >
           Check the schedule again
         </button>

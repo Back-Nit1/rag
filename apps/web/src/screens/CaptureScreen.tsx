@@ -360,7 +360,7 @@ export function CaptureScreen() {
             </Notice>
           )}
           {recorder.error && recorder.state !== "denied" && <Notice tone="warn">{recorder.error}</Notice>}
-          {!online && <Notice tone="warn">Offline: a note you send is held on this device, not saved.</Notice>}
+          {!online && flow !== "offline" && <Notice tone="warn">Offline: a note you send is held on this device, not saved.</Notice>}
           {flow === "budget_exceeded" && (
             <Notice tone="warn">The daily cost limit stopped the paid step. Typed notes and reminders still work.</Notice>
           )}
@@ -412,7 +412,9 @@ export function CaptureScreen() {
               <li key={entry.client_capture_id} className="rounded-md border border-warn/50 bg-warn-soft px-3 py-2 text-warn">
                 <p className="truncate font-serif text-base text-ink">{entry.text}</p>
                 <p className="text-xs">
-                  Not sent: {entry.attempts} attempt{entry.attempts === 1 ? "" : "s"}
+                  {entry.attempts === 0
+                    ? "Waiting to send"
+                    : `Not sent after ${entry.attempts} attempt${entry.attempts === 1 ? "" : "s"}`}
                   {entry.last_error ? ` · ${entry.last_error}` : ""}
                 </p>
               </li>

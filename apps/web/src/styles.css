@@ -125,6 +125,13 @@ h3 {
   box-shadow: 0 0 0 4px var(--color-canvas);
 }
 
+/* The landmark receives programmatic focus after navigation; it is not a control. */
+#main:focus,
+#main:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 /* Text inputs: a clear field edge, with the accent as the focus edge. */
 .control {
   min-height: 2.5rem;
