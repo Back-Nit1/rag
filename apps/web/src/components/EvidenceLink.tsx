@@ -4,6 +4,7 @@
  * "tombstoned" means access is gone, "purged" only when the job says so.
  */
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { JobState, type CaptureDetail, type DeleteCaptureResponse, type Job } from "../contracts/metis";
 import { ApiError, api } from "../lib/api";
 import { locate, type EvidenceRef } from "../lib/evidence";
@@ -19,6 +20,7 @@ function SourceBody({ refs, onClose }: { refs: EvidenceRef; onClose: () => void 
   const [deleted, setDeleted] = useState<DeleteCaptureResponse | null>(null);
   const [purge, setPurge] = useState<Job | null>(null);
   const [busy, setBusy] = useState(false);
+  const polls = useRef(0);
 
   useEffect(() => {
     api.getCapture(refs.source_id).then(setDetail, (cause) =>
@@ -27,7 +29,8 @@ function SourceBody({ refs, onClose }: { refs: EvidenceRef; onClose: () => void 
   }, [refs.source_id]);
 
   useEffect(() => {
-    if (!deleted || (purge && TERMINAL.has(purge.state ?? ""))) return;
+    if (!deleted || polls.current >= 40 || (purge && TERMINAL.has(purge.state ?? ""))) return; // then stop: the job record, not this tab, is the truth
+    polls.current += 1;
     const timer = window.setTimeout(() => api.getJob(deleted.purge_job_id).then(setPurge, () => undefined), purge ? 1500 : 0);
     return () => window.clearTimeout(timer);
   }, [deleted, purge]);
@@ -109,6 +112,7 @@ export function EvidenceLink({ evidence, label }: { evidence: EvidenceRef; label
       >
         {label ?? `source ${evidence.source_id.slice(0, 10)}…`}
       </button>
+      {createPortal(
       <dialog
         ref={dialog}
         aria-label="Source"
@@ -116,7 +120,9 @@ export function EvidenceLink({ evidence, label }: { evidence: EvidenceRef; label
         className="m-auto w-[min(92vw,40rem)] rounded-lg border border-line-strong bg-surface p-5 text-ink backdrop:bg-ink/40"
       >
         {open && <SourceBody refs={evidence} onClose={() => dialog.current?.close()} />}
-      </dialog>
+      </dialog>,
+        document.body,
+      )}
     </>
   );
 }
