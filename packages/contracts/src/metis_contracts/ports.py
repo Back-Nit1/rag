@@ -42,7 +42,7 @@ from .entities import (
     TranscriptSegment,
     UsageDay,
 )
-from .enums import AdapterMode, DeliveryStatus, JobState, TaskState
+from .enums import AdapterMode, DeliveryStatus, JobState, PlanStatus, TaskState
 
 
 @runtime_checkable
@@ -123,6 +123,18 @@ class StateStore(Protocol):
     def list_jobs(
         self, user_id: str, *, state: JobState | None = None, cursor: str | None = None, limit: int = 100
     ) -> Page[Job]: ...
+
+    def find_source_by_client_id(self, user_id: str, client_capture_id: str) -> SourceArtifact | None:
+        """The owner's source created with this client capture id, else None."""
+        ...
+
+    def list_proposals(
+        self, user_id: str, *, source_id: str | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[ExtractionProposal]: ...
+
+    def list_plans(
+        self, user_id: str, *, status: PlanStatus | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Plan]: ...
 
     def get_revisions(self, user_id: str, kind: str, entity_id: str) -> list[dict[str, Any]]:
         """Source-linked change history, newest first."""
