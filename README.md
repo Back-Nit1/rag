@@ -4,6 +4,12 @@ A voice-first multimodal personal assistant. You speak or type a thought; Metis
 turns it into sources, extraction proposals, tasks, events, plans and
 reminders, and keeps a source reference on every derived fact.
 
+**Direction.** Metis is becoming a local-first desktop app: hold a key anywhere,
+speak, release, and the thought is already a proposal you can review. Everything
+runs on your machine by default (SQLite, a bundled backend, a local speech
+model); the AWS stack is an optional cloud path, not a requirement. The browser
+PWA stays as the full review surface. Ordered next steps are in `new.md`.
+
 This README describes **what actually runs today**, not the target product. The
 full specification is `prompt (1).md`; role-scoped extracts are in
 `docs/spec/`. Agent instructions are in `CLAUDE.md` / `AGENTS.md`, and the live
@@ -42,7 +48,8 @@ What is **not** done or **not verified**, stated plainly:
 ## Requirements
 
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
-- Node 20+ and pnpm 9 (only needed for `infra/`, and later `apps/web/`)
+- Node 20+ and pnpm 9 (web, infra, and the desktop CLI)
+- Rust (via [rustup](https://rustup.rs)) only for `apps/desktop/`
 - No AWS account, no API key, no Docker for the default path
 
 ## Local setup
@@ -50,12 +57,12 @@ What is **not** done or **not verified**, stated plainly:
 ```bash
 cp .env.example .env     # defaults are already local-mode
 make bootstrap           # uv sync --all-packages + pnpm install
-make test                # 266 python tests; the web filter is a no-op for now
-make dev                 # API on :8000 + the worker loop
+make test                # python + web + e2e tests (counts: docs/progress.md)
+make dev                 # API on :8000 + worker loop + web on :5173
 ```
 
-`make dev` starts uvicorn and the pipeline worker, and skips the web client
-until `apps/web/package.json` exists. Check it is alive:
+`make dev` starts uvicorn, the pipeline worker and the Vite dev server, all on
+fixture adapters. Check the API is alive:
 
 ```bash
 curl -s localhost:8000/v1/health -H 'Authorization: Bearer demo' | python3 -m json.tool
@@ -68,9 +75,27 @@ the point: the client can tell what is real. In local mode you should see
 Local state lives in `.metis/` (SQLite plus an object directory) and is
 gitignored. Delete the directory to reset.
 
+### Desktop app
+
+```bash
+export PATH="$HOME/.cargo/bin:$PATH"
+pnpm --filter @metis/desktop test        # cargo tests + packaged-backend smoke test
+pnpm --filter @metis/desktop backend:build   # PyInstaller `metis-backend` (needs network)
+pnpm --filter @metis/desktop tauri dev   # window + supervised api/worker/speech
+```
+
+The supervisor generates a per-launch secret and passes it to the children only
+through their environment; the webview receives the API URL and bearer in memory
+via the `desktop_connection` command. Ownership is a stable per-install subject
+stored in the app-data directory, never the secret. Recording is refused until
+API, worker and the speech model are all healthy. Place a model under
+`<app-data>/models/<model id>` (default `small.en`); nothing is downloaded at
+runtime. Hold-to-talk is `Cmd+Option+Space`; this has **not** been exercised on
+real hardware yet.
+
 ### Fixture identity
 
-Local mode accepts any bearer token and resolves it to
+Local mode (without desktop auth) accepts any bearer token and resolves it to
 `METIS_FIXTURE_USER_ID`. This is a development convenience and is refused when
 `METIS_ENV=prod`, which now fails at startup if `METIS_ENV` is not one of
 `dev`, `staging`, `prod`.
@@ -81,12 +106,13 @@ Local mode accepts any bearer token and resolves it to
 make bootstrap     # install python + node dependencies
 make contracts     # regenerate schemas + metis.ts from the Pydantic models
 make contracts-check  # fail if the committed artifacts are stale
-make dev           # API + worker (+ web when present)
+make dev           # API + worker + web
 make api / worker  # just one of them
 make test          # python unit tests + web unit tests
 make check         # contracts-check, ruff, ruff format, mypy, tsc
 make fmt           # autoformat
 make synth         # cdk synth (no AWS calls, no deploy)
+make test-integration  # tests needing real audio decoding or a container
 make speech-bench  # WER + name/date/negation fidelity on the fixture set
 make clean         # remove caches and local build output
 ```
