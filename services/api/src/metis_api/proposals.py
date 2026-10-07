@@ -9,6 +9,7 @@ its local date and time actually resolve.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, time
 from typing import Any
 
@@ -54,6 +55,13 @@ def resolve_proposal(
             ErrorCode.REVISION_CONFLICT,
             "this proposal came from an earlier transcript revision and was superseded",
         )
+    if proposal.disposition is not ProposalDisposition.PENDING:
+        # A fresh Idempotency-Key must not mint a second set of commitments.
+        raise MetisError(
+            ErrorCode.REVISION_CONFLICT,
+            f"proposal {proposal_id} was already resolved ({proposal.disposition.value})",
+            current_revision=proposal.revision,
+        )
 
     source = ctx.state.get(ctx.user_id, "source", proposal.source_id)
     if source is None:
@@ -66,6 +74,7 @@ def resolve_proposal(
     created_reminders: list[str] = []
     clarifications: list[ClarificationRequest] = []
     edited = False
+    seen_items: set[int] = set()
 
     for decision in request.decisions:
         if decision.item_index >= len(proposal.items):
@@ -73,6 +82,7 @@ def resolve_proposal(
         if decision.action == "dismiss":
             continue
         item: ExtractedItem = proposal.items[decision.item_index]
+        first_clarification = len(clarifications)
         if decision.action == "edit":
             # ItemDecision's validator requires `edited` for action=edit, so a
             # missing payload means the contract was bypassed, not that the
@@ -136,6 +146,9 @@ def resolve_proposal(
                 with ctx.state.transaction(ctx.user_id) as tx:
                     created_tasks.append(tx.put("task", prep).id)
             if item.missing_fields:
+                # The event's single batched question covers the reminder fields too.
+                blocking = any(c.blocking for c in clarifications[first_clarification:])
+                del clarifications[first_clarification:]
                 clarifications.append(
                     ClarificationRequest(
                         clarification_id=new_id("clar"),
@@ -143,13 +156,21 @@ def resolve_proposal(
                         target_id=stored_event.id,
                         question=_question_for(item.missing_fields, item.title),
                         missing_fields=list(item.missing_fields),
-                        blocking=False,
+                        blocking=blocking,
                     )
                 )
 
         else:
             # Thoughts, decisions and work logs become memory, not obligations.
             _record_memory(ctx, item, source, now)
+
+        # One active clarification thread per captured item: keep the first.
+        if decision.item_index in seen_items:
+            del clarifications[first_clarification:]
+        else:
+            del clarifications[first_clarification + 1 :]
+            if len(clarifications) > first_clarification:
+                seen_items.add(decision.item_index)
 
     disposition = (
         ProposalDisposition.EDITED
@@ -170,19 +191,12 @@ def resolve_proposal(
             expected_revision=proposal.revision,
         )
 
-    # One active clarification thread per captured item.
-    deduped: dict[str, ClarificationRequest] = {}
-    for clarification in clarifications:
-        key = clarification.target_id or clarification.source_id
-        if key not in deduped:
-            deduped[key] = clarification
-
     return ResolveProposalResponse(
         proposal=stored_proposal,
         created_task_ids=created_tasks,
         created_event_ids=created_events,
         created_reminder_ids=created_reminders,
-        clarifications=list(deduped.values()),
+        clarifications=clarifications,
     )
 
 
@@ -323,6 +337,7 @@ def _record_memory(ctx: RequestContext, item: ExtractedItem, source: Any, now: d
         content_hash=content_hash(content),
         embedding_model_id=getattr(embedder, "model_id", None),
         embedding_dimensions=getattr(embedder, "dimensions", None),
+        project_id=_project_id_for(ctx, item.project_hint, content),
     )
     with ctx.state.transaction(ctx.user_id) as tx:
         stored = tx.put("memory", memory)
@@ -346,6 +361,25 @@ def _record_memory(ctx: RequestContext, item: ExtractedItem, source: Any, now: d
                 available_at=now,
             )
         )
+
+
+def _project_id_for(ctx: RequestContext, hint: str | None, content: str) -> str | None:
+    """Resolve to an existing owner project; never create or guess.
+
+    An explicit hint must match an id, title or alias. Without a hint, the
+    note text must literally name exactly one project; anything else stays null.
+    """
+    projects = ctx.state.list_projects(ctx.user_id, limit=500).items
+
+    def names(project: Any) -> set[str]:
+        return {project.id.casefold(), project.title.casefold(), *(a.casefold() for a in project.aliases)}
+
+    if hint and hint.strip():
+        wanted = hint.strip().casefold()
+        return next((p.id for p in projects if wanted in names(p)), None)
+    words = set(re.findall(r"[\w.-]+", content.casefold()))
+    named = [p for p in projects if (names(p) - {p.id.casefold()}) & words]
+    return named[0].id if len(named) == 1 else None
 
 
 def _question_for(missing_fields: list[str], title: str) -> str:
