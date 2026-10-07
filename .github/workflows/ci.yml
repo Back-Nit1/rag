@@ -24,4 +24,5 @@ jobs:
       - run: make check
       - run: make test
       - run: pnpm --filter @metis/web build
-      # make synth is added once infra/bin/metis.ts exists (infra-02).
+      - run: make synth
+      - run: pnpm --filter @metis/infra test

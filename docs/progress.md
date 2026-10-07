@@ -58,6 +58,20 @@ Lockfile: `@metis/desktop` importer committed. ADR 0004 item 1: PyInstaller
 worked first try (7.9MB, ~3s onefile start); one `metis-backend` executable with
 `api|worker|speech` subcommands recommended for prompt 16.
 
+## Wave 2/3 integrations (2026-10-07)
+
+| Item | Branch / SHA | Result |
+| --- | --- | --- |
+| Web runtime bridge (`desktop_connection`, in-memory bearer) | `web/15` `01e2ce4` | 44 web tests; Rust command implemented by prompt 16 |
+| `list_sources` + source export; daily schedule sync state | `state/list-sources` `2b40dec` | parity tests (Dynamo side not real DynamoDB) |
+| Daily planning API, preference sync events | `api/22d` `462253d`/`d8430f0` | 79 api tests; known gap: `claim_once` before plan txn |
+| Local daily wiring; EventBridge daily target ARN | `pipe/daily-wiring` `0a54197` | 407 python tests |
+| CDK entrypoint, 7 stacks, 14 alarms, ops docs (6) | `infra/30` | `make synth` pass, template assertions pass; **every cloud check UNRUN, nothing deployed** |
+
+Decision needed (not taken): interface endpoints are ~90% of the estimated
+$24-26/mo bill, above the default `monthlyBudgetUsd` of 25. Raise to ~40 or
+drop endpoints (public-IP ASR task). Prices are assumptions, nothing measured.
+
 ## Frozen base for parallel work (superseded, see Wave 0)
 
 ```
