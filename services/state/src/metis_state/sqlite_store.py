@@ -449,6 +449,11 @@ class SqliteStateStore:
         where, params = ("AND project_id = ?", [project_id]) if project_id else ("", [])
         return self._page("memory", user_id, where, params, cursor=cursor, limit=limit)
 
+    def list_sources(
+        self, user_id: str, *, cursor: str | None = None, limit: int = 100
+    ) -> Page[SourceArtifact]:
+        return self._page("source", user_id, "", [], cursor=cursor, limit=limit)
+
     def list_reminders_for_target(self, user_id: str, target_id: str) -> list[Reminder]:
         with self._lock:
             rows = self._conn.execute(

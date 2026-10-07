@@ -203,3 +203,37 @@ def test_eventbridge_failures_and_missing_delete(monkeypatch):
     client.delete_schedule.side_effect = RuntimeError("boom")
     with pytest.raises(MetisError):
         s.delete_daily(user_id="u", scheduler_ref=None)
+
+
+def _state(c):
+    return c.state_store.get_preferences("u1").daily_schedule_state
+
+
+def test_schedule_state_is_recorded_honestly(tmp_path):
+    class Flaky(LocalScheduleStore):
+        n = 1
+
+        def upsert_daily(self, **kw):
+            if self.n:
+                self.n -= 1
+                raise MetisError(ErrorCode.PROVIDER_UNAVAILABLE, "down")
+            return super().upsert_daily(**kw)
+
+    c, _ = ctx(tmp_path, sched=Flaky())
+    set_prefs(c)
+    assert _state(c) == "pending_schedule"
+    with pytest.raises(MetisError):
+        sync(c)
+    assert _state(c) == "schedule_failed"
+    sync(c)  # retry of the same event is not treated as superseded by our own bump
+    assert _state(c) == "scheduled"
+    sync(c)  # duplicate delivery stays idempotent
+    assert _state(c) == "scheduled"
+    sync(c, enabled=False)
+    assert _state(c) == "disabled"
+
+
+def test_unsaved_preferences_get_state_recorded(tmp_path):
+    c, _ = ctx(tmp_path)
+    sync(c)
+    assert _state(c) == "scheduled"
