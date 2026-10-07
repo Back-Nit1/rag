@@ -188,6 +188,11 @@ class EventBridgeScheduleStore:
         context attribute); the API derives the local date from it.
         """
         at, _ = parse_local_time(local_time, timezone)
+        if not self._cfg.daily_plan_target_arn:
+            raise MetisError(
+                ErrorCode.PROVIDER_UNAVAILABLE,
+                "daily planning schedule is not configured: set METIS_DAILY_PLAN_TARGET_ARN",
+            )
         name = daily_schedule_name(user_id)
         request: dict[str, Any] = {
             "Name": name,
@@ -197,9 +202,9 @@ class EventBridgeScheduleStore:
             "FlexibleTimeWindow": {"Mode": "OFF"},
             "State": "ENABLED",
             "Target": {
-                "Arn": self._cfg.reminder_target_arn,
+                "Arn": self._cfg.daily_plan_target_arn,
                 "RoleArn": self._cfg.scheduler_role_arn,
-                "Input": json.dumps({**payload, "scheduled_time": "<aws.scheduler.scheduled-time>"}),
+                "Input": json.dumps({"user_id": user_id, "scheduled_time": "<aws.scheduler.scheduled-time>"}),
                 "RetryPolicy": {"MaximumRetryAttempts": 2, "MaximumEventAgeInSeconds": 3600},
             },
         }
