@@ -235,6 +235,27 @@ the format in `docs/spec/development.md`.
    trigger rather than recover a failure. The previous docstring claimed
    partial batch failure reporting that the code never did.
 
+6. **D7/D8/D10 contract (additive, `CONTRACT_VERSION` stays 1).**
+   - `ExtractedItemKind.STATUS_UPDATE` + `ExtractedItem.update_action`
+     (`registered` | `canceled`) + `ExtractedItem.target_ids`. One kind covers
+     "I already registered" and "cancel that"; it never creates a record.
+   - Target resolution is never done by the server and never by title
+     matching. The extractor is shown a bounded candidate list (open events and
+     tasks) and returns candidate ids; the server drops ids it did not offer.
+     Exactly one id = resolved. Zero or several = `ClarificationRequest` with
+     `candidate_ids`, nothing mutated; the user answers by editing the item so
+     `target_ids` holds one id. The fixture extractor offers every candidate of
+     the right kind, so ambiguity asks.
+   - `Task.event_id` + `Task.purpose` (`registration` | `preparation`) link
+     follow-up tasks to their event; generated tasks must set both.
+   - `Reminder.purpose` (`general` default | `registration`), also on
+     `CreateReminderRequest`. The scheduler's registered-suppression applies only
+     to `registration` reminders (event registered, or the target task's event
+     registered/canceled). `general` reminders are untouched by registration.
+   - Defaults make every change backward compatible: old rows and clients read
+     as `general`, no link, no status update. Web must handle the new kind
+     (typecheck fails until `ProposalReview.tsx` labels it).
+
 ## Known gaps at BASE_SHA
 
 Stated so no worker mistakes a fixture for a feature.

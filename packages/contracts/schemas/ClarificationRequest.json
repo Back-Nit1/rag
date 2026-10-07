@@ -9,6 +9,15 @@
       "title": "Blocking",
       "type": "boolean"
     },
+    "candidate_ids": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 3,
+        "type": "string"
+      },
+      "title": "Candidate Ids",
+      "type": "array"
+    },
     "clarification_id": {
       "maxLength": 128,
       "minLength": 3,

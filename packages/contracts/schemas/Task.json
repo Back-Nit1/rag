@@ -76,6 +76,14 @@
       "title": "SourceRef",
       "type": "object"
     },
+    "TaskPurpose": {
+      "enum": [
+        "registration",
+        "preparation"
+      ],
+      "title": "TaskPurpose",
+      "type": "string"
+    },
     "TaskState": {
       "enum": [
         "inbox",
@@ -183,6 +191,20 @@
       ],
       "default": null
     },
+    "event_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 3,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Id"
+    },
     "id": {
       "maxLength": 128,
       "minLength": 3,
@@ -209,6 +231,17 @@
       ],
       "default": null,
       "title": "Project Id"
+    },
+    "purpose": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskPurpose"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "revision": {
       "default": 1,

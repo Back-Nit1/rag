@@ -228,6 +228,9 @@ class ExtractedItemKind(StrEnum):
     REMINDER_REQUEST = "reminder_request"
     PREFERENCE = "preference"
     PROJECT_HINT = "project_hint"
+    STATUS_UPDATE = "status_update"
+    """A spoken update to an existing event/task (registered, canceled). Carries
+    ``update_action`` and ``target_ids``; it never creates a record."""
 
 
 class RequestedAction(StrEnum):
@@ -235,6 +238,24 @@ class RequestedAction(StrEnum):
     PREPARE_FOR_EVENT = "prepare_for_event"
     REMIND_GENERIC = "remind_generic"
     PLAN_TIME = "plan_time"
+
+
+class StatusUpdateAction(StrEnum):
+    REGISTERED = "registered"
+    CANCELED = "canceled"
+
+
+class ReminderPurpose(StrEnum):
+    """Why a reminder exists. Only REGISTRATION reminders are suppressed by
+    registration; ordinary (event-time) reminders stay GENERAL."""
+
+    GENERAL = "general"
+    REGISTRATION = "registration"
+
+
+class TaskPurpose(StrEnum):
+    REGISTRATION = "registration"
+    PREPARATION = "preparation"
 
 
 class PlanStatus(StrEnum):

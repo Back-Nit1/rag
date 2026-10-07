@@ -46,6 +46,7 @@ from .enums import (
     JobState,
     MemoryKind,
     RegistrationStatus,
+    ReminderPurpose,
     SourceKind,
     TaskState,
 )
@@ -173,6 +174,9 @@ class ClarificationRequest(StrictModel):
     missing_fields: list[str]
     blocking: bool = False
     """True when a reminder is suspended pending this answer."""
+    candidate_ids: list[EntityId] = Field(default_factory=list)
+    """For an ambiguous status update: the records the user may mean. Answer by
+    editing the item so ``target_ids`` holds exactly one."""
 
 
 # --------------------------------------------------------------------------- #
@@ -251,6 +255,7 @@ class CreateReminderRequest(StrictModel):
     timezone: TimezoneName
     channel: DeliveryChannel = DeliveryChannel.IN_APP
     requires_generation: bool = False
+    purpose: ReminderPurpose = ReminderPurpose.GENERAL
 
     @model_validator(mode="after")
     def _resolvable_trigger(self) -> CreateReminderRequest:

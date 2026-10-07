@@ -7,6 +7,15 @@
       ],
       "title": "DeliveryChannel",
       "type": "string"
+    },
+    "ReminderPurpose": {
+      "description": "Why a reminder exists. Only REGISTRATION reminders are suppressed by\nregistration; ordinary (event-time) reminders stay GENERAL.",
+      "enum": [
+        "general",
+        "registration"
+      ],
+      "title": "ReminderPurpose",
+      "type": "string"
     }
   },
   "$id": "https://metis.local/schemas/v1/CreateReminderRequest.json",
@@ -47,6 +56,10 @@
       ],
       "default": null,
       "title": "Local Time"
+    },
+    "purpose": {
+      "$ref": "#/$defs/ReminderPurpose",
+      "default": "general"
     },
     "requires_generation": {
       "default": false,

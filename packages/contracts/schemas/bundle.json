@@ -790,6 +790,15 @@
               "default": null,
               "title": "Starts At"
             },
+            "target_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Target Ids",
+              "type": "array"
+            },
             "timezone": {
               "anyOf": [
                 {
@@ -812,6 +821,17 @@
               "minLength": 1,
               "title": "Title",
               "type": "string"
+            },
+            "update_action": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/StatusUpdateAction"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
@@ -830,7 +850,8 @@
             "work_log",
             "reminder_request",
             "preference",
-            "project_hint"
+            "project_hint",
+            "status_update"
           ],
           "title": "ExtractedItemKind",
           "type": "string"
@@ -1685,6 +1706,14 @@
           "title": "SpeechMetadata",
           "type": "object"
         },
+        "StatusUpdateAction": {
+          "enum": [
+            "registered",
+            "canceled"
+          ],
+          "title": "StatusUpdateAction",
+          "type": "string"
+        },
         "TranscriptRevision": {
           "additionalProperties": false,
           "description": "One accepted text revision of a source. Audio bytes are unchanged by an edit.",
@@ -2440,6 +2469,15 @@
           "title": "Blocking",
           "type": "boolean"
         },
+        "candidate_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
         "clarification_id": {
           "maxLength": 128,
           "minLength": 3,
@@ -3084,6 +3122,15 @@
           ],
           "title": "DeliveryChannel",
           "type": "string"
+        },
+        "ReminderPurpose": {
+          "description": "Why a reminder exists. Only REGISTRATION reminders are suppressed by\nregistration; ordinary (event-time) reminders stay GENERAL.",
+          "enum": [
+            "general",
+            "registration"
+          ],
+          "title": "ReminderPurpose",
+          "type": "string"
         }
       },
       "$id": "https://metis.local/schemas/v1/CreateReminderRequest.json",
@@ -3123,6 +3170,10 @@
           ],
           "default": null,
           "title": "Local Time"
+        },
+        "purpose": {
+          "$ref": "#/$defs/ReminderPurpose",
+          "default": "general"
         },
         "requires_generation": {
           "default": false,
@@ -4682,7 +4733,8 @@
             "work_log",
             "reminder_request",
             "preference",
-            "project_hint"
+            "project_hint",
+            "status_update"
           ],
           "title": "ExtractedItemKind",
           "type": "string"
@@ -4741,6 +4793,14 @@
           ],
           "title": "SourceRef",
           "type": "object"
+        },
+        "StatusUpdateAction": {
+          "enum": [
+            "registered",
+            "canceled"
+          ],
+          "title": "StatusUpdateAction",
+          "type": "string"
         }
       },
       "$id": "https://metis.local/schemas/v1/ExtractedItem.json",
@@ -4930,6 +4990,15 @@
           "default": null,
           "title": "Starts At"
         },
+        "target_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Target Ids",
+          "type": "array"
+        },
         "timezone": {
           "anyOf": [
             {
@@ -4952,6 +5021,17 @@
           "minLength": 1,
           "title": "Title",
           "type": "string"
+        },
+        "update_action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusUpdateAction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -5234,6 +5314,15 @@
               "default": null,
               "title": "Starts At"
             },
+            "target_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Target Ids",
+              "type": "array"
+            },
             "timezone": {
               "anyOf": [
                 {
@@ -5256,6 +5345,17 @@
               "minLength": 1,
               "title": "Title",
               "type": "string"
+            },
+            "update_action": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/StatusUpdateAction"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
@@ -5274,7 +5374,8 @@
             "work_log",
             "reminder_request",
             "preference",
-            "project_hint"
+            "project_hint",
+            "status_update"
           ],
           "title": "ExtractedItemKind",
           "type": "string"
@@ -5345,6 +5446,14 @@
           ],
           "title": "SourceRef",
           "type": "object"
+        },
+        "StatusUpdateAction": {
+          "enum": [
+            "registered",
+            "canceled"
+          ],
+          "title": "StatusUpdateAction",
+          "type": "string"
         }
       },
       "$id": "https://metis.local/schemas/v1/ExtractionProposal.json",
@@ -5845,6 +5954,15 @@
               "default": null,
               "title": "Starts At"
             },
+            "target_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Target Ids",
+              "type": "array"
+            },
             "timezone": {
               "anyOf": [
                 {
@@ -5867,6 +5985,17 @@
               "minLength": 1,
               "title": "Title",
               "type": "string"
+            },
+            "update_action": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/StatusUpdateAction"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
@@ -5885,7 +6014,8 @@
             "work_log",
             "reminder_request",
             "preference",
-            "project_hint"
+            "project_hint",
+            "status_update"
           ],
           "title": "ExtractedItemKind",
           "type": "string"
@@ -5944,6 +6074,14 @@
           ],
           "title": "SourceRef",
           "type": "object"
+        },
+        "StatusUpdateAction": {
+          "enum": [
+            "registered",
+            "canceled"
+          ],
+          "title": "StatusUpdateAction",
+          "type": "string"
         }
       },
       "$id": "https://metis.local/schemas/v1/ItemDecision.json",
@@ -10156,6 +10294,20 @@
               ],
               "default": null
             },
+            "event_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Event Id"
+            },
             "id": {
               "maxLength": 128,
               "minLength": 3,
@@ -10182,6 +10334,17 @@
               ],
               "default": null,
               "title": "Project Id"
+            },
+            "purpose": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TaskPurpose"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             },
             "revision": {
               "default": 1,
@@ -10262,6 +10425,14 @@
           ],
           "title": "Task",
           "type": "object"
+        },
+        "TaskPurpose": {
+          "enum": [
+            "registration",
+            "preparation"
+          ],
+          "title": "TaskPurpose",
+          "type": "string"
         },
         "TaskState": {
           "enum": [
@@ -10922,6 +11093,15 @@
           "title": "FailureCategory",
           "type": "string"
         },
+        "ReminderPurpose": {
+          "description": "Why a reminder exists. Only REGISTRATION reminders are suppressed by\nregistration; ordinary (event-time) reminders stay GENERAL.",
+          "enum": [
+            "general",
+            "registration"
+          ],
+          "title": "ReminderPurpose",
+          "type": "string"
+        },
         "ReminderState": {
           "enum": [
             "pending_schedule",
@@ -10989,6 +11169,10 @@
         "occurrence_key": {
           "title": "Occurrence Key",
           "type": "string"
+        },
+        "purpose": {
+          "$ref": "#/$defs/ReminderPurpose",
+          "default": "general"
         },
         "requires_generation": {
           "default": false,
@@ -11219,6 +11403,10 @@
               "title": "Occurrence Key",
               "type": "string"
             },
+            "purpose": {
+              "$ref": "#/$defs/ReminderPurpose",
+              "default": "general"
+            },
             "requires_generation": {
               "default": false,
               "title": "Requires Generation",
@@ -11337,6 +11525,15 @@
           ],
           "title": "Reminder",
           "type": "object"
+        },
+        "ReminderPurpose": {
+          "description": "Why a reminder exists. Only REGISTRATION reminders are suppressed by\nregistration; ordinary (event-time) reminders stay GENERAL.",
+          "enum": [
+            "general",
+            "registration"
+          ],
+          "title": "ReminderPurpose",
+          "type": "string"
         },
         "ReminderState": {
           "enum": [
@@ -11704,6 +11901,15 @@
               "default": null,
               "title": "Starts At"
             },
+            "target_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Target Ids",
+              "type": "array"
+            },
             "timezone": {
               "anyOf": [
                 {
@@ -11726,6 +11932,17 @@
               "minLength": 1,
               "title": "Title",
               "type": "string"
+            },
+            "update_action": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/StatusUpdateAction"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
@@ -11744,7 +11961,8 @@
             "work_log",
             "reminder_request",
             "preference",
-            "project_hint"
+            "project_hint",
+            "status_update"
           ],
           "title": "ExtractedItemKind",
           "type": "string"
@@ -11839,6 +12057,14 @@
           ],
           "title": "SourceRef",
           "type": "object"
+        },
+        "StatusUpdateAction": {
+          "enum": [
+            "registered",
+            "canceled"
+          ],
+          "title": "StatusUpdateAction",
+          "type": "string"
         }
       },
       "$id": "https://metis.local/schemas/v1/ResolveProposalRequest.json",
@@ -11895,6 +12121,15 @@
               "default": false,
               "title": "Blocking",
               "type": "boolean"
+            },
+            "candidate_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Candidate Ids",
+              "type": "array"
             },
             "clarification_id": {
               "maxLength": 128,
@@ -12194,6 +12429,15 @@
               "default": null,
               "title": "Starts At"
             },
+            "target_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Target Ids",
+              "type": "array"
+            },
             "timezone": {
               "anyOf": [
                 {
@@ -12216,6 +12460,17 @@
               "minLength": 1,
               "title": "Title",
               "type": "string"
+            },
+            "update_action": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/StatusUpdateAction"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             }
           },
           "required": [
@@ -12234,7 +12489,8 @@
             "work_log",
             "reminder_request",
             "preference",
-            "project_hint"
+            "project_hint",
+            "status_update"
           ],
           "title": "ExtractedItemKind",
           "type": "string"
@@ -12435,6 +12691,14 @@
           ],
           "title": "SourceRef",
           "type": "object"
+        },
+        "StatusUpdateAction": {
+          "enum": [
+            "registered",
+            "canceled"
+          ],
+          "title": "StatusUpdateAction",
+          "type": "string"
         }
       },
       "$id": "https://metis.local/schemas/v1/ResolveProposalResponse.json",
@@ -13794,6 +14058,14 @@
           "title": "SourceRef",
           "type": "object"
         },
+        "TaskPurpose": {
+          "enum": [
+            "registration",
+            "preparation"
+          ],
+          "title": "TaskPurpose",
+          "type": "string"
+        },
         "TaskState": {
           "enum": [
             "inbox",
@@ -13900,6 +14172,20 @@
           ],
           "default": null
         },
+        "event_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Id"
+        },
         "id": {
           "maxLength": 128,
           "minLength": 3,
@@ -13926,6 +14212,17 @@
           ],
           "default": null,
           "title": "Project Id"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskPurpose"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "revision": {
           "default": 1,
@@ -14179,6 +14476,20 @@
               ],
               "default": null
             },
+            "event_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Event Id"
+            },
             "id": {
               "maxLength": 128,
               "minLength": 3,
@@ -14205,6 +14516,17 @@
               ],
               "default": null,
               "title": "Project Id"
+            },
+            "purpose": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TaskPurpose"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             },
             "revision": {
               "default": 1,
@@ -14285,6 +14607,14 @@
           ],
           "title": "Task",
           "type": "object"
+        },
+        "TaskPurpose": {
+          "enum": [
+            "registration",
+            "preparation"
+          ],
+          "title": "TaskPurpose",
+          "type": "string"
         },
         "TaskState": {
           "enum": [
@@ -15305,6 +15635,20 @@
               ],
               "default": null
             },
+            "event_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Event Id"
+            },
             "id": {
               "maxLength": 128,
               "minLength": 3,
@@ -15331,6 +15675,17 @@
               ],
               "default": null,
               "title": "Project Id"
+            },
+            "purpose": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TaskPurpose"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
             },
             "revision": {
               "default": 1,
@@ -15411,6 +15766,14 @@
           ],
           "title": "Task",
           "type": "object"
+        },
+        "TaskPurpose": {
+          "enum": [
+            "registration",
+            "preparation"
+          ],
+          "title": "TaskPurpose",
+          "type": "string"
         },
         "TaskState": {
           "enum": [

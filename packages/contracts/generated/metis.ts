@@ -63,6 +63,7 @@ export enum ExtractedItemKind {
   REMINDER_REQUEST = "reminder_request",
   PREFERENCE = "preference",
   PROJECT_HINT = "project_hint",
+  STATUS_UPDATE = "status_update",
 }
 
 export enum FailureCategory {
@@ -144,6 +145,11 @@ export enum RegistrationStatus {
   REGISTERED = "registered",
 }
 
+export enum ReminderPurpose {
+  GENERAL = "general",
+  REGISTRATION = "registration",
+}
+
 export enum ReminderState {
   PENDING_SCHEDULE = "pending_schedule",
   SCHEDULED = "scheduled",
@@ -177,6 +183,16 @@ export enum SourceLifecycle {
   READY = "ready",
   FAILED = "failed",
   TOMBSTONED = "tombstoned",
+}
+
+export enum StatusUpdateAction {
+  REGISTERED = "registered",
+  CANCELED = "canceled",
+}
+
+export enum TaskPurpose {
+  REGISTRATION = "registration",
+  PREPARATION = "preparation",
 }
 
 export enum TaskState {
@@ -334,6 +350,7 @@ export interface ClarificationRequest {
   question: string;
   missing_fields: string[];
   blocking?: boolean;
+  candidate_ids?: string[];
 }
 
 export interface CompleteCaptureRequest {
@@ -414,6 +431,7 @@ export interface CreateReminderRequest {
   timezone: string;
   channel?: DeliveryChannel;
   requires_generation?: boolean;
+  purpose?: ReminderPurpose;
 }
 
 export interface CreateTaskRequest {
@@ -556,6 +574,8 @@ export interface ExtractedItem {
   remind_at?: string | null;
   remind_local_time?: string | null;
   requested_actions?: RequestedAction[];
+  update_action?: StatusUpdateAction | null;
+  target_ids?: string[];
   missing_fields?: string[];
   evidence?: SourceRef[];
   confidence?: ConfidenceHint | null;
@@ -968,6 +988,7 @@ export interface Reminder {
   timezone: string;
   state?: ReminderState;
   channel?: DeliveryChannel;
+  purpose?: ReminderPurpose;
   scheduler_ref?: string | null;
   occurrence_key: string;
   requires_generation?: boolean;
@@ -1123,6 +1144,8 @@ export interface Task {
   duration_estimate?: Estimate | null;
   priority?: number;
   depends_on?: string[];
+  event_id?: string | null;
+  purpose?: TaskPurpose | null;
   source_refs?: SourceRef[];
   completed_at?: string | null;
   canceled_at?: string | null;

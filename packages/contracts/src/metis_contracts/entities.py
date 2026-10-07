@@ -37,10 +37,13 @@ from .enums import (
     PlanStatus,
     ProposalDisposition,
     RegistrationStatus,
+    ReminderPurpose,
     ReminderState,
     RequestedAction,
     SourceKind,
     SourceLifecycle,
+    StatusUpdateAction,
+    TaskPurpose,
     TaskState,
 )
 
@@ -166,6 +169,12 @@ class ExtractedItem(StrictModel):
     remind_at: datetime | None = None
     remind_local_time: Annotated[str | None, Field(default=None, pattern=r"^\d{2}:\d{2}$")] = None
     requested_actions: list[RequestedAction] = Field(default_factory=list)
+    # Status updates (kind=status_update): which record(s) the user means.
+    update_action: StatusUpdateAction | None = None
+    target_ids: list[EntityId] = Field(default_factory=list)
+    """Candidate existing event/task ids proposed by the extractor and checked
+    against the candidates it was shown. Exactly one is a resolved target; zero
+    or several means the user is asked. Never chosen by the server."""
     # Provenance
     missing_fields: list[str] = Field(default_factory=list)
     evidence: list[SourceRef] = Field(default_factory=list)
@@ -175,6 +184,8 @@ class ExtractedItem(StrictModel):
     def _evidence_required(self) -> ExtractedItem:
         if not self.evidence:
             raise ValueError("every extracted item must cite at least one source span")
+        if (self.kind is ExtractedItemKind.STATUS_UPDATE) != (self.update_action is not None):
+            raise ValueError("update_action is required for, and only valid on, status_update items")
         return self
 
 
@@ -214,6 +225,9 @@ class Task(Record):
     duration_estimate: Estimate | None = None
     priority: Annotated[int, Field(ge=0, le=3)] = 1
     depends_on: list[EntityId] = Field(default_factory=list)
+    event_id: EntityId | None = None
+    """The event this task serves (registration/preparation follow-ups)."""
+    purpose: TaskPurpose | None = None
     source_refs: list[SourceRef] = Field(default_factory=list)
     completed_at: datetime | None = None
     canceled_at: datetime | None = None
@@ -355,6 +369,7 @@ class Reminder(Record):
     timezone: TimezoneName
     state: ReminderState = ReminderState.PENDING_SCHEDULE
     channel: DeliveryChannel = DeliveryChannel.IN_APP
+    purpose: ReminderPurpose = ReminderPurpose.GENERAL
     scheduler_ref: str | None = None
     occurrence_key: str
     """Stable per-occurrence dedupe key; retained across retries."""

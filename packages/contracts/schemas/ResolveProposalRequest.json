@@ -260,6 +260,15 @@
           "default": null,
           "title": "Starts At"
         },
+        "target_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Target Ids",
+          "type": "array"
+        },
         "timezone": {
           "anyOf": [
             {
@@ -282,6 +291,17 @@
           "minLength": 1,
           "title": "Title",
           "type": "string"
+        },
+        "update_action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusUpdateAction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -300,7 +320,8 @@
         "work_log",
         "reminder_request",
         "preference",
-        "project_hint"
+        "project_hint",
+        "status_update"
       ],
       "title": "ExtractedItemKind",
       "type": "string"
@@ -395,6 +416,14 @@
       ],
       "title": "SourceRef",
       "type": "object"
+    },
+    "StatusUpdateAction": {
+      "enum": [
+        "registered",
+        "canceled"
+      ],
+      "title": "StatusUpdateAction",
+      "type": "string"
     }
   },
   "$id": "https://metis.local/schemas/v1/ResolveProposalRequest.json",
