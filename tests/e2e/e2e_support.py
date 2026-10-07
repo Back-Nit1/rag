@@ -84,3 +84,36 @@ def add_reminder(h, task, local_date="2026-10-07", local_time="09:00"):
 
 def reminder(h, reminder_id):
     return h.client.get(f"/v1/reminders/{reminder_id}").json()
+
+
+def fire_stale(h, reminder_id, occurrence_key, user_id=USER):
+    """Simulate an external scheduler firing a (possibly outdated) occurrence."""
+    from metis_contracts import EventType, OutboxEvent, new_id
+    from metis_contracts.events import ReminderDuePayload
+
+    now = h.clock.now()
+    with h.state.transaction(user_id) as tx:
+        tx.append_outbox(
+            OutboxEvent(
+                id=new_id("obx"),
+                user_id=user_id,
+                created_at=now,
+                updated_at=now,
+                event_type=EventType.REMINDER_DUE,
+                target_id=reminder_id,
+                target_revision=1,
+                correlation_id=f"stale:{occurrence_key}",
+                idempotency_key=f"stale:{occurrence_key}:{new_id('x')}",
+                payload=ReminderDuePayload(
+                    reminder_id=reminder_id, occurrence_key=occurrence_key, scheduled_for=now
+                ).model_dump(mode="json"),
+                available_at=now,
+            )
+        )
+
+
+def notifications(h):
+    return h.client.get("/v1/notifications").json()["items"]
+
+
+DUE = datetime(2026, 10, 7, 13, 0, tzinfo=UTC)  # 09:00 New York on 2026-10-07
