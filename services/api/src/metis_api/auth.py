@@ -12,6 +12,7 @@ the demo user.
 
 from __future__ import annotations
 
+import hmac
 import logging
 import time
 from dataclasses import dataclass
@@ -30,7 +31,7 @@ class Principal:
     """The authenticated caller. ``user_id`` is the partition key for all data."""
 
     user_id: str
-    source: str  # "cognito" or "fixture"
+    source: str  # "cognito", "fixture" or "desktop"
     email: str | None = None
 
     @property
@@ -104,6 +105,22 @@ def verify_cognito_token(token: str) -> Principal:
     return Principal(user_id=str(subject), source="cognito", email=claims.get("email"))
 
 
+def _desktop_principal(authorization: str | None) -> Principal:
+    """Desktop-local mode: the bearer must be the launch secret, and is never
+    sent to Cognito. The owner is the install subject, not the secret."""
+    from .desktop import install_subject
+
+    cfg = settings()
+    if cfg.environment == "prod":
+        raise MetisError(ErrorCode.UNAUTHENTICATED, "desktop authentication is not available here")
+    scheme, _, value = (authorization or "").partition(" ")
+    secret = cfg.desktop.auth_secret or ""
+    # compare_digest on bytes: str comparison rejects non-ASCII input.
+    if scheme.lower() != "bearer" or not hmac.compare_digest(value.strip().encode(), secret.encode()):
+        raise MetisError(ErrorCode.UNAUTHENTICATED, "authentication is required")
+    return Principal(user_id=install_subject(cfg.desktop.identity_path), source="desktop")
+
+
 def principal_from_header(authorization: str | None) -> Principal:
     """Resolve the caller from an Authorization header.
 
@@ -112,6 +129,8 @@ def principal_from_header(authorization: str | None) -> Principal:
     path is refused outright for ``METIS_ENV=prod``.
     """
     cfg = settings()
+    if cfg.desktop.enabled:
+        return _desktop_principal(authorization)
     token = None
     if authorization:
         scheme, _, value = authorization.partition(" ")

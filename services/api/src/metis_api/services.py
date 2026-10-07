@@ -461,12 +461,20 @@ def get_capture(ctx: RequestContext, capture_id: str) -> CaptureDetail:
         for e in ctx.state.list_events(ctx.user_id, limit=200).items
         if any(r.source_id == capture_id for r in e.source_refs)
     ]
+    jobs: list[Job] = []
+    cursor = None
+    while True:
+        job_page = ctx.state.list_jobs(ctx.user_id, cursor=cursor, limit=200)
+        jobs.extend(j for j in job_page.items if j.target_id == capture_id)
+        if not job_page.next_cursor:
+            break
+        cursor = job_page.next_cursor
     return CaptureDetail(
         source=source,
         transcript_text=current.text if current else None,
         segments=current.segments if current else [],
         proposals=sorted(proposals, key=lambda p: (p.source_version, p.range_index)),
-        jobs=[],
+        jobs=sorted(jobs, key=lambda j: j.created_at),
         created_task_ids=created_tasks,
         created_event_ids=created_events,
     )
