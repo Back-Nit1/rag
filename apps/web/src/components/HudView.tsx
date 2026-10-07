@@ -6,9 +6,19 @@
 import { LiveStatus, StatusPill } from "./StatusPill";
 import { Button } from "./Button";
 import type { HudSnapshot } from "../lib/hud";
-import { describe } from "../lib/hud";
+import { OPEN_ERROR_COPY, describe } from "../lib/hud";
 
-export function HudView({ snapshot, onCancel }: { snapshot: HudSnapshot; onCancel: () => void }) {
+export function HudView({
+  snapshot,
+  onCancel,
+  onOpen,
+  openError = false,
+}: {
+  snapshot: HudSnapshot;
+  onCancel: () => void;
+  onOpen?: () => void;
+  openError?: boolean;
+}) {
   const v = describe(snapshot);
   const recording = snapshot.state === "recording";
   return (
@@ -44,9 +54,16 @@ export function HudView({ snapshot, onCancel }: { snapshot: HudSnapshot; onCance
       )}
       <div className="mt-auto flex items-center gap-2">
         {v.showOpenReview && (
-          <p className="flex-1 text-xs">
-            {v.error ? "Open the Metis window for details." : "Open the Metis window to review and confirm."}
-          </p>
+          <div className="flex flex-1 flex-col gap-1">
+            <Button variant="secondary" onClick={onOpen}>
+              {v.error ? "Open Metis for details" : "Open Metis to review and confirm"}
+            </Button>
+            {openError && (
+              <p role="alert" className="text-2xs text-bad">
+                {OPEN_ERROR_COPY}
+              </p>
+            )}
+          </div>
         )}
         {v.showCancel && (
           <Button variant="danger" onClick={onCancel} className="ml-auto">

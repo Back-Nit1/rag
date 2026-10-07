@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe as suite, expect, it, vi } from "vitest";
 import { HudView } from "../components/HudView";
-import { ERROR_COPY, ERROR_STEPS, HUD_STATES, IDLE_SNAPSHOT, describe, parseSnapshot, tauriHudAdapter, type HudSnapshot } from "./hud";
+import { OPEN_ERROR_COPY, OPEN_REVIEW_EVENT, parseOpenReview, ERROR_COPY, ERROR_STEPS, HUD_STATES, IDLE_SNAPSHOT, describe, parseSnapshot, tauriHudAdapter, type HudSnapshot } from "./hud";
 import { parseGate, readGate } from "./recordingGate";
 
 const snap = (over: Partial<HudSnapshot> = {}): HudSnapshot => ({ ...IDLE_SNAPSHOT, ...over });
@@ -132,5 +132,37 @@ suite("recording gate", () => {
   });
   it("a failing status call blocks recording", async () => {
     expect((await readGate(() => Promise.reject("boom"))).allowed).toBe(false);
+  });
+});
+
+suite("open main window", () => {
+  const view = (s: HudSnapshot, openError = false) =>
+    renderToStaticMarkup(createElement(HudView, { snapshot: s, onCancel: () => undefined, onOpen: () => undefined, openError }));
+  it("renders a button, and an alert with generic copy only on failure", () => {
+    const ok = view(snap({ state: "review", captureId: "cap_1" }));
+    expect(ok).toMatch(/<button[^>]*>Open Metis to review and confirm/);
+    expect(ok).not.toContain("alert");
+    expect(view(snap({ state: "review", captureId: "cap_1" }), true)).toContain(OPEN_ERROR_COPY);
+  });
+  it("invokes show_main_window with captureId only when present", async () => {
+    const invoke = vi.fn(async () => null);
+    vi.stubGlobal("window", { __TAURI_INTERNALS__: { invoke, transformCallback: () => 1 } });
+    await tauriHudAdapter().openMain("cap_1");
+    await tauriHudAdapter().openMain(null);
+    expect(invoke.mock.calls).toEqual([["show_main_window", { captureId: "cap_1" }], ["show_main_window", undefined]]);
+    vi.unstubAllGlobals();
+  });
+  it("a rejection propagates without the raw text in the copy", async () => {
+    vi.stubGlobal("window", { __TAURI_INTERNALS__: { invoke: () => Promise.reject("/Users/alice boom"), transformCallback: () => 1 } });
+    await expect(tauriHudAdapter().openMain("cap_1")).rejects.toBeDefined();
+    expect(OPEN_ERROR_COPY).not.toContain("alice");
+    vi.unstubAllGlobals();
+  });
+  it("validates hud:open-review payloads", () => {
+    expect(OPEN_REVIEW_EVENT).toBe("hud:open-review");
+    expect(parseOpenReview({ captureId: null })).toEqual({ captureId: null });
+    expect(parseOpenReview({ captureId: "cap_AB-12" })).toEqual({ captureId: "cap_AB-12" });
+    for (const bad of [null, "x", {}, { captureId: "a" }, { captureId: "../etc" }, { captureId: 5 }, { captureId: "a".repeat(129) }])
+      expect(parseOpenReview(bad)).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import { IDLE_SNAPSHOT, parseSnapshot, tauriHudAdapter, type HudAdapter, type Hu
 /** Rendered for `#/hud`. No auth, API or session providers: the HUD holds no credentials. */
 export function HudScreen({ adapter }: { adapter?: HudAdapter }) {
   const [snapshot, setSnapshot] = useState<HudSnapshot>(IDLE_SNAPSHOT);
+  const [openError, setOpenError] = useState(false);
   const [adapterRef] = useState(() => adapter ?? tauriHudAdapter());
 
   useEffect(() => {
@@ -30,5 +31,17 @@ export function HudScreen({ adapter }: { adapter?: HudAdapter }) {
     };
   }, [adapterRef]);
 
-  return <HudView snapshot={snapshot} onCancel={() => void adapterRef.cancel().catch(() => undefined)} />;
+  const open = () => {
+    setOpenError(false);
+    adapterRef.openMain(snapshot.captureId).catch(() => setOpenError(true));
+  };
+
+  return (
+    <HudView
+      snapshot={snapshot}
+      onCancel={() => void adapterRef.cancel().catch(() => undefined)}
+      onOpen={open}
+      openError={openError}
+    />
+  );
 }
