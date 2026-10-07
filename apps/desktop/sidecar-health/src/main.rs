@@ -99,7 +99,13 @@ fn main() {
 
 fn serve(mut s: TcpStream, svc: &str, model: &str, broken: bool) {
     let mut buf = [0u8; 4096];
-    let n = s.read(&mut buf).unwrap_or(0);
+    let mut n = 0;
+    while n < buf.len() && !buf[..n].windows(4).any(|w| w == b"\r\n\r\n") {
+        match s.read(&mut buf[n..]) {
+            Ok(0) | Err(_) => break,
+            Ok(m) => n += m,
+        }
+    }
     let req = String::from_utf8_lossy(&buf[..n]).to_string();
     let path = req.split_whitespace().nth(1).unwrap_or("");
     let bearer = req
