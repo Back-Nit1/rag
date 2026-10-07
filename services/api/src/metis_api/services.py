@@ -741,8 +741,9 @@ def patch_preferences(ctx: RequestContext, request: PatchPreferencesRequest) -> 
         for f in ("daily_planning_local_time", "timezone", "daily_planning_enabled")
     )
     if sync:
-        state = "pending_schedule" if updated.daily_planning_enabled else "disabled"
-        updated = updated.model_copy(update={"daily_schedule_state": state})
+        # The scheduler handler treats the event as stale unless this is
+        # pending_schedule; it writes scheduled/disabled/schedule_failed itself.
+        updated = updated.model_copy(update={"daily_schedule_state": "pending_schedule"})
     with ctx.state.transaction(ctx.user_id) as tx:
         stored = tx.put("preferences", updated, expected_revision=current.revision if existing else None)
         if sync:

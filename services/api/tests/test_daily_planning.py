@@ -45,13 +45,17 @@ def test_preference_change_raises_sync_in_same_transaction(client, adapters):
     assert event.target_id == prefs["id"]
     assert event.target_revision == prefs["revision"]
     assert event.payload == {"enabled": True}
+    stored = client.get("/v1/preferences").json()
+    assert stored["daily_schedule_state"] == "pending_schedule"
+    assert stored["revision"] == event.target_revision
 
 
 def test_disable_syncs_enabled_false_and_unrelated_patch_does_not(client, adapters):
     patch_prefs(client, break_minutes=15)  # first write: schedules once
-    patch_prefs(client, daily_planning_enabled=False)
+    off = patch_prefs(client, daily_planning_enabled=False)
+    assert off["daily_schedule_state"] == "pending_schedule"
     prefs = patch_prefs(client, break_minutes=20)
-    assert prefs["daily_schedule_state"] == "disabled"
+    assert prefs["daily_schedule_state"] == "pending_schedule"  # unrelated patch leaves state alone
     events = sorted(sync_events(adapters), key=lambda e: e.target_revision)
     assert [e.payload["enabled"] for e in events] == [True, False]
 
