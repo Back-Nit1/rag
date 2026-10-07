@@ -252,6 +252,7 @@ class AwsConfig:
     scheduler_group: str | None = field(default_factory=lambda: _env("METIS_SCHEDULER_GROUP"))
     scheduler_role_arn: str | None = field(default_factory=lambda: _env("METIS_SCHEDULER_ROLE_ARN"))
     reminder_target_arn: str | None = field(default_factory=lambda: _env("METIS_REMINDER_TARGET_ARN"))
+    daily_plan_target_arn: str | None = field(default_factory=lambda: _env("METIS_DAILY_PLAN_TARGET_ARN"))
     speech_state_machine_arn: str | None = field(
         default_factory=lambda: _env("METIS_SPEECH_STATE_MACHINE_ARN")
     )
