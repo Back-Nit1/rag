@@ -88,7 +88,7 @@ Open xfail defects (tests/e2e): D7 spoken "already registered" does not link to 
 existing event; D8 "cancel that" has no extraction kind; D9 project hint not
 emitted by real extraction (fixture emits it only for explicit phrases); D10
 registration-reminder suppression needs a task->event link or reminder purpose.
-D7/D8/D10 need contract decisions.
+D7/D8/D10 resolved 2026-10-07 (decision 6): xfails removed, 485 python passed, 1 xfailed (D9 only).
 
 UNRUN / unverified: real ASR (no pinned model, no WER, no latency), microphone,
 global shortcut and HUD window walkthrough, `tauri build` as a signed .app,

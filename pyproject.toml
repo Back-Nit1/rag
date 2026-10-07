@@ -76,6 +76,8 @@ ignore = [
 # job-result contract read by the caller. Everywhere else print is a defect.
 "**/tests/**" = ["T20", "DTZ"]
 "scripts/*" = ["T20"]
+# Throwaway bench/codegen scripts run by hand; stdout is their interface.
+"services/speech/scripts/*" = ["T20", "C408", "E402", "SIM115"]
 "**/generate.py" = ["T20"]
 "**/local_worker.py" = ["T20"]
 "services/speech/src/metis_speech/worker.py" = ["T20"]
@@ -91,6 +93,11 @@ disallow_untyped_decorators = false
 # ~400 fixture-heavy test signatures to satisfy strict mode buys no safety and
 # would slow every worker down. Production strictness is NOT relaxed.
 exclude = "(cdk\\.out|node_modules|generated|/tests/)"
+
+[[tool.mypy.overrides]]
+# Hand-run bench scripts: not production code, no stubs for ctranslate2.
+module = ["bench_real", "gen_synthetic_audio"]
+ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Optional runtime dependencies with no published stubs. They are imported
