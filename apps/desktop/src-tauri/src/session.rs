@@ -95,6 +95,7 @@ pub enum Msg {
 
 pub struct Progress {
     gen: u64,
+    capture_id: String,
     obs: Observed,
     release_to_transcript_ms: Option<u64>,
     extraction_ms: Option<u64>,
@@ -229,9 +230,10 @@ struct Work {
 /// create -> upload -> complete -> poll. Every step reuses the same idempotency
 /// anchor, so a retry after an API restart is the same logical capture.
 fn process(backend: &dyn Backend, w: Work, cancel: &AtomicBool, tx: &Sender<Msg>) {
-    let send = |obs: Observed, a: Option<u64>, b: Option<u64>| {
+    let send = |id: &str, obs: Observed, a: Option<u64>, b: Option<u64>| {
         let _ = tx.send(Msg::Progress(Progress {
             gen: w.gen,
+            capture_id: id.to_string(),
             obs,
             release_to_transcript_ms: a,
             extraction_ms: b,
@@ -306,8 +308,8 @@ fn process(backend: &dyn Backend, w: Work, cancel: &AtomicBool, tx: &Sender<Msg>
                 let msg = obs.failure.clone().unwrap_or_default();
                 return fail("processing", &msg);
             }
-            State::Review | State::Saved => return send(obs, a, b),
-            _ => send(obs, a, None),
+            State::Review | State::Saved => return send(&id, obs, a, b),
+            _ => send(&id, obs, a, None),
         }
         if started.elapsed() > POLL_DEADLINE {
             return fail(
@@ -525,6 +527,7 @@ impl Controller {
                     return;
                 }
                 self.publish(|s| {
+                    s.capture_id = Some(p.capture_id.clone());
                     s.transcript = p.obs.transcript.clone();
                     s.adapter_mode = p.obs.adapter_mode.clone();
                     s.needs_clarification = p.obs.clarification;

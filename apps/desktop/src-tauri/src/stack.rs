@@ -184,8 +184,9 @@ pub struct Config {
     pub policy: Policy,
     /// Arguments after the backend path, per service (speech, api, worker).
     pub args: [Vec<String>; 3],
-    /// Test/E2E only: forces `METIS_SPEECH_ENGINE` for the speech child (e.g.
-    /// `fixture`). Production leaves this `None`, so the real model is required.
+    /// Test/E2E only: forces `METIS_SPEECH_ENGINE` (e.g. `fixture`) for the API
+    /// and worker instead of the remote loopback speech server. Production
+    /// leaves this `None`, so the real model is required.
     pub speech_engine: Option<String>,
 }
 
@@ -645,6 +646,10 @@ impl Orchestrator {
             ("METIS_LOCAL_OBJECTS_DIR".into(), p(&d.objects)),
         ];
         let speech_remote = |e: &mut Vec<(String, String)>| {
+            if let Some(engine) = &self.cfg.speech_engine {
+                e.push(("METIS_SPEECH_ENGINE".into(), engine.clone()));
+                return;
+            }
             let port = self.svc[Kind::Speech.idx()].port.unwrap_or(0);
             e.push(("METIS_SPEECH_ENGINE".into(), "remote".into()));
             e.push((
@@ -657,9 +662,6 @@ impl Orchestrator {
             Kind::Speech => {
                 e.push(("METIS_SPEECH_SECRET".into(), sec.speech.clone()));
                 e.push(("METIS_SPEECH_MODEL_DIR".into(), p(&d.models)));
-                if let Some(engine) = &self.cfg.speech_engine {
-                    e.push(("METIS_SPEECH_ENGINE".into(), engine.clone()));
-                }
             }
             Kind::Api => {
                 e.push(("METIS_DESKTOP_AUTH_SECRET".into(), sec.api.clone()));
