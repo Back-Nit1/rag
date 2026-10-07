@@ -7,24 +7,38 @@
  * authenticated subject.
  */
 import {
+  type AcceptPlanRequest,
+  type AvailabilityBlock,
   type CaptureDetail,
   type CompleteCaptureRequest,
   type CompleteCaptureResponse,
   type CreateCaptureRequest,
   type CreateCaptureResponse,
+  type CreateExportRequest,
+  type CreatePlanRequest,
+  type CreatePlanResponse,
   type CreateReminderRequest,
+  type DeleteCaptureResponse,
   ErrorCode,
   type ErrorBody,
   type Event as MetisEvent,
   type EventPage,
+  type ExportStatusResponse,
   type HealthResponse,
   type Job,
+  type JobAccepted,
   type Notification,
   type NotificationPage,
+  type PatchPlanRequest,
   type PatchTaskRequest,
   type PatchTranscriptRequest,
+  type Plan,
   type Preferences,
+  type ProjectDetail,
+  type ProjectPage,
   type Reminder,
+  type SearchRequest,
+  type SearchResponse,
   type ResolveProposalRequest,
   type ResolveProposalResponse,
   type Task,
@@ -102,6 +116,27 @@ export function setAuthToken(token: string | null): void {
   authToken = token;
 }
 
+/** Called when a signed-in request is refused as unauthenticated (expired or revoked session). */
+let onUnauthenticated: (() => void) | null = null;
+export function setUnauthenticatedHandler(handler: (() => void) | null): void {
+  onUnauthenticated = handler;
+}
+
+function authHeaders(url: string): Record<string, string> {
+  return isDesktop() ? desktopAuthFor(url) : authToken ? { Authorization: `Bearer ${authToken}` } : {};
+}
+
+/** Server-supplied work packet for a project (the route has no response model in the contract). */
+export type ResumePacket = {
+  project_id: string;
+  minutes: number;
+  objective: string | null;
+  attempts: { summary: string; recorded_at: string; outcome: string }[];
+  blocker: string | null;
+  provenance: string;
+  evidence: { source_id: string; source_version: number; span_ref?: string | null }[];
+};
+
 type RequestOptions = {
   method?: string;
   body?: unknown;
@@ -117,7 +152,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
   const url = `${baseUrl()}${path}`;
-  Object.assign(headers, isDesktop() ? desktopAuthFor(url) : authToken ? { Authorization: `Bearer ${authToken}` } : {});
+  Object.assign(headers, authHeaders(url));
 
   let response: Response;
   try {
@@ -136,6 +171,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const text = await response.text();
   const parsed: unknown = text ? JSON.parse(text) : null;
   if (!response.ok) {
+    if (response.status === 401 && authToken) onUnauthenticated?.();
     throw new ApiError(response.status, (parsed ?? {
       code: ErrorCode.INTERNAL,
       message: `the server returned ${response.status}`,
@@ -167,7 +203,7 @@ export const api = {
     request<CaptureDetail>(`/v1/captures/${captureId}/transcript`, { method: "PATCH", body }),
 
   deleteCapture: (captureId: string) =>
-    request<{ capture_id: string }>(`/v1/captures/${captureId}`, { method: "DELETE" }),
+    request<DeleteCaptureResponse>(`/v1/captures/${captureId}`, { method: "DELETE" }),
 
   resolveProposal: (proposalId: string, body: ResolveProposalRequest, idempotencyKey: string) =>
     request<ResolveProposalResponse>(`/v1/proposals/${proposalId}/resolve`, {
@@ -250,4 +286,53 @@ export const api = {
   patchPreferences: (body: Record<string, unknown>) =>
     request<Preferences>("/v1/preferences", { method: "PATCH", body }),
   usage: () => request<UsageResponse>("/v1/usage"),
+
+  // ----- projects and memory -------------------------------------------- //
+  listProjects: () => request<ProjectPage>("/v1/projects?limit=100"),
+  getProject: (projectId: string) => request<ProjectDetail>(`/v1/projects/${projectId}`),
+  resumeProject: (projectId: string, minutes: number) =>
+    request<ResumePacket>(`/v1/projects/${projectId}/resume`, { method: "POST", body: { minutes } }),
+  search: (body: SearchRequest) => request<SearchResponse>("/v1/search", { method: "POST", body }),
+
+  // ----- plans and availability ----------------------------------------- //
+  /** Generation is asynchronous; a repeat with the same key replays the first answer. */
+  createPlan: (body: CreatePlanRequest, idempotencyKey: string) =>
+    request<CreatePlanResponse>("/v1/plans", { method: "POST", body, idempotencyKey }),
+  getPlan: (planId: string) => request<Plan>(`/v1/plans/${planId}`),
+  acceptPlan: (planId: string, body: AcceptPlanRequest) =>
+    request<Plan>(`/v1/plans/${planId}/accept`, { method: "POST", body }),
+  patchPlan: (planId: string, body: PatchPlanRequest) =>
+    request<Plan>(`/v1/plans/${planId}`, { method: "PATCH", body }),
+  listAvailability: (localDate: string) =>
+    request<AvailabilityBlock[]>(`/v1/availability?local_date=${encodeURIComponent(localDate)}`),
+  /** The server upserts by id; an edit re-posts the same id. */
+  saveAvailability: (block: AvailabilityBlock) =>
+    request<AvailabilityBlock>("/v1/availability", { method: "POST", body: block }),
+
+  // ----- export ---------------------------------------------------------- //
+  createExport: (body: CreateExportRequest, idempotencyKey: string) =>
+    request<JobAccepted>("/v1/exports", { method: "POST", body, idempotencyKey }),
+  getExport: (jobId: string) => request<ExportStatusResponse>(`/v1/exports/${jobId}`),
+  /** Authenticated download: the bearer goes in a header and the bytes are returned as a Blob. */
+  async downloadExport(jobId: string): Promise<Blob> {
+    const url = `${baseUrl()}/v1/exports/${jobId}/download`;
+    let response: Response;
+    try {
+      response = await fetch(url, { headers: { "X-Correlation-Id": newCorrelationId(), ...authHeaders(url) } });
+    } catch (cause) {
+      throw new OfflineError(cause);
+    }
+    if (!response.ok) {
+      if (response.status === 401 && authToken) onUnauthenticated?.();
+      const text = await response.text();
+      let body: ErrorBody;
+      try {
+        body = JSON.parse(text) as ErrorBody;
+      } catch {
+        body = { code: ErrorCode.INTERNAL, message: `the download failed with ${response.status}` };
+      }
+      throw new ApiError(response.status, body);
+    }
+    return response.blob();
+  },
 };

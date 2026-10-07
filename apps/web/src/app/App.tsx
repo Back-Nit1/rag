@@ -20,6 +20,7 @@ import { NotificationsScreen } from "../screens/NotificationsScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { TasksScreen } from "../screens/TasksScreen";
 import { TodayScreen } from "../screens/TodayScreen";
+import { AuthGate } from "./AuthGate";
 import { SessionProvider, useSession } from "./session";
 
 const SURFACES = ["today", "capture", "inbox", "tasks", "alerts", "settings"] as const;
@@ -270,9 +271,11 @@ function DesktopGate({ children }: { children: ReactNode }) {
 export function App() {
   return (
     <DesktopGate>
-      <SessionProvider>
-        <Shell />
-      </SessionProvider>
+      <AuthGate>
+        <SessionProvider>
+          <Shell />
+        </SessionProvider>
+      </AuthGate>
     </DesktopGate>
   );
 }
