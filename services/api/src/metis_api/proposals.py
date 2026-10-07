@@ -9,7 +9,6 @@ its local date and time actually resolve.
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime, time
 from typing import Any
 
@@ -366,20 +365,18 @@ def _record_memory(ctx: RequestContext, item: ExtractedItem, source: Any, now: d
 def _project_id_for(ctx: RequestContext, hint: str | None, content: str) -> str | None:
     """Resolve to an existing owner project; never create or guess.
 
-    An explicit hint must match an id, title or alias. Without a hint, the
-    note text must literally name exactly one project; anything else stays null.
+    Only an explicit hint that matches an id, title or alias attaches. Matching
+    project names inside free text is a guess, so without a hint it stays null.
     """
     projects = ctx.state.list_projects(ctx.user_id, limit=500).items
 
     def names(project: Any) -> set[str]:
         return {project.id.casefold(), project.title.casefold(), *(a.casefold() for a in project.aliases)}
 
-    if hint and hint.strip():
-        wanted = hint.strip().casefold()
-        return next((p.id for p in projects if wanted in names(p)), None)
-    words = set(re.findall(r"[\w.-]+", content.casefold()))
-    named = [p for p in projects if (names(p) - {p.id.casefold()}) & words]
-    return named[0].id if len(named) == 1 else None
+    if not (hint and hint.strip()):
+        return None
+    wanted = hint.strip().casefold()
+    return next((p.id for p in projects if wanted in names(p)), None)
 
 
 def _question_for(missing_fields: list[str], title: str) -> str:
