@@ -78,7 +78,7 @@ class OllamaHttp:
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - loopback validated
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 raw = resp.read(MAX_RESPONSE_BYTES + 1)
         except urllib.error.HTTPError as exc:
             detail = exc.read(500).decode(errors="replace")
