@@ -9,6 +9,7 @@ fn main() {
             "capture_state",
             "capture_cancel",
             "capture_prepare_mic",
+            "show_main_window",
         ]),
     ))
     .expect("tauri build");

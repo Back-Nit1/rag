@@ -6,7 +6,8 @@
 //! text only after the API returned it. No bearer, URL, audio or file path.
 use crate::audio::{encode_wav, AudioSource, Recorder, MAX_SAMPLES, TARGET_RATE};
 use crate::backend::{clip, ApiError, Backend, CreateReq};
-use crate::machine::{Action, Machine, State};
+pub use crate::machine::State;
+use crate::machine::{Action, Machine};
 use serde::Serialize;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -50,6 +51,11 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
+    #[cfg(test)]
+    pub fn default_for_test() -> Self {
+        Self::new(false)
+    }
+
     fn new(mic_ready: bool) -> Self {
         Self {
             state: State::Idle,

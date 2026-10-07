@@ -1,6 +1,7 @@
 //! Metis desktop shell: window + supervised local stack (speech, API, worker).
 pub mod audio;
 pub mod backend;
+pub mod hud;
 pub mod machine;
 pub mod session;
 pub mod stack;
@@ -11,7 +12,8 @@ use stack::{Config, Stack, StackStatus};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use tauri::{Emitter, Manager, RunEvent};
+use std::time::Instant;
+use tauri::{Emitter, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 /// Event the HUD listens to; payload is a sanitized [`Snapshot`].
@@ -27,11 +29,56 @@ struct AppState {
     capture: Mutex<Option<(Handle, JoinHandle<()>)>>,
 }
 
-struct TauriEmit(tauri::AppHandle);
+/// Publishes `capture:state` and drives the HUD window from the same snapshots.
+struct TauriEmit {
+    app: tauri::AppHandle,
+    plan: Arc<Mutex<hud::Plan>>,
+    t0: Instant,
+}
+
+impl TauriEmit {
+    fn new(app: tauri::AppHandle) -> Self {
+        Self {
+            app,
+            plan: Arc::default(),
+            t0: Instant::now(),
+        }
+    }
+}
+
+fn apply_visibility(app: &tauri::AppHandle, v: Option<hud::Visibility>) {
+    let (Some(v), Some(w)) = (v, app.get_webview_window(hud::LABEL)) else {
+        return;
+    };
+    // `show` on a non-focusable window orders it front without activating the app.
+    let _ = match v {
+        hud::Visibility::Show => w.show(),
+        hud::Visibility::Hide => w.hide(),
+    };
+}
 
 impl Emit for TauriEmit {
     fn emit(&self, snap: &Snapshot) {
-        let _ = self.0.emit(STATE_EVENT, snap);
+        let _ = self.app.emit(STATE_EVENT, snap);
+        let now = self.t0.elapsed().as_millis() as u64;
+        let v = self.plan.lock().unwrap().on_state(snap.state, now);
+        apply_visibility(&self.app, v);
+        if matches!(
+            snap.state,
+            session::State::Review | session::State::Saved | session::State::Error
+        ) {
+            // A stale timer is harmless: `on_tick` checks the dwell against the
+            // newest terminal state, so it can never cut a newer one short.
+            let (app, plan, t0) = (self.app.clone(), self.plan.clone(), self.t0);
+            std::thread::spawn(move || {
+                std::thread::sleep(hud::DWELL);
+                let v = plan
+                    .lock()
+                    .unwrap()
+                    .on_tick(t0.elapsed().as_millis() as u64);
+                apply_visibility(&app, v);
+            });
+        }
     }
 }
 
@@ -94,6 +141,30 @@ fn capture_prepare_mic(state: tauri::State<'_, AppState>) {
     if let Some((h, _)) = state.capture.lock().unwrap().as_ref() {
         h.send(Msg::PrepareMic);
     }
+}
+
+/// HUD "open in Metis": shows and focuses `main`, then tells it which capture
+/// to open. The only input is an optional entity id; anything else is refused.
+#[tauri::command]
+fn show_main_window(app: tauri::AppHandle, capture_id: Option<String>) -> Result<(), String> {
+    if capture_id
+        .as_deref()
+        .is_some_and(|c| !hud::valid_entity_id(c))
+    {
+        return Err("invalid capture id".into());
+    }
+    let main = app
+        .get_webview_window("main")
+        .ok_or("main window missing")?;
+    let _ = main.unminimize();
+    main.show().map_err(|e| e.to_string())?;
+    let _ = main.set_focus();
+    let _ = app.emit_to(
+        "main",
+        hud::OPEN_REVIEW_EVENT,
+        hud::OpenReview { capture_id },
+    );
+    Ok(())
 }
 
 /// Rejects exactly `not_ready` while the stack starts, `unavailable` when it cannot.
@@ -165,7 +236,8 @@ pub fn run() {
             desktop_connection,
             capture_state,
             capture_cancel,
-            capture_prepare_mic
+            capture_prepare_mic,
+            show_main_window
         ])
         .setup(|app| {
             let state = app.state::<AppState>();
@@ -175,12 +247,30 @@ pub fn run() {
                 Ok(stack) => *state.stack.lock().unwrap() = Some(stack),
                 Err(e) => *state.startup_error.lock().unwrap() = Some(e),
             }
+            // Hidden until capture leaves Idle; see `hud::Plan`. Not focusable, so
+            // showing it never takes the keyboard from the app being dictated into.
+            if let Err(e) =
+                WebviewWindowBuilder::new(app, hud::LABEL, WebviewUrl::App(hud::ROUTE.into()))
+                    .title("Metis HUD")
+                    .inner_size(hud::WIDTH, hud::HEIGHT)
+                    .resizable(false)
+                    .decorations(false)
+                    .always_on_top(true)
+                    .skip_taskbar(true)
+                    .focusable(false)
+                    .focused(false)
+                    .visible(false)
+                    .accept_first_mouse(true)
+                    .build()
+            {
+                eprintln!("metis: HUD window not created: {e}");
+            }
             // The controller always exists so failures stay visible; it refuses
             // to record unless the stack reports `recording_allowed`.
             let (handle, join) = session::spawn(
                 || Box::new(audio::CpalSource::default()),
                 Arc::new(backend::HttpBackend::new(state.stack.clone())),
-                Arc::new(TauriEmit(app.handle().clone())),
+                Arc::new(TauriEmit::new(app.handle().clone())),
                 data_dir.ok().map(|d| d.join("mic_confirmed")),
             );
             register_hotkey(app.handle(), &handle);
@@ -188,6 +278,9 @@ pub fn run() {
             Ok(())
         })
         .on_page_load(|w, _| {
+            if w.label() != "main" {
+                return;
+            }
             let state = w.app_handle().state::<AppState>();
             let err = state.startup_error.lock().unwrap().clone();
             if let Some(e) = err {
@@ -208,4 +301,64 @@ pub fn run() {
                 }
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// Documents the exact wire format the webview sees. Deliberately mixed:
+    /// `capture:state` and `desktop_connection` are camelCase; `desktop_status`
+    /// (and its `StackStatus`/`ServiceStatus`) keeps Rust snake_case; enum
+    /// values (`state`, `phase`) are snake_case lowercase. Changing any of these
+    /// breaks apps/web, so this test must be updated together with it.
+    #[test]
+    fn wire_format_is_pinned() {
+        let snap = serde_json::to_value(session::Snapshot::default_for_test()).unwrap();
+        let mut keys: Vec<_> = snap.as_object().unwrap().keys().cloned().collect();
+        keys.sort();
+        assert_eq!(
+            keys,
+            [
+                "adapterMode",
+                "captureId",
+                "elapsedMs",
+                "error",
+                "extractionMs",
+                "locked",
+                "micReady",
+                "needsClarification",
+                "releaseToTranscriptMs",
+                "state",
+                "transcript",
+                "truncated"
+            ]
+        );
+        assert_eq!(snap["state"], "idle");
+
+        let status = serde_json::to_value(DesktopStatus {
+            mode: "debug",
+            version: "0",
+            stack: Some(StackStatus {
+                state: "ready",
+                recording_allowed: true,
+                services: vec![],
+            }),
+            error: None,
+        })
+        .unwrap();
+        assert_eq!(
+            status,
+            json!({"mode":"debug","version":"0","error":null,
+                   "stack":{"state":"ready","recording_allowed":true,"services":[]}})
+        );
+
+        let conn = serde_json::to_value(ConnectionDto {
+            api_base_url: "u".into(),
+            bearer: "b".into(),
+        })
+        .unwrap();
+        assert_eq!(conn, json!({"apiBaseUrl":"u","bearer":"b"}));
+    }
 }
