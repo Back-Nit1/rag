@@ -21,7 +21,7 @@ TTL deletion in DynamoDB is eventual (up to ~48 h); it is not used for reminder 
 ## Deletion
 
 1. User deletes a capture/source through the API (`DELETE /v1/captures/{id}`), which increments the revision so late job results cannot resurrect it, and enqueues cleanup via the outbox.
-2. The outbox Lambda removes the audio object, derived vectors (S3 Vectors `DeleteVectors`) and schedules; it holds the IAM grants for exactly those.
+2. (Intended behaviour, not verified against the backend code in this task: confirm the delete handler actually removes objects, vectors and schedules.) The outbox Lambda holds the IAM grants to remove the audio object, derived vectors (S3 Vectors `DeleteVectors`) and schedules; it holds the IAM grants for exactly those.
 3. Verify (UNRUN): `aws s3 ls s3://<sources-bucket>/users/<user_id>/` empty for that source; vector query returns nothing; schedule absent in the group.
 4. Prod bucket versioning is on, so noncurrent versions persist until a lifecycle expiry exists. **Gap:** there is no noncurrent-version expiry rule, so a "deleted" prod object remains recoverable indefinitely. Add one (e.g. 30 days) before claiming deletion; infra change pending coordinator decision.
 5. DynamoDB point-in-time recovery retains deleted items for up to 35 days inside backups.
