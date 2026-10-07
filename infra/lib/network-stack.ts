@@ -13,7 +13,7 @@ export interface NetworkStackProps extends StackProps {
  * Deliberately **no NAT gateway**. A NAT is a fixed monthly cost and the
  * speech worker does not need egress to the public internet: model artifacts
  * are baked into the container image at build time, and everything the task
- * talks to (S3, ECR, CloudWatch Logs, Secrets Manager, Step Functions) is
+ * talks to (S3 and DynamoDB gateway endpoints, ECR and CloudWatch Logs interface endpoints; Step Functions starts the task from outside the VPC, and the worker calls neither SSM nor Step Functions) is
  * reached through VPC endpoints.
  *
  * The trade-off is recorded rather than hidden: the S3 gateway endpoint is
@@ -58,8 +58,6 @@ export class NetworkStack extends Stack {
       ['EcrApi', ec2.InterfaceVpcEndpointAwsService.ECR],
       ['EcrDocker', ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER],
       ['Logs', ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS],
-      ['Ssm', ec2.InterfaceVpcEndpointAwsService.SSM],
-      ['StepFunctions', ec2.InterfaceVpcEndpointAwsService.STEP_FUNCTIONS],
     ];
     for (const [name, service] of interfaceEndpoints) {
       this.vpc.addInterfaceEndpoint(`${name}Endpoint`, {
