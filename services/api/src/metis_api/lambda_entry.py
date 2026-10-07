@@ -11,8 +11,6 @@ import json
 import logging
 from typing import Any
 
-from metis_contracts import settings
-
 log = logging.getLogger("metis.api.lambda")
 
 
@@ -123,10 +121,21 @@ def reminder_due(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
 
 def daily_planning(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """Scheduled hook for the user's configured daily planning time.
+    """EventBridge Scheduler target for one user's daily planning occurrence.
 
-    It only enqueues a plan request; generation happens in the ordinary worker
-    path with its own budget reservation.
+    Payload: ``{"user_id", "scheduled_time"}``. It is a hint only: preferences
+    are re-read, the local date is derived server-side and a stale invocation
+    is suppressed. It only enqueues ``plan.requested``; generation, the budget
+    gate and freshness checks run in the ordinary worker path.
     """
-    log.info("daily planning tick mode=%s", settings().mode.value)
-    return {"enqueued": 0, "note": "wire this to POST /v1/plans once a planning schedule exists"}
+    from .planning import handle_daily_due
+
+    payload = event if "user_id" in event else json.loads(event.get("body", "{}"))
+    ctx = _worker_context()
+    return handle_daily_due(
+        ctx.state_store,
+        ctx.clock,
+        user_id=str(payload["user_id"]),
+        scheduled_time=payload.get("scheduled_time"),
+        scheduler_ref=payload.get("scheduler_ref"),
+    )
