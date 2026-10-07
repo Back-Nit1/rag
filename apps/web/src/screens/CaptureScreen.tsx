@@ -39,6 +39,8 @@ import {
 import { bytes, clock } from "../lib/format";
 import { Outbox, newClientCaptureId, type OutboxEntry } from "../lib/outbox";
 import { FLOW_STATUS, type FlowState } from "../lib/status";
+import { prepareMic, useRecordingGate } from "../lib/recordingGate";
+import { isDesktop } from "../lib/desktop";
 import { useRecorder, type Recording } from "../lib/useRecorder";
 
 export function CaptureScreen() {
@@ -63,6 +65,7 @@ export function CaptureScreen() {
   const outbox = useRef(new Outbox());
   const deps = useRef(defaultDeps());
   const recorder = useRecorder(limits.max_audio_seconds);
+  const gate = useRecordingGate();
 
   useEffect(() => {
     deps.current = { ...deps.current, timezone };
@@ -312,7 +315,7 @@ export function CaptureScreen() {
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              disabled={!recorder.supported}
+              disabled={!recorder.supported || !gate.allowed}
               onClick={() => void recorder.start()}
               className="inline-flex min-h-14 items-center gap-3 rounded-full border-2 border-accent bg-surface py-1.5 pl-1.5 pr-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -352,6 +355,19 @@ export function CaptureScreen() {
         <div className="mt-3 flex flex-col gap-2 empty:hidden">
           {!recorder.supported && (
             <Notice tone="info">This browser has no MediaRecorder support, so voice capture is off. Typing does the same thing.</Notice>
+          )}
+          {!gate.allowed && (
+            <Notice tone="info" live>
+              {gate.reason ?? "Checking the local services…"}
+              {isDesktop() && (
+                <>
+                  {" "}
+                  <button type="button" className="underline" onClick={() => void prepareMic()}>
+                    Enable microphone for the hotkey
+                  </button>
+                </>
+              )}
+            </Notice>
           )}
           {recorder.state === "denied" && (
             <Notice tone="warn">
