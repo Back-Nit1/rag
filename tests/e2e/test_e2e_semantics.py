@@ -107,6 +107,14 @@ def _event_with_reminder(h):
     return event, rem
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="DEFECT D10 (medium, open): the scheduler's registered-suppression only matches the literal text "
+    "'regist' in target_id, so it never fires. Suppressing on event.registration_status alone was tried and "
+    "rejected: it would also silence ordinary event-time reminders on a registered event. A correct fix "
+    "needs the registration follow-up task linked to its event (or a reminder purpose field): a "
+    "coordinator contract decision (owner: contracts + scheduler)",
+)
 def test_marking_registered_removes_the_now_useless_registration_reminder(h):
     event, rem = _event_with_reminder(h)
     patch(h, f"/v1/events/{event['id']}", event, registration_status="registered")

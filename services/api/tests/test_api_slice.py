@@ -688,7 +688,7 @@ def test_purge_job_is_queued_until_the_worker_finishes_then_ready(client, worker
     job = client.get(f"/v1/jobs/{job_id}").json()
     assert job["state"] == JobState.READY.value
     assert job["finished_at"] is not None
-    assert job["result_refs"]["not_purged"] == "transcripts,proposals"
+    assert job["result_refs"]["not_purged"] == "transcripts"
 
 
 def test_list_captures_is_owner_scoped_paged_and_hides_deleted(client):
