@@ -128,7 +128,7 @@ export class DataStack extends Stack {
         MetadataConfiguration: { NonFilterableMetadataKeys: ['content'] },
       },
     });
-    vectorIndex.addDependency(vectorBucket);
+    vectorIndex.addResourceDependency(vectorBucket);
     this.vectorBucketName = vectorBucketName;
     this.vectorIndexName = 'memories';
 

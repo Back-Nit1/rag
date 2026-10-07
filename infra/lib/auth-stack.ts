@@ -40,9 +40,7 @@ export class AuthStack extends Stack {
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       mfa: isProd(config) ? cognito.Mfa.OPTIONAL : cognito.Mfa.OFF,
       mfaSecondFactor: { sms: false, otp: true },
-      advancedSecurityMode: isProd(config)
-        ? cognito.AdvancedSecurityMode.ENFORCED
-        : cognito.AdvancedSecurityMode.OFF,
+      // Threat protection needs the paid Plus feature plan; left off deliberately (see ops/cost-worksheet.md).
       removalPolicy: isProd(config) ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
     });
 

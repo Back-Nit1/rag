@@ -1,6 +1,18 @@
 {
   "app": "npx ts-node --prefer-ts-exts bin/metis.ts",
-  "watch": { "include": ["**"], "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "**/*.js", "node_modules", "cdk.out"] },
+  "watch": {
+    "include": [
+      "**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "**/*.d.ts",
+      "**/*.js",
+      "node_modules",
+      "cdk.out"
+    ]
+  },
   "context": {
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
@@ -24,6 +36,7 @@
     "metis:extractionModelId": "amazon.nova-micro-v1:0",
     "metis:planningModelId": "amazon.nova-lite-v1:0",
     "metis:embeddingModelId": "amazon.titan-embed-text-v2:0",
-    "metis:embeddingDimensions": 512
+    "metis:embeddingDimensions": 512,
+    "@aws-cdk/core:defaultCrossStackReferences": "strong"
   }
 }

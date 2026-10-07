@@ -1,4 +1,4 @@
-import { Duration, DockerImage, Stack } from 'aws-cdk-lib';
+import { Duration, DockerImage, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
@@ -16,6 +16,8 @@ export interface PythonFunctionProps {
 }
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
+// ponytail: `cdk synth` needs no Docker or pip; this placeholder asset is never deployable.
+const STUB_DIR = path.join(__dirname, '..', 'assets', 'synth-stub');
 
 /**
  * One builder for every Python Lambda, so runtime, bundling, log retention and
@@ -37,7 +39,7 @@ export function pythonFunction(
     runtime: lambda.Runtime.PYTHON_3_12,
     architecture: lambda.Architecture.ARM_64, // cheaper per ms than x86 for this workload
     handler: props.handler,
-    code: lambda.Code.fromAsset(REPO_ROOT, {
+    code: props.config.bundling === 'stub' ? lambda.Code.fromAsset(STUB_DIR) : lambda.Code.fromAsset(REPO_ROOT, {
       exclude: [
         '.git', '.venv', 'node_modules', 'apps/web/node_modules', 'apps/web/dist',
         'infra/cdk.out', 'infra/node_modules', '**/__pycache__', '**/.pytest_cache',
@@ -67,8 +69,12 @@ export function pythonFunction(
       PYTHONDONTWRITEBYTECODE: '1',
       ...props.environment,
     },
-    logRetention: logs.RetentionDays.ONE_MONTH,
+    logGroup: new logs.LogGroup(scope, `${id}Logs`, {
+      logGroupName: `/aws/lambda/metis-${props.config.envName}-${id.toLowerCase()}`,
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: RemovalPolicy.DESTROY,
+    }),
     tracing: lambda.Tracing.ACTIVE,
-    reservedConcurrentExecutions: props.reservedConcurrentExecutions,
+    reservedConcurrentExecutions: props.reservedConcurrentExecutions || undefined,
   });
 }

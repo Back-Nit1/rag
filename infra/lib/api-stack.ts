@@ -27,6 +27,7 @@ export interface ApiStackProps extends StackProps {
   readonly schedulerGroupName: string;
   readonly schedulerRoleArn: string;
   readonly reminderTargetArn: string;
+  readonly dailyPlanTargetArn: string;
   readonly allowedOrigins: string[];
 }
 
@@ -66,6 +67,7 @@ export class ApiStack extends Stack {
         METIS_SCHEDULER_GROUP: props.schedulerGroupName,
         METIS_SCHEDULER_ROLE_ARN: props.schedulerRoleArn,
         METIS_REMINDER_TARGET_ARN: props.reminderTargetArn,
+        METIS_DAILY_PLAN_TARGET_ARN: props.dailyPlanTargetArn,
         METIS_EXTRACTION_MODEL_ID: config.extractionModelId,
         METIS_PLANNING_MODEL_ID: config.planningModelId,
         METIS_EMBEDDING_MODEL_ID: config.embeddingModelId,
