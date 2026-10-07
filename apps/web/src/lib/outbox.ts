@@ -72,6 +72,10 @@ export class Outbox {
     this.write(this.list().filter((e) => e.client_capture_id !== clientCaptureId));
   }
 
+  clear(): void {
+    this.write([]);
+  }
+
   markAttempt(clientCaptureId: string, error: string): void {
     this.write(
       this.list().map((e) =>

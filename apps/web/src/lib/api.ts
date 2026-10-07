@@ -33,9 +33,26 @@ import {
   type UploadInstructions,
   type UsageResponse,
 } from "../contracts/metis";
+import { desktopAuthFor, desktopBase, isDesktop } from "./desktop";
 
 export const API_BASE: string =
   (import.meta.env?.VITE_METIS_API as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8000";
+
+/** Desktop mode without a runtime connection: nothing is sent anywhere. */
+export class DesktopUnavailableError extends Error {
+  constructor() {
+    super("the local Metis services are not available");
+    this.name = "DesktopUnavailableError";
+  }
+}
+
+/** Desktop: only the runtime loopback base, never a fallback. Browser: API_BASE. */
+function baseUrl(): string {
+  if (!isDesktop()) return API_BASE;
+  const base = desktopBase();
+  if (!base) throw new DesktopUnavailableError();
+  return base;
+}
 
 /** A server error with the contract's own shape preserved. */
 export class ApiError extends Error {
@@ -99,11 +116,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
-  if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+  const url = `${baseUrl()}${path}`;
+  Object.assign(headers, isDesktop() ? desktopAuthFor(url) : authToken ? { Authorization: `Bearer ${authToken}` } : {});
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetch(url, {
       method: options.method ?? "GET",
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -162,12 +180,22 @@ export const api = {
 
   /** Local mode only: the cloud path PUTs the same bytes to a presigned URL. */
   async uploadBytes(upload: UploadInstructions, blob: Blob): Promise<void> {
-    const url = upload.url.startsWith("http") ? upload.url : `${API_BASE}${upload.url}`;
+    const base = baseUrl();
+    const url = upload.url.startsWith("http") ? upload.url : `${base}${upload.url}`;
+    // Only our own API origin gets credentials and correlation; a presigned
+    // external URL is signed for exactly the headers the server returned.
+    const local = new URL(url).origin === new URL(base).origin;
+    const own: Record<string, string> = local
+      ? {
+          "X-Correlation-Id": newCorrelationId(),
+          ...(isDesktop() ? desktopAuthFor(url) : authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        }
+      : {};
     let response: Response;
     try {
       response = await fetch(url, {
         method: upload.method ?? "PUT",
-        headers: { "Content-Type": blob.type || "application/octet-stream", ...(upload.headers ?? {}) },
+        headers: { "Content-Type": blob.type || "application/octet-stream", ...(upload.headers ?? {}), ...own },
         body: blob,
       });
     } catch (cause) {

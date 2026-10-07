@@ -9,7 +9,9 @@
  * main column carries bottom padding so the bar never covers the transcript
  * editor. Settings sits in the header on small screens.
  */
-import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { connectDesktop, getDesktopState, subscribeDesktop } from "../lib/desktop";
 import { Icon, type IconName } from "../components/Icon";
 import { Notice } from "../components/Card";
 import { CaptureScreen } from "../screens/CaptureScreen";
@@ -234,10 +236,43 @@ function Shell() {
   );
 }
 
+/** In the desktop shell nothing renders (or requests) until the loopback API is known. */
+function DesktopGate({ children }: { children: ReactNode }) {
+  const desktop = useSyncExternalStore(subscribeDesktop, getDesktopState);
+  useEffect(() => {
+    if (desktop.phase === "starting") void connectDesktop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (desktop.phase === "browser" || desktop.phase === "ready") return <>{children}</>;
+  return (
+    <main className="grid min-h-dvh place-items-center bg-canvas p-6 text-ink">
+      <div role="status" className="max-w-sm text-center">
+        <p className="font-serif text-xl font-semibold">Metis</p>
+        {desktop.phase === "starting" ? (
+          <p className="mt-2 text-sm text-muted">Starting local services…</p>
+        ) : (
+          <>
+            <p className="mt-2 text-sm">{desktop.reason}</p>
+            <button
+              type="button"
+              onClick={() => void connectDesktop()}
+              className="mt-4 min-h-11 rounded-md border border-line-strong bg-surface px-4 text-sm font-medium"
+            >
+              Try again
+            </button>
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
 export function App() {
   return (
-    <SessionProvider>
-      <Shell />
-    </SessionProvider>
+    <DesktopGate>
+      <SessionProvider>
+        <Shell />
+      </SessionProvider>
+    </DesktopGate>
   );
 }
