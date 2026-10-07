@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from metis_contracts import JobState
+from metis_state.object_store import owner_prefix
+
 T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)
 NY = "America/New_York"
 USER = "demo_authenticated_subject"
@@ -511,10 +514,136 @@ def test_a_deleted_capture_leaves_an_independently_edited_task_in_place(client, 
     assert after["source_unavailable"] is True, "the missing source must be disclosed"
 
 
-def test_an_export_is_queued_as_a_job(client):
-    response = client.post("/v1/exports", json={})
+IDEM = {"Idempotency-Key": "exp-1"}
+
+
+def _export(client, key="exp-1", **body):
+    return client.post("/v1/exports", json=body, headers={"Idempotency-Key": key})
+
+
+def test_an_export_is_queued_with_a_typed_outbox_event(client, adapters):
+    response = _export(client, include_memories=False)
     assert response.status_code == 202
     assert response.json()["state"] == "queued"
+    job_id = response.json()["job_id"]
+    events = [
+        e
+        for e in adapters.state_store.claim_outbox(owner="t", limit=10, lease_seconds=30)
+        if e.event_type == "export.requested"
+    ]
+    assert events[0].payload == {
+        "job_id": job_id,
+        "include_sources": True,
+        "include_memories": False,
+        "include_commitments": True,
+    }
+
+
+def test_an_export_requires_an_idempotency_key(client):
+    assert client.post("/v1/exports", json={}).status_code == 422
+
+
+def test_a_retried_export_replays_the_first_response(client, adapters):
+    first = _export(client).json()
+    assert _export(client).json() == first
+    events = [
+        e
+        for e in adapters.state_store.claim_outbox(owner="t", limit=10, lease_seconds=30)
+        if e.event_type == "export.requested"
+    ]
+    assert len(events) == 1
+    assert _export(client, key="exp-2").json()["job_id"] != first["job_id"]
+
+
+def _set_job(adapters, job_id, **update):
+    job = adapters.state_store.get(USER, "job", job_id)
+    with adapters.state_store.transaction(USER) as tx:
+        tx.put("job", job.model_copy(update=update), expected_revision=job.revision)
+
+
+def test_a_queued_export_is_never_downloadable(client):
+    job_id = _export(client).json()["job_id"]
+    body = client.get(f"/v1/exports/{job_id}").json()
+    assert body["state"] == "queued" and body["download_url"] is None
+    assert client.get(f"/v1/exports/{job_id}/download").status_code == 404
+
+
+def test_a_failed_export_reports_failure_without_a_download(client, adapters):
+    job_id = _export(client).json()["job_id"]
+    _set_job(adapters, job_id, state=JobState.FAILED, error_message="boom", result_refs={})
+    body = client.get(f"/v1/exports/{job_id}").json()
+    assert body["state"] == "failed" and body["error_message"] == "boom" and body["download_url"] is None
+
+
+def test_a_succeeded_job_without_a_verified_result_is_not_downloadable(client, adapters):
+    job_id = _export(client).json()["job_id"]
+    _set_job(adapters, job_id, state=JobState.READY)
+    assert client.get(f"/v1/exports/{job_id}").json()["download_url"] is None
+
+
+def _complete(client, adapters, job_id, key=None, payload=b"zipbytes"):
+    import hashlib
+
+    from metis_contracts.entities import ObjectRef
+
+    key = key or f"{owner_prefix(USER)}/exports/{job_id}.zip"
+    adapters.source_store.put_bytes(ObjectRef(bucket="", key=key), payload, content_type="application/zip")
+    _set_job(
+        adapters,
+        job_id,
+        state=JobState.READY,
+        result_refs={
+            "object_key": key,
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "bytes": str(len(payload)),
+        },
+    )
+
+
+def test_a_completed_export_downloads_after_ownership_checks(client, adapters):
+    job_id = _export(client).json()["job_id"]
+    _complete(client, adapters, job_id)
+    body = client.get(f"/v1/exports/{job_id}").json()
+    assert body["state"] == "ready" and body["byte_size"] == 8 and body["download_url"]
+    download = client.get(body["download_url"])
+    assert download.status_code == 200 and download.content == b"zipbytes"
+
+
+def test_a_result_key_outside_the_owner_prefix_is_refused(client, adapters):
+    job_id = _export(client).json()["job_id"]
+    _complete(client, adapters, job_id, key="someone_else/exports/x.zip")
+    assert client.get(f"/v1/exports/{job_id}").json()["download_url"] is None
+    assert client.get(f"/v1/exports/{job_id}/download").status_code == 404
+
+
+def test_a_corrupted_archive_is_not_served(client, adapters):
+    job_id = _export(client).json()["job_id"]
+    _complete(client, adapters, job_id)
+    from metis_contracts.entities import ObjectRef
+
+    adapters.source_store.put_bytes(
+        ObjectRef(bucket="", key=f"{owner_prefix(USER)}/exports/{job_id}.zip"),
+        b"tampered",
+        content_type="application/zip",
+    )
+    assert client.get(f"/v1/exports/{job_id}/download").status_code == 409
+
+
+def test_a_deleted_export_job_is_not_found(client, adapters):
+    job_id = _export(client).json()["job_id"]
+    adapters.state_store.tombstone(USER, "job", job_id)
+    assert client.get(f"/v1/exports/{job_id}").status_code == 404
+
+
+def test_another_users_export_is_not_found(client, adapters):
+    job_id = _export(client).json()["job_id"]
+    other = adapters.state_store.get(USER, "job", job_id).model_copy(
+        update={"id": "job_foreign", "user_id": "other"}
+    )
+    with adapters.state_store.transaction("other") as tx:
+        tx.put("job", other)
+    assert client.get("/v1/exports/job_foreign").status_code == 404
+    assert client.get("/v1/exports/job_foreign/download").status_code == 404
 
 
 # --- errors ----------------------------------------------------------------- #
