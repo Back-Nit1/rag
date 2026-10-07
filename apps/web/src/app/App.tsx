@@ -51,6 +51,11 @@ const ICON: Record<Surface, IconName> = {
   settings: "gear",
 };
 
+const RAIL_GROUPS: { label: string; items: Surface[] }[] = [
+  { label: "Work", items: ["today", "inbox", "tasks", "projects"] },
+  { label: "Find", items: ["search", "alerts"] },
+];
+
 const BAR: Surface[] = ["today", "inbox", "capture", "tasks", "alerts"];
 
 function surfaceFromHash(): Surface {
@@ -99,7 +104,7 @@ function Shell() {
       <>
         {LABEL[item]}
         {count > 0 && (
-          <span className="ml-1.5 rounded-full bg-accent px-1.5 py-px font-mono text-2xs text-on-accent">
+          <span className="ml-1.5 rounded-full bg-accent px-1.5 py-px font-mono text-2xs font-semibold text-on-accent">
             {count}
             <span className="visually-hidden"> unread</span>
           </span>
@@ -112,12 +117,14 @@ function Shell() {
           type="button"
           aria-current={active ? "page" : undefined}
           onClick={() => go(item)}
-          className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition-colors ${
-            active ? "bg-surface font-semibold text-ink shadow-[inset_3px_0_0_var(--color-accent)]" : "text-muted hover:bg-raised hover:text-ink"
+          className={`relative flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition-colors ${
+            active
+              ? "bg-rail-raised font-semibold text-rail-ink before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-rail-accent"
+              : "text-rail-muted hover:bg-rail-raised/60 hover:text-rail-ink"
           }`}
         >
           <Icon name={ICON[item]} />
-          <span className="flex items-center">{label}</span>
+          <span className="flex flex-1 items-center justify-between">{label}</span>
         </button>
       );
     }
@@ -148,7 +155,7 @@ function Shell() {
   };
 
   return (
-    <div className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
+    <div className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)]">
       <a
         href="#main"
         className="visually-hidden focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2"
@@ -157,27 +164,53 @@ function Shell() {
       </a>
 
       {/* wide: rail */}
-      <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-line bg-rail px-3 py-5 lg:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col gap-5 bg-rail px-3 py-5 text-rail-ink lg:flex">
         <div className="px-3">
-          <p className="font-serif text-2xl font-semibold leading-none tracking-tight">Metis</p>
-          <p className="mt-1.5 font-mono text-2xs uppercase tracking-[0.14em] text-muted">Notebook · Desk</p>
+          <p className="font-serif text-[1.75rem] font-semibold leading-none tracking-tight">Metis</p>
+          <p className="mt-1.5 font-mono text-2xs uppercase tracking-[0.14em] text-rail-muted">Voice-first assistant</p>
         </div>
-        <nav aria-label="Surfaces" className="flex flex-col gap-1">
-          {SURFACES.map((item) => (
-            <div key={item}>{link(item, "rail")}</div>
+        <button
+          type="button"
+          aria-current={surface === "capture" ? "page" : undefined}
+          onClick={() => go("capture")}
+          className="flex min-h-12 items-center gap-3 rounded-lg bg-rail-accent px-3.5 text-sm font-semibold text-[#04130f] shadow-lift transition-[filter] hover:brightness-110 active:brightness-95"
+        >
+          <span className="grid size-7 place-items-center rounded-full bg-[#04130f]/15">
+            <Icon name="mic" size={16} />
+          </span>
+          Capture a thought
+        </button>
+        <nav aria-label="Surfaces" className="flex flex-col gap-4">
+          {RAIL_GROUPS.map((group) => (
+            <div key={group.label} className="flex flex-col gap-0.5">
+              <p className="px-3 pb-1 font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-rail-muted">
+                {group.label}
+              </p>
+              {group.items.map((item) => (
+                <div key={item}>{link(item, "rail")}</div>
+              ))}
+            </div>
           ))}
         </nav>
-        <div className="mt-auto flex flex-col gap-2 px-3 text-xs text-muted">
-          <p className="flex items-center gap-2">
-            <Icon name={offline ? "wifiOff" : "cloud"} size={14} />
-            {!session.online ? "Offline" : !session.reachable ? "Server unreachable" : "Connected"}
-          </p>
-          {fixtures.length > 0 && (
-            <p className="rounded-md border border-dashed border-line-strong bg-surface px-2.5 py-2 text-ink">
-              <span className="block font-mono text-2xs font-semibold uppercase tracking-[0.12em]">Fixture mode</span>
-              Results come from test adapters, not production.
+        <div className="mt-auto flex flex-col gap-3">
+          <div className="border-t border-rail-line pt-3">{link("settings", "rail")}</div>
+          <div className="flex flex-col gap-2 px-3 text-xs text-rail-muted">
+            <p className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className={`size-2 rounded-full ${offline ? "bg-[#ecb766]" : "bg-rail-accent"}`}
+              />
+              {!session.online ? "Offline" : !session.reachable ? "Server unreachable" : "Connected"}
             </p>
-          )}
+            {fixtures.length > 0 && (
+              <p className="rounded-md border border-dashed border-rail-muted/60 bg-rail-raised px-2.5 py-2 text-rail-ink">
+                <span className="block font-mono text-2xs font-semibold uppercase tracking-[0.12em] text-[#ecb766]">
+                  Fixture mode
+                </span>
+                Results come from test adapters, not production.
+              </p>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -185,7 +218,7 @@ function Shell() {
         {/* small: header */}
         <header className="sticky top-0 z-20 border-b border-line bg-surface lg:hidden">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
-            <span className="font-serif text-xl font-semibold tracking-tight">Metis</span>
+            <span className="font-serif text-2xl font-semibold tracking-tight">Metis</span>
             <div className="flex items-center gap-2 text-xs">
               {fixtures.length > 0 && (
                 <span
@@ -224,7 +257,7 @@ function Shell() {
           id="main"
           ref={main}
           tabIndex={-1}
-          className="mx-auto w-full max-w-3xl px-4 pb-32 pt-5 outline-none md:px-6 lg:max-w-5xl lg:px-10 lg:pb-16 lg:pt-8"
+          className="mx-auto w-full max-w-3xl px-4 pb-32 pt-5 outline-none md:px-6 lg:max-w-6xl lg:px-12 lg:pb-16 lg:pt-10"
         >
           {offline && (
             <Notice tone="warn" className="mb-4">

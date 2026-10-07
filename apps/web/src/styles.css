@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 /*
- * DESIGN NOTE — Metis as a field notebook on a work desk.
+ * DESIGN NOTE — Metis as a dispatch desk: a dark ink rail, a bright work sheet.
  *
  * Direction
- *   Paper and ink. Green-grey paper, near-black ink, ONE deep-teal accent for
- *   "your action", and a separate record-red used only for the live mic.
- *   Squared radii (2/4/6px) read as instrument and ledger, not as app cards.
+ *   A permanently dark rail holds navigation, Capture and system status; the
+ *   work sheet is white on a cool grey desk with one soft card shadow. ONE
+ *   deep-teal accent for "your action", and a separate record-red used only
+ *   for the live mic. Radii 3/6/10px.
  *   Signature: the ruled eyebrow — every section opens with a small mono label
  *   and a hairline rule, like a tab in a notebook; the page header sits on a
  *   margin line. Serif carries titles and the note itself; mono carries clock
@@ -31,24 +32,29 @@
   --font-serif: Charter, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --color-canvas: #e6eae6;
-  --color-rail: #dce2dd;
-  --color-surface: #f6f8f5;
-  --color-raised: #e1e7e2;
-  --color-line: #cbd3cd;
-  --color-line-strong: #98a69e;
-  --color-ink: #111a16;
-  --color-muted: #475852;
-  --color-accent: #0b6b5e;
-  --color-accent-soft: #d1eae3;
-  --color-accent-ink: #07493f;
+  --color-canvas: #eef0ee;
+  --color-rail: #11201c;
+  --color-rail-raised: #1a2d28;
+  --color-rail-line: #2a3f39;
+  --color-rail-ink: #eaf2ee;
+  --color-rail-muted: #9db3aa;
+  --color-rail-accent: #5fe0c4;
+  --color-surface: #ffffff;
+  --color-raised: #e7ebe8;
+  --color-line: #d5dad6;
+  --color-line-strong: #8f9c95;
+  --color-ink: #101614;
+  --color-muted: #4b5853;
+  --color-accent: #0a6b5f;
+  --color-accent-soft: #d3ece6;
+  --color-accent-ink: #064b42;
   --color-on-accent: #ffffff;
-  --color-good: #2d6a17;
-  --color-good-soft: #e0eed8;
-  --color-warn: #84470a;
-  --color-warn-soft: #f7ead0;
-  --color-bad: #a8231b;
-  --color-bad-soft: #f8e1dd;
+  --color-good: #2a6414;
+  --color-good-soft: #e1efd9;
+  --color-warn: #7d4308;
+  --color-warn-soft: #f9ecd2;
+  --color-bad: #a3211a;
+  --color-bad-soft: #f9e2de;
   --color-record: #c9321a;
   --color-record-soft: #fbe5df;
 
@@ -60,10 +66,12 @@
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
 
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
   --shadow-lift: 0 1px 2px rgb(20 24 31 / 0.12), 0 8px 24px -8px rgb(20 24 31 / 0.28);
+
+  --shadow-card: 0 1px 2px rgb(16 22 20 / 0.06), 0 2px 8px -4px rgb(16 22 20 / 0.12);
 
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -72,14 +80,16 @@
    which is what the utilities read. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-canvas: #0e1311;
-    --color-rail: #0a0e0c;
-    --color-surface: #151b18;
-    --color-raised: #1d2521;
-    --color-line: #28322d;
-    --color-line-strong: #475650;
-    --color-ink: #e8eee9;
-    --color-muted: #96a59d;
+    --color-canvas: #0c100f;
+    --color-rail: #070a09;
+    --color-rail-raised: #141c19;
+    --color-rail-line: #222d29;
+    --color-surface: #151b19;
+    --color-raised: #1e2623;
+    --color-line: #2a3430;
+    --color-line-strong: #53625b;
+    --color-ink: #eaf0ec;
+    --color-muted: #9aaaa2;
     --color-accent: #4fd1b5;
     --color-accent-soft: #11302a;
     --color-accent-ink: #9be6d3;
@@ -93,6 +103,7 @@
     --color-record: #ff7255;
     --color-record-soft: #321a15;
     --shadow-lift: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -8px rgb(0 0 0 / 0.7);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   }
 }
 
@@ -136,6 +147,12 @@ h3 {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--color-canvas);
+}
+
+/* On the always-dark rail the ring and its gap use rail colours. */
+aside :where(a, button):focus-visible {
+  outline-color: var(--color-rail-accent);
+  box-shadow: 0 0 0 4px var(--color-rail);
 }
 
 /* The landmark receives programmatic focus after navigation; it is not a control. */

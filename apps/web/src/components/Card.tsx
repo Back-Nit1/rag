@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 
-/** A flat panel: a hairline border, no shadow. Elevation is reserved for floating controls. */
+/** A white sheet on the grey desk: hairline border and one soft shadow. */
 export function Card({
   children,
   as: Tag = "section",
@@ -11,7 +11,7 @@ export function Card({
   as?: "section" | "article" | "li" | "div";
   className?: string;
 }) {
-  return <Tag className={`rounded-lg border border-line bg-surface p-4 md:p-5 ${className}`}>{children}</Tag>;
+  return <Tag className={`rounded-lg border border-line bg-surface p-4 shadow-card md:p-5 ${className}`}>{children}</Tag>;
 }
 
 /**
@@ -31,10 +31,10 @@ export function SectionHeading({
 }) {
   return (
     <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-      <Tag id={id} className="font-mono text-xs font-semibold uppercase tracking-[0.12em] whitespace-nowrap text-ink">
+      <Tag id={id} className="font-mono text-xs font-bold uppercase tracking-[0.12em] whitespace-nowrap text-ink">
         {children}
       </Tag>
-      <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-line-strong" />
+      <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-line-strong/60" />
       {hint && <span className="text-xs text-muted max-sm:order-last max-sm:basis-full">{hint}</span>}
     </div>
   );
@@ -45,16 +45,23 @@ export function Empty({
   children,
   title,
   action,
+  icon = "info",
 }: {
   children: ReactNode;
   title?: string;
   action?: ReactNode;
+  icon?: IconName;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-line-strong bg-surface/40 px-4 py-6 text-sm text-muted">
-      {title && <p className="mb-0.5 font-serif text-base font-semibold text-ink">{title}</p>}
-      <p className="max-w-prose">{children}</p>
-      {action && <div className="mt-3">{action}</div>}
+    <div className="flex items-start gap-3.5 rounded-lg border border-dashed border-line-strong bg-surface/60 px-4 py-5 text-sm text-muted">
+      <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-raised text-muted">
+        <Icon name={icon} size={18} />
+      </span>
+      <div className="min-w-0">
+        {title && <p className="mb-0.5 font-serif text-base font-semibold text-ink">{title}</p>}
+        <p className="max-w-prose">{children}</p>
+        {action && <div className="mt-3">{action}</div>}
+      </div>
     </div>
   );
 }
@@ -140,10 +147,10 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
-      <div className="min-w-0 border-l-2 border-accent pl-3.5">
-        <h1 className="font-serif text-2xl font-semibold leading-tight tracking-tight text-ink md:text-[2rem]">{title}</h1>
-        {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
+    <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line-strong/50 pb-4">
+      <div className="min-w-0">
+        <h1 className="font-serif text-[1.75rem] font-semibold leading-tight tracking-tight text-ink md:text-4xl">{title}</h1>
+        {sub && <p className="mt-1 max-w-prose text-sm text-muted">{sub}</p>}
       </div>
       {action}
     </header>
