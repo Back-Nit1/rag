@@ -25,6 +25,23 @@ Skills: `anthropic-frontend-design`, `anthropic-webapp-testing`,
 locally; each worker must read the `SKILL.md` before claiming use. No install
 was performed this session.
 
+## Wave 1 integrations (2026-10-07)
+
+| Item | Branch / SHA | Gates on integrated tree |
+| --- | --- | --- |
+| Desktop-local auth (`python -m metis_api`, launch secret, install subject, `CaptureDetail.jobs`) | `auth/12` `cad40ef` | ruff, format, mypy clean |
+| Warm speech server, `RemoteTranscriber`, engine-aware `build_transcriber` | `speech/13` `93a8c44` | 41 speech tests pass; **no real decode run** |
+| `StateStore` reads `find_source_by_client_id`, `list_proposals`, `list_plans`; API off `_page` (closes `backend-02`) | `state/22e` `028eb74` | sqlite parity real; Dynamo side tested against a sqlite-backed `_query_kind`, not real DynamoDB |
+| Web UI overhaul (tokens, shell, six surfaces, honest fixture labels) | `ui/10` `672fe0d` | 28 web tests, typecheck, build pass; Playwright pass at 390/768/1440 by the worker; **no real mic or screen-reader pass** |
+
+Integrated tree: `make check` pass; `make test` 346 python + 28 web pass; web
+build pass; `make synth` still fails (`infra-02`).
+
+Open: supervisor must start the speech server first, read its port, then start
+the API with `METIS_SPEECH_ENGINE=remote`. `/v1/health` and `/v1/limits` stay
+unauthenticated by decision. Plan accept/adjust UI, export/delete UI, push
+subscription POST are absent (prompt 21).
+
 ## Frozen base for parallel work (superseded, see Wave 0)
 
 ```

@@ -54,3 +54,5 @@ models/
 coverage/
 .coverage
 htmlcov/
+.uv-cache/
+.uvcache/
