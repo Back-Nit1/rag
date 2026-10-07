@@ -66,6 +66,7 @@ fn start(speech: &[&str], api: &[&str], worker: &[&str], policy: Policy) -> Env 
         data: DataPaths::under(&dir),
         policy,
         args: [a("speech", speech), a("api", api), a("worker", worker)],
+        speech_engine: None,
     };
     Env {
         stack: Stack::start(cfg).unwrap(),

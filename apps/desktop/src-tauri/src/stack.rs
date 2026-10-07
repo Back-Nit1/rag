@@ -184,6 +184,9 @@ pub struct Config {
     pub policy: Policy,
     /// Arguments after the backend path, per service (speech, api, worker).
     pub args: [Vec<String>; 3],
+    /// Test/E2E only: forces `METIS_SPEECH_ENGINE` for the speech child (e.g.
+    /// `fixture`). Production leaves this `None`, so the real model is required.
+    pub speech_engine: Option<String>,
 }
 
 impl Config {
@@ -198,6 +201,7 @@ impl Config {
                 s(&["api", "--host", "127.0.0.1", "--port", "0"]),
                 s(&["worker"]),
             ],
+            speech_engine: None,
         }
     }
 }
@@ -653,6 +657,9 @@ impl Orchestrator {
             Kind::Speech => {
                 e.push(("METIS_SPEECH_SECRET".into(), sec.speech.clone()));
                 e.push(("METIS_SPEECH_MODEL_DIR".into(), p(&d.models)));
+                if let Some(engine) = &self.cfg.speech_engine {
+                    e.push(("METIS_SPEECH_ENGINE".into(), engine.clone()));
+                }
             }
             Kind::Api => {
                 e.push(("METIS_DESKTOP_AUTH_SECRET".into(), sec.api.clone()));

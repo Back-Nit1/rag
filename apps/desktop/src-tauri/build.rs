@@ -6,6 +6,9 @@ fn main() {
             "health",
             "desktop_status",
             "desktop_connection",
+            "capture_state",
+            "capture_cancel",
+            "capture_prepare_mic",
         ]),
     ))
     .expect("tauri build");
