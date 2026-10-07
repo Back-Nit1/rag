@@ -21,7 +21,7 @@ def health(request: Request) -> HealthResponse:
     adapters = get_adapters(request)
     cfg = settings()
     described = adapters.describe()
-    degraded = any(mode == "none" for mode in described.values())
+    degraded = any(mode == "none" or mode.startswith("unavailable") for mode in described.values())
     return HealthResponse(
         status="degraded" if degraded else "ok",
         mode=cfg.mode.value,

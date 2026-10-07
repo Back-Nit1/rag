@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from metis_contracts import AdapterMode, ErrorCode, MetisError, settings
+from metis_pipeline.local_llm import LocalConfig, OllamaHttp, inference_engine
 
 log = logging.getLogger("metis.retrieval.embedder")
 
@@ -118,8 +119,61 @@ class BedrockEmbedder:
         return -(-tokens * rate // 1000)
 
 
+class LocalEmbedder:
+    """Ollama ``/api/embed`` over loopback. Dimension is learned from the first
+    response and checked on every later one, so a model swap cannot silently
+    mix vector spaces."""
+
+    mode = AdapterMode.LOCAL
+    MAX_BATCH = 32
+
+    def __init__(self, config: LocalConfig | None = None) -> None:
+        cfg = config or LocalConfig.from_env()
+        if not cfg.embed_model:
+            raise MetisError(
+                ErrorCode.PROVIDER_UNAVAILABLE,
+                "METIS_LOCAL_EMBED_MODEL is not set; choose a locally installed model explicitly",
+            )
+        self.model_id = cfg.embed_model
+        self._dimensions: int | None = None
+        self._http = OllamaHttp(cfg.endpoint)
+        self._timeout = settings().limits.model_timeout_seconds
+
+    @property
+    def dimensions(self) -> int:
+        if self._dimensions is None:
+            self.embed(["dimension probe"])
+        assert self._dimensions is not None
+        return self._dimensions
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        vectors: list[list[float]] = []
+        for i in range(0, len(texts), self.MAX_BATCH):
+            batch = list(texts[i : i + self.MAX_BATCH])
+            reply = self._http.call("/api/embed", {"model": self.model_id, "input": batch}, self._timeout)
+            got = reply.get("embeddings")
+            if not isinstance(got, list) or len(got) != len(batch):
+                raise MetisError(
+                    ErrorCode.VALIDATION_FAILED, "local embedding model returned the wrong vector count"
+                )
+            for vec in got:
+                if not isinstance(vec, list) or not vec:
+                    raise MetisError(ErrorCode.VALIDATION_FAILED, "local embedding vector is empty")
+                if self._dimensions is None:
+                    self._dimensions = len(vec)
+                elif len(vec) != self._dimensions:
+                    raise MetisError(
+                        ErrorCode.VALIDATION_FAILED,
+                        f"embedding dimension changed: {len(vec)} vs {self._dimensions}",
+                    )
+                vectors.append(normalize([float(v) for v in vec]))
+        return vectors
+
+
 def build_embedder() -> Any:
-    cfg = settings()
-    if cfg.uses_real_inference:
+    engine = inference_engine()
+    if engine == "cloud":
         return BedrockEmbedder()
+    if engine == "local":
+        return LocalEmbedder()
     return FixtureEmbedder()

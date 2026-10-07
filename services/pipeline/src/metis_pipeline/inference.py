@@ -396,7 +396,11 @@ class BedrockInferenceClient:
 
 
 def build_inference_client(model_id: str | None = None) -> Any:
-    cfg = settings()
-    if cfg.uses_real_inference:
+    from .local_llm import LocalInferenceClient, inference_engine
+
+    engine = inference_engine()
+    if engine == "cloud":
         return BedrockInferenceClient(model_id=model_id)
+    if engine == "local":
+        return LocalInferenceClient()
     return FixtureInferenceClient()

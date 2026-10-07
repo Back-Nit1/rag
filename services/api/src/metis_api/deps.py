@@ -85,7 +85,14 @@ class Adapters:
         def mode_of(adapter: Any) -> str:
             return str(getattr(getattr(adapter, "mode", None), "value", getattr(adapter, "mode", "none")))
 
+        extra: dict[str, str] = {}
+        if hasattr(self.inference, "health"):  # local runtime: report model + reachability
+            ok, detail = self.inference.health()
+            extra = {"inference_model": self.inference.model_id, "inference_runtime": detail}
+            if not ok:
+                extra["inference_runtime"] = f"unavailable: {detail}"
         return {
+            **extra,
             "state_store": mode_of(self.state_store),
             "source_store": mode_of(self.source_store),
             "inference": mode_of(self.inference),
