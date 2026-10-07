@@ -22,7 +22,10 @@ def test_worker_prints_one_structured_record_then_exits_on_stdin_eof(tmp_path):
     }
     p = subprocess.Popen(
         [sys.executable, str(ENTRY), "worker", "--interval", "0.2"],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        env=env,
         # use the active interpreter's site-packages
     )
     record = json.loads(p.stdout.readline())

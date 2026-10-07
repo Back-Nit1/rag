@@ -22,7 +22,7 @@ import signal
 import sys
 import threading
 import types
-from typing import Callable
+from collections.abc import Callable
 
 WORKER_PROTOCOL = 1
 SERVICES = ("api", "worker", "speech")

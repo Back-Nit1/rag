@@ -13,6 +13,7 @@ asr = [
   "ctranslate2==4.4.0",
   "av==12.3.0",
   "numpy>=1.26,<2",
+  "requests>=2.31",  # faster-whisper 1.0.3 imports it; huggingface-hub no longer pulls it in
 ]
 cloud = ["boto3>=1.35"]
 

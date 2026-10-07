@@ -1260,6 +1260,7 @@ asr = [
     { name = "ctranslate2" },
     { name = "faster-whisper" },
     { name = "numpy" },
+    { name = "requests" },
 ]
 cloud = [
     { name = "boto3" },
@@ -1273,6 +1274,7 @@ requires-dist = [
     { name = "faster-whisper", marker = "extra == 'asr'", specifier = "==1.0.3" },
     { name = "metis-contracts", editable = "packages/contracts" },
     { name = "numpy", marker = "extra == 'asr'", specifier = ">=1.26,<2" },
+    { name = "requests", marker = "extra == 'asr'", specifier = ">=2.31" },
 ]
 provides-extras = ["asr", "cloud"]
 
