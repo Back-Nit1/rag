@@ -36,6 +36,7 @@ from metis_contracts import (
     Plan,
     PlanStatus,
     Preferences,
+    ReminderState,
     SourceArtifact,
     SystemClock,
     Task,
@@ -453,6 +454,12 @@ class SqliteStateStore:
         self, user_id: str, *, cursor: str | None = None, limit: int = 100
     ) -> Page[SourceArtifact]:
         return self._page("source", user_id, "", [], cursor=cursor, limit=limit)
+
+    def list_reminders(
+        self, user_id: str, *, state: ReminderState | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Reminder]:
+        where, params = ("AND state = ?", [ReminderState(state).value]) if state else ("", [])
+        return self._page("reminder", user_id, where, params, cursor=cursor, limit=limit)
 
     def list_reminders_for_target(self, user_id: str, target_id: str) -> list[Reminder]:
         with self._lock:

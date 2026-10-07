@@ -743,3 +743,30 @@ def test_limits_publish_the_vapid_public_key_when_configured(client, monkeypatch
     body = client.get("/v1/limits").json()
     assert body["vapid_public_key"] == "BPublicKey"
     assert "vapid_private_key_param" not in body
+
+
+def test_list_reminders_pages_and_filters_by_state(client, worker):
+    task = client.post("/v1/tasks", json={"title": "Register"}, headers={"Idempotency-Key": "t"}).json()
+    for i, day in enumerate(("07", "08", "09")):
+        client.post(
+            "/v1/reminders",
+            json={
+                "target_id": task["id"],
+                "target_kind": "task",
+                "expected_target_revision": task["revision"],
+                "local_date": f"2026-10-{day}",
+                "local_time": "09:00",
+                "timezone": NY,
+            },
+            headers={"Idempotency-Key": f"rem-{i}"},
+        )
+    assert {r["state"] for r in client.get("/v1/reminders").json()["items"]} == {"pending_schedule"}
+    worker()
+    everything = client.get("/v1/reminders").json()["items"]
+    assert len(everything) == 3 and {r["state"] for r in everything} == {"scheduled"}
+    assert client.get("/v1/reminders?state=canceled").json()["items"] == []
+    first = client.get("/v1/reminders?limit=2").json()
+    assert len(first["items"]) == 2 and first["next_cursor"]
+    rest = client.get(f"/v1/reminders?limit=2&cursor={first['next_cursor']}").json()
+    assert [r["id"] for r in first["items"] + rest["items"]] == [r["id"] for r in everything]
+    assert client.get("/v1/reminders?limit=101").status_code == 422

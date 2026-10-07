@@ -11,6 +11,8 @@ from metis_contracts import (
     FixedClock,
     Plan,
     PlanStatus,
+    Reminder,
+    ReminderState,
     SourceArtifact,
     reset_settings_cache,
 )
@@ -42,6 +44,13 @@ def _plan(pid: str, status: PlanStatus, user: str = USER) -> Plan:
     )  # fmt: skip
 
 
+def _reminder(rid: str, state: ReminderState, user: str = USER) -> Reminder:
+    return Reminder(
+        id=rid, user_id=user, created_at=T0, updated_at=T0, target_id="task_1", target_kind="task",
+        target_revision=1, trigger_at=T0, timezone="UTC", state=state, occurrence_key=f"occ_{rid}",
+    )  # fmt: skip
+
+
 @pytest.fixture()
 def sqlite(tmp_path) -> SqliteStateStore:
     reset_settings_cache()
@@ -54,10 +63,14 @@ def sqlite(tmp_path) -> SqliteStateStore:
         tx.put("proposal", _proposal("prop_x", "src_2"))
         tx.put("plan", _plan("plan_1", PlanStatus.PROPOSED))
         tx.put("plan", _plan("plan_2", PlanStatus.ACCEPTED))
+        tx.put("reminder", _reminder("rem_1", ReminderState.SCHEDULED))
+        tx.put("reminder", _reminder("rem_2", ReminderState.PENDING_SCHEDULE))
+        tx.put("reminder", _reminder("rem_3", ReminderState.SCHEDULED))
     with s.transaction(OTHER) as tx:
         tx.put("source", _source("src_o", OTHER, client_id="cli-1"))
         tx.put("proposal", _proposal("prop_o", "src_1", OTHER))
         tx.put("plan", _plan("plan_o", PlanStatus.PROPOSED, OTHER))
+        tx.put("reminder", _reminder("rem_o", ReminderState.SCHEDULED, OTHER))
     return s
 
 
@@ -120,3 +133,19 @@ def test_list_sources_is_owner_scoped_and_cursor_is_stable(store):
 def test_list_sources_excludes_tombstoned(sqlite):
     sqlite.tombstone(USER, "source", "src_1")
     assert [s.id for s in sqlite.list_sources(USER).items] == ["src_2"]
+
+
+def test_list_reminders_filters_by_state_and_owner(store):
+    assert [r.id for r in store.list_reminders(USER).items] == ["rem_1", "rem_2", "rem_3"]
+    scheduled = store.list_reminders(USER, state=ReminderState.SCHEDULED)
+    assert [r.id for r in scheduled.items] == ["rem_1", "rem_3"]
+    assert [r.id for r in store.list_reminders(OTHER).items] == ["rem_o"]
+
+
+def test_list_reminders_cursor_is_stable_and_skips_tombstones(sqlite):
+    first = sqlite.list_reminders(USER, limit=2)
+    assert [r.id for r in first.items] == ["rem_1", "rem_2"] and first.next_cursor
+    rest = sqlite.list_reminders(USER, cursor=first.next_cursor, limit=2)
+    assert [r.id for r in rest.items] == ["rem_3"]
+    sqlite.tombstone(USER, "reminder", "rem_1")
+    assert [r.id for r in sqlite.list_reminders(USER).items] == ["rem_2", "rem_3"]

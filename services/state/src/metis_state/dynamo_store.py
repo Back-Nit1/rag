@@ -48,6 +48,7 @@ from metis_contracts import (
     Plan,
     PlanStatus,
     Preferences,
+    ReminderState,
     SourceArtifact,
     SystemClock,
     Task,
@@ -445,6 +446,13 @@ class DynamoStateStore:
     ) -> Page[SourceArtifact]:
         items, next_cursor, complete = self._query_kind(user_id, "source", cursor=cursor, limit=limit)
         return Page(items=items, next_cursor=next_cursor, complete=complete)
+
+    def list_reminders(
+        self, user_id: str, *, state: ReminderState | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Reminder]:
+        items, next_cursor, complete = self._query_kind(user_id, "reminder", cursor=cursor, limit=limit)
+        filtered = [r for r in items if state is None or r.state == state]
+        return Page(items=filtered, next_cursor=next_cursor, complete=complete)
 
     def list_reminders_for_target(self, user_id: str, target_id: str) -> list[Reminder]:
         items, _, _ = self._query_kind(user_id, "reminder", cursor=None, limit=200)
