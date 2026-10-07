@@ -332,14 +332,14 @@ export function CaptureScreen() {
               type="button"
               disabled={!recorder.supported || !gate.allowed}
               onClick={() => void recorder.start()}
-              className="inline-flex min-h-14 items-center gap-3 rounded-full border-2 border-accent bg-surface py-1.5 pl-1.5 pr-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-14 items-center gap-3 rounded-full border-2 border-accent bg-accent py-2 pl-2 pr-6 text-base font-semibold text-on-accent shadow-lift transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="grid size-11 place-items-center rounded-full bg-accent text-on-accent">
+              <span className="grid size-11 place-items-center rounded-full bg-on-accent text-accent">
                 <Icon name="mic" size={22} />
               </span>
               Record a thought
             </button>
-            <Button variant="primary" className="ml-auto min-h-12 px-5 md:min-h-11" disabled={!text.trim()} onClick={() => void submitText()}>
+            <Button className="ml-auto min-h-12 px-5 md:min-h-11" disabled={!text.trim()} onClick={() => void submitText()}>
               <Icon name="send" size={16} /> Send note
             </Button>
             <span className="hidden text-xs text-muted sm:inline">or press ⌘/Ctrl + Enter</span>

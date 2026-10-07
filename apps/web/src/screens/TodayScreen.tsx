@@ -87,11 +87,6 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
             {today.timezone} <span aria-hidden="true">·</span> planning epoch {today.planning_epoch}
           </>
         }
-        action={
-          <Button variant="primary" onClick={onOpenCapture} className="max-lg:hidden">
-            <Icon name="mic" size={16} /> Capture a thought
-          </Button>
-        }
       />
 
       {(!today.availability_configured || today.inputs_complete === false) && (
@@ -116,13 +111,13 @@ export function TodayScreen({ onOpenCapture }: { onOpenCapture: () => void }) {
         {[
           ["Appointments", events.length, "fixed"],
           ["Focus", focus.length, `of ${open.length} open`],
-          ["Overdue", overdue.length, overdue.length ? "needs a decision" : "none"],
+          ["Overdue", overdue.length, overdue.length ? "needs a look" : "none"],
         ].map(([label, n, note]) => (
           <div key={label} className="px-4 py-3 md:px-5">
             <dt className="font-mono text-2xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</dt>
             <dd className={`font-serif text-3xl font-semibold leading-none ${label === "Overdue" && n ? "text-warn" : "text-ink"}`}>
               {n}
-              <span className="ml-2 font-sans text-xs font-normal text-muted">{note}</span>
+              <span className="mt-1 block font-sans text-xs font-normal text-muted">{note}</span>
             </dd>
           </div>
         ))}
