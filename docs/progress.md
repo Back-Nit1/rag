@@ -72,6 +72,32 @@ Decision needed (not taken): interface endpoints are ~90% of the estimated
 $24-26/mo bill, above the default `monthlyBudgetUsd` of 25. Raise to ~40 or
 drop endpoints (public-IP ASR task). Prices are assumptions, nothing measured.
 
+## Final gate for this run (2026-10-07)
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| Contracts | `make contracts-check` | pass |
+| Lint/types | `make check` | pass |
+| Tests | `make test` | 463 python passed, 4 xfailed (known defects), 94 web passed |
+| Web build | `pnpm --filter @metis/web build` | pass |
+| Synth | `make synth` | pass (7 stacks; nothing deployed) |
+| Infra templates | `pnpm --filter @metis/infra test` | pass |
+| Desktop | `pnpm --filter @metis/desktop test` | pass: 52 unit, 2 scripted-WAV E2E, 1 real-backend smoke, 10 lifecycle |
+
+Open xfail defects (tests/e2e): D7 spoken "already registered" does not link to the
+existing event; D8 "cancel that" has no extraction kind; D9 project hint not
+emitted by real extraction (fixture emits it only for explicit phrases); D10
+registration-reminder suppression needs a task->event link or reminder purpose.
+D7/D8/D10 need contract decisions.
+
+UNRUN / unverified: real ASR (no pinned model, no WER, no latency), microphone,
+global shortcut and HUD window walkthrough, `tauri build` as a signed .app,
+non-aarch64 targets, every AWS check, real DynamoDB/EventBridge behaviour, a
+successful Cognito session, reminder snooze/cancel/plan-adjust in a browser.
+Transcripts are not purged by capture deletion. `claim_once` before the daily
+plan transaction can drop a retry. Interface endpoints exceed the default
+monthly budget estimate (decision pending).
+
 ## Frozen base for parallel work (superseded, see Wave 0)
 
 ```
