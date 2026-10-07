@@ -772,6 +772,7 @@ export interface PatchPreferencesRequest {
   break_minutes?: number | null;
   transition_minutes?: number | null;
   daily_planning_local_time?: string | null;
+  daily_planning_enabled?: boolean | null;
   max_focus_tasks?: number | null;
   channels?: DeliveryChannel[] | null;
   speech_model_id?: string | null;
@@ -871,6 +872,8 @@ export interface Preferences {
   break_minutes?: number;
   transition_minutes?: number;
   daily_planning_local_time?: string;
+  daily_planning_enabled?: boolean;
+  daily_schedule_state?: "disabled" | "pending_schedule" | "scheduled" | "schedule_failed";
   max_focus_tasks?: number;
   planning_horizon_days?: number;
   channels?: DeliveryChannel[];

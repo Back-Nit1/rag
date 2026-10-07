@@ -428,6 +428,12 @@ class Preferences(Record):
     break_minutes: Annotated[int, Field(ge=0, le=120)] = 10
     transition_minutes: Annotated[int, Field(ge=0, le=120)] = 0
     daily_planning_local_time: Annotated[str, Field(pattern=r"^\d{2}:\d{2}$")] = "08:00"
+    daily_planning_enabled: bool = True
+    #: Provider sync state of the daily schedule. "scheduled" requires a
+    #: confirmed provider call, same rule as reminders.
+    daily_schedule_state: Literal["disabled", "pending_schedule", "scheduled", "schedule_failed"] = (
+        "pending_schedule"
+    )
     max_focus_tasks: Annotated[int, Field(ge=1, le=10)] = 3
     planning_horizon_days: Annotated[int, Field(ge=1, le=30)] = 7
     channels: list[DeliveryChannel] = Field(default_factory=lambda: [DeliveryChannel.IN_APP])

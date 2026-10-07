@@ -378,6 +378,7 @@ class PatchPreferencesRequest(StrictModel):
     break_minutes: Annotated[int | None, Field(default=None, ge=0, le=120)] = None
     transition_minutes: Annotated[int | None, Field(default=None, ge=0, le=120)] = None
     daily_planning_local_time: Annotated[str | None, Field(default=None, pattern=r"^\d{2}:\d{2}$")] = None
+    daily_planning_enabled: bool | None = None
     max_focus_tasks: Annotated[int | None, Field(default=None, ge=1, le=10)] = None
     channels: list[DeliveryChannel] | None = None
     speech_model_id: str | None = None

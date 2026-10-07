@@ -133,10 +133,26 @@
       "title": "Created At",
       "type": "string"
     },
+    "daily_planning_enabled": {
+      "default": true,
+      "title": "Daily Planning Enabled",
+      "type": "boolean"
+    },
     "daily_planning_local_time": {
       "default": "08:00",
       "pattern": "^\\d{2}:\\d{2}$",
       "title": "Daily Planning Local Time",
+      "type": "string"
+    },
+    "daily_schedule_state": {
+      "default": "pending_schedule",
+      "enum": [
+        "disabled",
+        "pending_schedule",
+        "scheduled",
+        "schedule_failed"
+      ],
+      "title": "Daily Schedule State",
       "type": "string"
     },
     "delete_commitments_with_source": {

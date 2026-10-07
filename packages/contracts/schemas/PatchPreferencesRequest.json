@@ -151,6 +151,18 @@
       "default": null,
       "title": "Channels"
     },
+    "daily_planning_enabled": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Daily Planning Enabled"
+    },
     "daily_planning_local_time": {
       "anyOf": [
         {
