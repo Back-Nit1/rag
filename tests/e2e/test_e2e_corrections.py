@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from e2e_support import BLOOMBERG, NY, DUE, USER, accept_all, capture, detail, key, notifications, reminder
+from e2e_support import BLOOMBERG, DUE, NY, USER, accept_all, capture, detail, key, notifications, reminder
 
 
 def _counts(h):
@@ -15,7 +15,9 @@ def _counts(h):
 
 
 def test_offline_retry_with_stable_client_id_yields_one_source_and_one_commitment_set(h):
-    ids = {capture(h, client_capture_id="offline-1", idem=key("retry")).json()["capture_id"] for _ in range(3)}
+    ids = {
+        capture(h, client_capture_id="offline-1", idem=key("retry")).json()["capture_id"] for _ in range(3)
+    }
     assert len(ids) == 1
     cap = ids.pop()
     h.tick()
@@ -60,20 +62,28 @@ def test_transcript_correction_supersedes_proposal_index_and_keeps_later_manual_
     h.tick()
     task_id = accept_all(h, task_cap).json()["created_task_ids"][0]
     task = h.client.get(f"/v1/tasks/{task_id}").json()
-    h.client.patch(f"/v1/tasks/{task_id}", json={"expected_revision": task["revision"], "title": "My wording"})
+    h.client.patch(
+        f"/v1/tasks/{task_id}", json={"expected_revision": task["revision"], "title": "My wording"}
+    )
 
     cap = capture(h, "I tried the stale cache approach and it failed.").json()["capture_id"]
     h.tick()
     pending = detail(h, cap).json()["proposals"][0]
     accept_all(h, cap)  # creates a memory + index request; the worker has NOT run yet
-    (memory,) = [m for m in h.state.list_memories(USER, limit=50).items
-                 if any(r.source_id == cap for r in m.source_refs)]
+    (memory,) = [
+        m
+        for m in h.state.list_memories(USER, limit=50).items
+        if any(r.source_id == cap for r in m.source_refs)
+    ]
     assert memory.indexed_at is None
 
     source = detail(h, cap).json()["source"]
     resp = h.client.patch(
         f"/v1/captures/{cap}/transcript",
-        json={"expected_revision": source["revision"], "text": "I tried the warm cache approach and it failed."},
+        json={
+            "expected_revision": source["revision"],
+            "text": "I tried the warm cache approach and it failed.",
+        },
     )
     assert resp.status_code == 200
     h.tick()
@@ -87,12 +97,20 @@ def test_transcript_correction_supersedes_proposal_index_and_keeps_later_manual_
 
 
 def test_correcting_a_date_after_scheduling_holds_the_old_reminder(h):
-    cap = capture(h, "Register for the Bloomberg event on the twelfth, remind me at nine.").json()["capture_id"]
+    cap = capture(h, "Register for the Bloomberg event on the twelfth, remind me at nine.").json()[
+        "capture_id"
+    ]
     h.tick()
     proposal = detail(h, cap).json()["proposals"][0]
     task_idx = next(i for i, it in enumerate(proposal["items"]) if it["kind"] == "event_intent")
-    item = {**proposal["items"][task_idx], "local_date": "2026-10-12", "timezone": NY,
-            "deadline_local_date": "2026-10-12", "remind_local_time": "09:00", "missing_fields": []}
+    item = {
+        **proposal["items"][task_idx],
+        "local_date": "2026-10-12",
+        "timezone": NY,
+        "deadline_local_date": "2026-10-12",
+        "remind_local_time": "09:00",
+        "missing_fields": [],
+    }
     body = accept_all(h, cap, edits={task_idx: item}).json()
     (rid,) = body["created_reminder_ids"][:1]
     h.tick()
@@ -101,8 +119,10 @@ def test_correcting_a_date_after_scheduling_holds_the_old_reminder(h):
     source = detail(h, cap).json()["source"]
     h.client.patch(
         f"/v1/captures/{cap}/transcript",
-        json={"expected_revision": source["revision"],
-              "text": "Register for the Bloomberg event on the twentieth, remind me at nine."},
+        json={
+            "expected_revision": source["revision"],
+            "text": "Register for the Bloomberg event on the twentieth, remind me at nine.",
+        },
     )
     held = reminder(h, rid)
     assert held["state"] != "delivered"

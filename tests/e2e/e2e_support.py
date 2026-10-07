@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from itertools import count
-
 from datetime import UTC, datetime
+from itertools import count
 
 T0 = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)  # 10:00 in New York
 NY = "America/New_York"

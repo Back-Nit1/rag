@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from e2e_support import (
     DUE,
-    USER,
     add_reminder,
     fire_stale,
     make_task,
@@ -68,17 +67,26 @@ def test_canceled_task_suppresses_a_stale_due_delivery(h):
 def test_canceled_event_suppresses_its_reminder(h):
     event = h.client.post(
         "/v1/events",
-        json={"title": "Bloomberg event", "local_date": "2026-10-08",
-              "starts_at": "2026-10-08T22:00:00Z", "timezone": "America/New_York"},
+        json={
+            "title": "Bloomberg event",
+            "local_date": "2026-10-08",
+            "starts_at": "2026-10-08T22:00:00Z",
+            "timezone": "America/New_York",
+        },
         headers={"Idempotency-Key": "ev-1"},
     )
     assert event.status_code == 201, event.status_code
     event = event.json()
     rem = h.client.post(
         "/v1/reminders",
-        json={"target_id": event["id"], "target_kind": "event",
-              "expected_target_revision": event["revision"], "local_date": "2026-10-07",
-              "local_time": "09:00", "timezone": "America/New_York"},
+        json={
+            "target_id": event["id"],
+            "target_kind": "event",
+            "expected_target_revision": event["revision"],
+            "local_date": "2026-10-07",
+            "local_time": "09:00",
+            "timezone": "America/New_York",
+        },
         headers={"Idempotency-Key": "rem-ev"},
     ).json()
     h.tick()
@@ -107,12 +115,21 @@ def test_unsupported_push_falls_back_to_the_visible_feed_and_never_claims_accept
     from e2e_support import NY, key
     from metis_scheduler.transports import WebPushTransport
 
-    h.adapters.notification_transports["web_push"] = WebPushTransport(h.state, h.clock)  # no key, no subscription
+    h.adapters.notification_transports["web_push"] = WebPushTransport(
+        h.state, h.clock
+    )  # no key, no subscription
     task = make_task(h, "Register for the event")
     rem = h.client.post(
         "/v1/reminders",
-        json={"target_id": task["id"], "target_kind": "task", "expected_target_revision": task["revision"],
-              "local_date": "2026-10-07", "local_time": "09:00", "timezone": NY, "channel": "web_push"},
+        json={
+            "target_id": task["id"],
+            "target_kind": "task",
+            "expected_target_revision": task["revision"],
+            "local_date": "2026-10-07",
+            "local_time": "09:00",
+            "timezone": NY,
+            "channel": "web_push",
+        },
         headers={"Idempotency-Key": key("push")},
     ).json()
     h.tick()

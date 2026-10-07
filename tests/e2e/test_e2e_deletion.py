@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from e2e_support import USER, accept_all, capture, detail, make_task, patch
+from e2e_support import USER, accept_all, capture, detail, patch
 from metis_contracts import ErrorCode, MetisError
 
 NOTE = "I tried the stale cache approach on the Cerno build and it failed."
@@ -14,8 +14,11 @@ def _indexed_capture(h, text=NOTE):
     h.tick()
     accept_all(h, cap)
     h.tick()
-    (memory,) = [m for m in h.state.list_memories(USER, limit=50).items
-                 if any(r.source_id == cap for r in m.source_refs)]
+    (memory,) = [
+        m
+        for m in h.state.list_memories(USER, limit=50).items
+        if any(r.source_id == cap for r in m.source_refs)
+    ]
     assert memory.indexed_at is not None, "the fixture embedder indexed the memory"
     return cap, memory
 
@@ -33,7 +36,7 @@ def _search(h, query="stale cache approach"):
 
 
 def test_deleted_capture_is_inaccessible_immediately_even_before_the_purge_runs(h):
-    cap, memory = _indexed_capture(h)
+    cap, _ = _indexed_capture(h)
     assert _search(h), "baseline: the memory is retrievable"
     resp = h.client.delete(f"/v1/captures/{cap}")
     assert resp.status_code == 200 and resp.json()["tombstoned"] is True
@@ -46,7 +49,7 @@ def test_deleted_capture_is_inaccessible_immediately_even_before_the_purge_runs(
 
 
 def test_purge_removes_object_vectors_and_marks_the_job_ready_only_when_finished(h):
-    cap, memory = _indexed_capture(h)
+    cap, _ = _indexed_capture(h)
     source = h.state.get(USER, "source", cap)
     assert _vector_hits(h), "baseline: a vector exists"
     job_id = h.client.delete(f"/v1/captures/{cap}").json()["purge_job_id"]

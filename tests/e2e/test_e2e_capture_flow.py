@@ -46,9 +46,12 @@ def test_audio_fixture_capture_reaches_structured_state_only_after_transcription
     cap = body["capture_id"]
     assert body["upload"] is not None
     assert detail(h, cap).json()["transcript_text"] in (None, ""), "uploaded must not look transcribed"
-    assert h.client.put(
-        f"/v1/local-uploads/{cap}", content=b"RIFF-fixture-bytes", headers={"Content-Type": "audio/webm"}
-    ).status_code == 204
+    assert (
+        h.client.put(
+            f"/v1/local-uploads/{cap}", content=b"RIFF-fixture-bytes", headers={"Content-Type": "audio/webm"}
+        ).status_code
+        == 204
+    )
     done = h.client.post(
         f"/v1/captures/{cap}/complete",
         json={"actual_bytes": 18, "expected_revision": detail(h, cap).json()["source"]["revision"]},
@@ -78,7 +81,7 @@ def test_tentative_event_has_no_invented_date(h):
 def test_one_clarification_answer_resolves_date_and_reminder_time(h):
     cap = capture(h).json()["capture_id"]
     h.tick()
-    proposal, intent = _intent(h, cap)
+    _, intent = _intent(h, cap)
     assert set(intent["missing_fields"]) >= {"event_date_time", "registration_reminder_time"}
     first = accept_all(h, cap).json()
     event_threads = [c for c in first["clarifications"] if c["target_id"] == first["created_event_ids"][0]]
@@ -87,9 +90,15 @@ def test_one_clarification_answer_resolves_date_and_reminder_time(h):
     assert first["created_reminder_ids"] == [], "no reminder before the user answers"
 
     # A single answer (date + time) is applied as one edit of the same proposal item.
-    answered = {**intent, "starts_at": "2026-10-20T14:00:00Z", "local_date": "2026-10-20",
-                "timezone": NY, "deadline_local_date": "2026-10-12", "remind_local_time": "09:00",
-                "missing_fields": []}
+    answered = {
+        **intent,
+        "starts_at": "2026-10-20T14:00:00Z",
+        "local_date": "2026-10-20",
+        "timezone": NY,
+        "deadline_local_date": "2026-10-12",
+        "remind_local_time": "09:00",
+        "missing_fields": [],
+    }
     second_cap = capture(h, BLOOMBERG + " ", idem=key("c2")).json()["capture_id"]
     h.tick()
     p2, i2 = _intent(h, second_cap)

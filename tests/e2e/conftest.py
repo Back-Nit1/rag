@@ -8,10 +8,9 @@ says nothing about real ASR, Bedrock, DynamoDB, EventBridge or web push.
 from __future__ import annotations
 
 import pytest
+from e2e_support import T0
 from fastapi.testclient import TestClient
 from metis_contracts import FixedClock, reset_settings_cache
-
-from e2e_support import T0
 
 
 class Harness:

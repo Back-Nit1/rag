@@ -13,9 +13,14 @@ def _window(h, start="11:00", end="12:00", block_id="avail_1", kind="available")
     response = h.client.post(
         "/v1/availability",
         json={
-            "id": block_id, "user_id": "ignored", "created_at": T0.isoformat(),
-            "updated_at": T0.isoformat(), "local_date": TODAY, "timezone": NY,
-            "window": {"start": start, "end": end}, "kind": kind,
+            "id": block_id,
+            "user_id": "ignored",
+            "created_at": T0.isoformat(),
+            "updated_at": T0.isoformat(),
+            "local_date": TODAY,
+            "timezone": NY,
+            "window": {"start": start, "end": end},
+            "kind": kind,
         },
     )
     assert response.status_code == 201, response.status_code
@@ -24,7 +29,10 @@ def _window(h, start="11:00", end="12:00", block_id="avail_1", kind="available")
 
 def _ready_task(h, title, minutes, deadline="2026-10-07"):
     return make_task(
-        h, title, state="ready", deadline_local_date=deadline,
+        h,
+        title,
+        state="ready",
+        deadline_local_date=deadline,
         duration_estimate={"minutes": minutes, "provenance": "user"},
     )
 
@@ -71,8 +79,11 @@ def test_overflow_is_explained_to_the_user(h):
 def test_dated_task_is_retained_in_the_plan_or_overflow_whatever_its_note_says(h):
     _window(h, "11:00", "17:00")
     task = make_task(
-        h, "Renew passport", body="completely unrelated to anything else here",
-        state="ready", deadline_local_date="2026-10-08",
+        h,
+        "Renew passport",
+        body="completely unrelated to anything else here",
+        state="ready",
+        deadline_local_date="2026-10-08",
         duration_estimate={"minutes": 30, "provenance": "user"},
     )
     plan = _plan(h)
@@ -83,8 +94,14 @@ def test_fixed_event_is_preserved_and_not_double_booked(h):
     _window(h, "11:00", "17:00")
     event = h.client.post(
         "/v1/events",
-        json={"title": "Team sync", "starts_at": "2026-10-05T16:00:00Z", "ends_at": "2026-10-05T17:00:00Z",
-              "local_date": TODAY, "timezone": NY, "attendance_status": "committed"},
+        json={
+            "title": "Team sync",
+            "starts_at": "2026-10-05T16:00:00Z",
+            "ends_at": "2026-10-05T17:00:00Z",
+            "local_date": TODAY,
+            "timezone": NY,
+            "attendance_status": "committed",
+        },
         headers={"Idempotency-Key": key("ev")},
     )
     assert event.status_code == 201, event.status_code

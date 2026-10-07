@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import zipfile
 
-from e2e_support import OTHER, USER, accept_all, capture, detail, key, make_task, patch
+from e2e_support import OTHER, USER, accept_all, capture, detail, key, make_task
 from metis_contracts import ErrorCode, EventType, MetisError, OutboxEvent, new_id
 
 NOTE = "I tried the quokka cache approach on the Cerno build and it failed."
@@ -29,14 +29,20 @@ def test_user_b_cannot_read_change_resolve_or_delete_user_a_captures(h):
     proposal = detail(h, cap).json()["proposals"][0]
     hb = _b(h)
     assert detail(h, cap, headers=hb).status_code == 404
-    assert h.client.patch(
-        f"/v1/captures/{cap}/transcript", json={"expected_revision": 1, "text": "tampered"}, headers=hb
-    ).status_code == 404
-    assert h.client.post(
-        f"/v1/proposals/{proposal['id']}/resolve",
-        json={"expected_revision": proposal["revision"], "decisions": []},
-        headers={**hb, "Idempotency-Key": key("b")},
-    ).status_code == 404
+    assert (
+        h.client.patch(
+            f"/v1/captures/{cap}/transcript", json={"expected_revision": 1, "text": "tampered"}, headers=hb
+        ).status_code
+        == 404
+    )
+    assert (
+        h.client.post(
+            f"/v1/proposals/{proposal['id']}/resolve",
+            json={"expected_revision": proposal["revision"], "decisions": []},
+            headers={**hb, "Idempotency-Key": key("b")},
+        ).status_code
+        == 404
+    )
     assert h.client.delete(f"/v1/captures/{cap}", headers=hb).status_code == 404
     assert h.client.get("/v1/captures", headers=hb).json()["items"] == []
     assert detail(h, cap).status_code == 200, "owner data untouched"
@@ -51,9 +57,12 @@ def test_user_b_cannot_see_user_a_jobs_tasks_or_reminders(h):
     assert h.client.get(f"/v1/jobs/{job_id}", headers=hb).status_code == 404
     assert h.client.get(f"/v1/tasks/{task['id']}", headers=hb).status_code == 404
     assert h.client.get("/v1/tasks", headers=hb).json()["items"] == []
-    assert h.client.patch(
-        f"/v1/tasks/{task['id']}", json={"expected_revision": 1, "priority": 3}, headers=hb
-    ).status_code == 404
+    assert (
+        h.client.patch(
+            f"/v1/tasks/{task['id']}", json={"expected_revision": 1, "priority": 3}, headers=hb
+        ).status_code
+        == 404
+    )
 
 
 def test_a_forged_queue_payload_cannot_make_user_b_process_user_a_data(h):
@@ -63,11 +72,23 @@ def test_a_forged_queue_payload_cannot_make_user_b_process_user_a_data(h):
     with h.state.transaction(OTHER) as tx:
         tx.append_outbox(
             OutboxEvent(
-                id=new_id("obx"), user_id=OTHER, created_at=now, updated_at=now,
-                event_type=EventType.EXTRACTION_REQUESTED, target_id=cap, target_revision=1,
-                correlation_id="forged", idempotency_key=key("forged"),
-                payload={"source_id": cap, "source_version": 1, "range_index": 0, "range_count": 1,
-                         "char_start": 0, "char_end": 10},
+                id=new_id("obx"),
+                user_id=OTHER,
+                created_at=now,
+                updated_at=now,
+                event_type=EventType.EXTRACTION_REQUESTED,
+                target_id=cap,
+                target_revision=1,
+                correlation_id="forged",
+                idempotency_key=key("forged"),
+                payload={
+                    "source_id": cap,
+                    "source_version": 1,
+                    "range_index": 0,
+                    "range_count": 1,
+                    "char_start": 0,
+                    "char_end": 10,
+                },
                 available_at=now,
             )
         )
@@ -78,8 +99,11 @@ def test_a_forged_queue_payload_cannot_make_user_b_process_user_a_data(h):
 
 def test_cross_user_vector_hit_is_rejected_before_any_text_reaches_the_model(h, monkeypatch):
     cap = _a_data(h)
-    (memory,) = [m for m in h.state.list_memories(USER, limit=50).items
-                 if any(r.source_id == cap for r in m.source_refs)]
+    (memory,) = [
+        m
+        for m in h.state.list_memories(USER, limit=50).items
+        if any(r.source_id == cap for r in m.source_refs)
+    ]
     store = h.adapters.memory_store
     # A buggy/poisoned index returns user A's memory for user B's query.
     queried: list[str] = []
@@ -102,12 +126,20 @@ def test_cross_user_vector_hit_is_rejected_before_any_text_reaches_the_model(h, 
 
     monkeypatch.setattr(h.adapters.inference, "complete_json", spy)
     task = h.client.post(
-        "/v1/tasks", json={"title": "Fix cache", "state": "ready", "deadline_local_date": "2026-10-07",
-                           "timezone": "America/New_York"},
+        "/v1/tasks",
+        json={
+            "title": "Fix cache",
+            "state": "ready",
+            "deadline_local_date": "2026-10-07",
+            "timezone": "America/New_York",
+        },
         headers={**_b(h), "Idempotency-Key": key("tb")},
     ).json()
-    h.client.post("/v1/plans", json={"local_date": "2026-10-05", "timezone": "America/New_York"},
-                  headers={**_b(h), "Idempotency-Key": key("pb")})
+    h.client.post(
+        "/v1/plans",
+        json={"local_date": "2026-10-05", "timezone": "America/New_York"},
+        headers={**_b(h), "Idempotency-Key": key("pb")},
+    )
     h.tick()
     assert task["id"]
     assert not any(MARK in text for text in seen), "no foreign text reached an inference prompt"
@@ -135,11 +167,14 @@ def _names_and_text(blob: bytes) -> tuple[list[str], str]:
 def test_export_is_owner_scoped_retried_and_downloadable_only_when_ready(h, monkeypatch):
     _a_data(h)
     make_task(h, "Owner A only task")
-    h.client.post("/v1/tasks", json={"title": "Bee private zebra"},
-                  headers={**_b(h), "Idempotency-Key": key("tb")})
+    h.client.post(
+        "/v1/tasks", json={"title": "Bee private zebra"}, headers={**_b(h), "Idempotency-Key": key("tb")}
+    )
     first = _request_export(h).json()
     assert first["state"] == "queued"
-    assert h.client.get(f"/v1/exports/{first['job_id']}/download").status_code == 404, "queued is not downloadable"
+    assert h.client.get(f"/v1/exports/{first['job_id']}/download").status_code == 404, (
+        "queued is not downloadable"
+    )
     assert _request_export(h).json() == first, "a retried request replays the first response"
 
     # First attempt fails transiently; the retry completes. No partial download appears meanwhile.
@@ -162,7 +197,7 @@ def test_export_is_owner_scoped_retried_and_downloadable_only_when_ready(h, monk
     assert done["state"] == "ready" and done["download_url"]
     blob = h.client.get(done["download_url"])
     assert blob.status_code == 200
-    names, text = _names_and_text(blob.content)
+    _, text = _names_and_text(blob.content)
     assert "Owner A only task" in text and "zebra" not in text, "only the owner's records are bundled"
 
     hb = _b(h)
