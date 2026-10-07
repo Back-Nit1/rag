@@ -42,7 +42,7 @@ from .entities import (
     TranscriptSegment,
     UsageDay,
 )
-from .enums import AdapterMode, DeliveryStatus, JobState, PlanStatus, TaskState
+from .enums import AdapterMode, DeliveryStatus, JobState, PlanStatus, ReminderState, TaskState
 
 
 @runtime_checkable
@@ -107,6 +107,12 @@ class StateStore(Protocol):
     def list_notifications(
         self, user_id: str, *, cursor: str | None = None, limit: int = 50
     ) -> Page[Notification]: ...
+
+    def list_reminders(
+        self, user_id: str, *, state: ReminderState | None = None, cursor: str | None = None, limit: int = 100
+    ) -> Page[Reminder]:
+        """The owner's reminders (live only), optionally by state, stable id cursor."""
+        ...
 
     def list_reminders_for_target(self, user_id: str, target_id: str) -> list[Reminder]: ...
 
