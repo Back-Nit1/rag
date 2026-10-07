@@ -7,13 +7,9 @@ from datetime import date
 from fastapi import APIRouter, status
 from metis_contracts import (
     ErrorCode,
-    EventType,
-    JobState,
     MetisError,
-    OutboxEvent,
     Plan,
     PlanStatus,
-    new_id,
 )
 from metis_contracts.api import (
     AcceptPlanRequest,
@@ -22,9 +18,8 @@ from metis_contracts.api import (
     PatchPlanRequest,
     TodayResponse,
 )
-from metis_contracts.entities import Job
 
-from .. import services
+from .. import planning, services
 from ..deps import Context
 
 router = APIRouter(prefix="/v1", tags=["plans"])
@@ -42,56 +37,15 @@ def create_plan(body: CreatePlanRequest, ctx: Context) -> CreatePlanResponse:
     if replayed := ctx.replay():
         return CreatePlanResponse.model_validate(replayed)
 
-    now = ctx.adapters.clock.now()
-    epoch = ctx.state.get_planning_epoch(ctx.user_id)
-    plan = Plan(
-        id=new_id("plan"),
+    stored_plan, stored_job = planning.request_plan(
+        ctx.state,
+        ctx.adapters.clock,
         user_id=ctx.user_id,
-        created_at=now,
-        updated_at=now,
         local_date=body.local_date,
         timezone=body.timezone,
-        planning_epoch=epoch,
         time_budget_minutes=body.time_budget_minutes or 0,
-        status=PlanStatus.PENDING,
-    )
-    job = Job(
-        id=new_id("job"),
-        user_id=ctx.user_id,
-        created_at=now,
-        updated_at=now,
-        job_type="plan",
-        state=JobState.QUEUED,
-        target_id=plan.id,
-        target_revision=1,
         correlation_id=ctx.correlation_id,
-        idempotency_key=f"plan:{body.local_date.isoformat()}:{epoch}",
     )
-    with ctx.state.transaction(ctx.user_id) as tx:
-        stored_plan = tx.put("plan", plan)
-        stored_job = tx.put("job", job)
-        tx.append_outbox(
-            OutboxEvent(
-                id=new_id("obx"),
-                user_id=ctx.user_id,
-                created_at=now,
-                updated_at=now,
-                event_type=EventType.PLAN_REQUESTED,
-                target_id=stored_plan.id,
-                target_revision=stored_plan.revision,
-                correlation_id=ctx.correlation_id,
-                idempotency_key=f"plan:{body.local_date.isoformat()}:{epoch}",
-                payload={
-                    "plan_id": stored_plan.id,
-                    "job_id": stored_job.id,
-                    "local_date": body.local_date.isoformat(),
-                    "timezone": body.timezone,
-                    "time_budget_minutes": body.time_budget_minutes or 0,
-                    "planning_epoch": epoch,
-                },
-                available_at=now,
-            )
-        )
     result = CreatePlanResponse(plan_id=stored_plan.id, job_id=stored_job.id, status=stored_plan.status.value)
     ctx.remember(result.model_dump(mode="json"))
     return result

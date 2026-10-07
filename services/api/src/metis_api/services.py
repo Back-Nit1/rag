@@ -736,5 +736,31 @@ def patch_preferences(ctx: RequestContext, request: PatchPreferencesRequest) -> 
         resolve_timezone(patch["timezone"])  # raises on an unknown identifier
     existing = ctx.state.get(ctx.user_id, "preferences", current.id)
     updated = current.model_copy(update=patch)
+    sync = existing is None or any(
+        getattr(updated, f) != getattr(current, f)
+        for f in ("daily_planning_local_time", "timezone", "daily_planning_enabled")
+    )
+    if sync:
+        # The scheduler handler treats the event as stale unless this is
+        # pending_schedule; it writes scheduled/disabled/schedule_failed itself.
+        updated = updated.model_copy(update={"daily_schedule_state": "pending_schedule"})
     with ctx.state.transaction(ctx.user_id) as tx:
-        return tx.put("preferences", updated, expected_revision=current.revision if existing else None)
+        stored = tx.put("preferences", updated, expected_revision=current.revision if existing else None)
+        if sync:
+            now = ctx.adapters.clock.now()
+            tx.append_outbox(
+                OutboxEvent(
+                    id=new_id("obx"),
+                    user_id=ctx.user_id,
+                    created_at=now,
+                    updated_at=now,
+                    event_type=EventType.DAILY_PLAN_SCHEDULE_SYNC,
+                    target_id=stored.id,
+                    target_revision=stored.revision,
+                    correlation_id=ctx.correlation_id,
+                    idempotency_key=f"daily-sync:{stored.revision}",
+                    payload={"enabled": stored.daily_planning_enabled},
+                    available_at=now,
+                )
+            )
+        return stored
