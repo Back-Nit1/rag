@@ -5,6 +5,7 @@ set -eu
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
 triple=$(rustc -vV | sed -n 's/^host: //p')
+mkdir -p src-tauri/binaries
 cargo build --release -p metis-health-sidecar
 ext=""; case "$triple" in *windows*) ext=".exe";; esac
 cp "target/release/metis-health-sidecar$ext" "src-tauri/binaries/metis-health-sidecar-$triple$ext"
