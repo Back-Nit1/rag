@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ErrorCode } from "../contracts/metis";
-import { ApiError, OfflineError, api, setAuthToken } from "./api";
+import { API_BASE, ApiError, DesktopUnavailableError, OfflineError, api, setAuthToken } from "./api";
+import { connectDesktop, desktopBase, resetDesktopForTests } from "./desktop";
+import { Outbox } from "./outbox";
+import { resetClientData } from "./reset";
 
 type Call = { url: string; init: RequestInit };
 
@@ -88,5 +91,114 @@ describe("api client", () => {
     expect(calls[0]?.url).toContain("/v1/local-uploads/src_1");
     expect(calls[0]?.init.method).toBe("PUT");
     expect((calls[0]?.init.headers as Record<string, string>)["Content-Type"]).toBe("audio/webm");
+  });
+});
+
+describe("desktop bridge", () => {
+  const BASE = "http://127.0.0.1:49152";
+  const BEARER = "launch-secret-0123456789abcdef0123456789";
+  const noSleep = async () => undefined;
+  const asDesktop = () => vi.stubGlobal("window", { __TAURI_INTERNALS__: {} });
+  const connect = (invoke: (c: string) => Promise<unknown>, maxAttempts = 5) =>
+    connectDesktop({ invoke, sleep: noSleep, maxAttempts });
+
+  afterEach(() => {
+    resetDesktopForTests();
+  });
+
+  it("browser mode keeps API_BASE and VITE-style auth", async () => {
+    const calls = mockFetch(() => json({}));
+    setAuthToken("t");
+    await api.health();
+    expect(calls[0]?.url).toBe(`${API_BASE}/v1/health`);
+    expect((calls[0]?.init.headers as Record<string, string>)["Authorization"]).toBe("Bearer t");
+  });
+
+  it("desktop waits through not_ready, then authenticates API calls on loopback", async () => {
+    asDesktop();
+    const invoke = vi
+      .fn()
+      .mockRejectedValueOnce("not_ready")
+      .mockResolvedValue({ apiBaseUrl: BASE, bearer: BEARER });
+    expect((await connect(invoke)).phase).toBe("ready");
+    expect(invoke).toHaveBeenCalledTimes(2);
+    setAuthToken("ignored");
+    const calls = mockFetch(() => json({}));
+    await api.health();
+    const h = calls[0]?.init.headers as Record<string, string>;
+    expect(calls[0]?.url).toBe(`${BASE}/v1/health`);
+    expect(h["Authorization"]).toBe(`Bearer ${BEARER}`);
+    expect(h["X-Correlation-Id"]).toMatch(/^web_/);
+  });
+
+  it("desktop upload to loopback is authenticated and correlated", async () => {
+    asDesktop();
+    await connect(async () => ({ apiBaseUrl: BASE, bearer: BEARER }));
+    const calls = mockFetch(() => new Response(null, { status: 204 }));
+    await api.uploadBytes(
+      { url: "/v1/local-uploads/src_1", object_key: "k", expires_at: "", max_bytes: 9 },
+      new Blob(["a"], { type: "audio/webm" }),
+    );
+    const h = calls[0]?.init.headers as Record<string, string>;
+    expect(calls[0]?.url).toBe(`${BASE}/v1/local-uploads/src_1`);
+    expect(h["Authorization"]).toBe(`Bearer ${BEARER}`);
+    expect(h["X-Correlation-Id"]).toMatch(/^web_/);
+  });
+
+  it("never sends the bearer to an external presigned URL", async () => {
+    asDesktop();
+    await connect(async () => ({ apiBaseUrl: BASE, bearer: BEARER }));
+    const calls = mockFetch(() => new Response(null, { status: 200 }));
+    await api.uploadBytes(
+      { url: "https://bucket.s3.example/key?sig=1", headers: { "x-amz-meta": "1" }, object_key: "k", expires_at: "", max_bytes: 9 },
+      new Blob(["a"], { type: "audio/webm" }),
+    );
+    const h = calls[0]?.init.headers as Record<string, string>;
+    expect(h["Authorization"]).toBeUndefined();
+    expect(h["X-Correlation-Id"]).toBeUndefined();
+    expect(JSON.stringify(calls[0])).not.toContain(BEARER);
+  });
+
+  it("missing bootstrap: no request is made and no fallback server is used", async () => {
+    asDesktop();
+    const calls = mockFetch(() => json({}));
+    await expect(api.health()).rejects.toBeInstanceOf(DesktopUnavailableError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("a failing command or exhausted retries is unavailable, without echoing the raw error", async () => {
+    asDesktop();
+    const failed = await connect(async () => Promise.reject(`boom ${BEARER}`));
+    expect(failed.phase).toBe("unavailable");
+    expect(JSON.stringify(failed)).not.toContain(BEARER);
+    expect((await connect(async () => Promise.reject("not_ready"), 3)).phase).toBe("unavailable");
+  });
+
+  it.each([
+    null,
+    {},
+    { apiBaseUrl: BASE },
+    { apiBaseUrl: "https://example.com", bearer: BEARER },
+    { apiBaseUrl: "http://localhost:80", bearer: BEARER },
+    { apiBaseUrl: "http://127.0.0.1:99999", bearer: BEARER },
+    { apiBaseUrl: "http://127.0.0.1:1234/evil", bearer: BEARER },
+    { apiBaseUrl: BASE, bearer: "has space" },
+    { apiBaseUrl: BASE, bearer: "" },
+  ])("rejects malformed connection data %j", async (bad) => {
+    asDesktop();
+    const state = await connect(async () => bad);
+    expect(state.phase).toBe("unavailable");
+    expect(desktopBase()).toBeNull();
+  });
+
+  it("reset clears the connection, token and outbox", async () => {
+    asDesktop();
+    await connect(async () => ({ apiBaseUrl: BASE, bearer: BEARER }));
+    const store = new Map<string, string>();
+    const outbox = new Outbox({ getItem: (k) => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v), removeItem: (k) => void store.delete(k) });
+    outbox.add({ client_capture_id: "cc_1", text: "x", capture_timezone: "UTC", captured_at: "" });
+    resetClientData(outbox);
+    expect(outbox.list()).toEqual([]);
+    expect(desktopBase()).toBeNull();
   });
 });
