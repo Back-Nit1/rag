@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ErrorCode } from "../contracts/metis";
-import { API_BASE, ApiError, DesktopUnavailableError, OfflineError, api, setAuthToken } from "./api";
+import { API_BASE, ApiError, DesktopUnavailableError, OfflineError, api, setAuthToken, setUnauthenticatedHandler } from "./api";
 import { connectDesktop, desktopBase, resetDesktopForTests } from "./desktop";
 import { Outbox } from "./outbox";
 import { resetClientData } from "./reset";
@@ -200,5 +200,46 @@ describe("desktop bridge", () => {
     resetClientData(outbox);
     expect(outbox.list()).toEqual([]);
     expect(desktopBase()).toBeNull();
+  });
+});
+
+describe("exports, plans and sessions", () => {
+  it("creates an export with an Idempotency-Key", async () => {
+    const calls = mockFetch(() => json({ job_id: "job_1", state: "queued" }, 202));
+    await api.createExport({}, "export:k1");
+    expect((calls[0]?.init.headers as Record<string, string>)["Idempotency-Key"]).toBe("export:k1");
+  });
+
+  it("downloads an export with the bearer in a header, never in the URL", async () => {
+    const calls = mockFetch(() => new Response("zip-bytes"));
+    setAuthToken("tok-secret");
+    const blob = await api.downloadExport("job_1");
+    expect(await blob.text()).toBe("zip-bytes");
+    expect(calls[0]?.url).toBe(`${API_BASE}/v1/exports/job_1/download`);
+    expect(calls[0]?.url).not.toContain("tok-secret");
+    expect((calls[0]?.init.headers as Record<string, string>)["Authorization"]).toBe("Bearer tok-secret");
+  });
+
+  it("surfaces a failed download as an ApiError", async () => {
+    mockFetch(() => json({ code: ErrorCode.NOT_FOUND, message: "export job_1 is not ready" }, 404));
+    await expect(api.downloadExport("job_1")).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("accepts a plan with the revision and epoch it was reviewed at", async () => {
+    const calls = mockFetch(() => json({ id: "plan_1" }));
+    await api.acceptPlan("plan_1", { expected_revision: 2, expected_planning_epoch: 5 });
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ expected_revision: 2, expected_planning_epoch: 5 });
+  });
+
+  it("tells the session layer when a signed-in request is refused, and not otherwise", async () => {
+    const handler = vi.fn();
+    setUnauthenticatedHandler(handler);
+    mockFetch(() => json({ code: ErrorCode.UNAUTHENTICATED, message: "expired" }, 401));
+    await api.today().catch(() => undefined);
+    expect(handler).not.toHaveBeenCalled();
+    setAuthToken("t");
+    await api.today().catch(() => undefined);
+    expect(handler).toHaveBeenCalledTimes(1);
+    setUnauthenticatedHandler(null);
   });
 });

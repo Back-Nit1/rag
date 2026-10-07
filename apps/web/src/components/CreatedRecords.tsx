@@ -6,10 +6,8 @@
  */
 import type { Event, Reminder, Task } from "../contracts/metis";
 import { ReminderState } from "../contracts/metis";
-import { timeLabel } from "../lib/format";
-import { REMINDER_STATUS } from "../lib/status";
 import { Card, SectionHeading } from "./Card";
-import { StatusPill } from "./StatusPill";
+import { ReminderControls } from "./ReminderControls";
 
 export function CreatedRecords({
   tasks,
@@ -48,10 +46,7 @@ export function CreatedRecords({
         ))}
         {reminders.map((reminder) => (
           <li key={reminder.id} className="rounded-md border border-line bg-canvas px-3 py-2.5">
-            <StatusPill status={REMINDER_STATUS[reminder.state ?? ReminderState.PENDING_SCHEDULE]} detail={false} />
-            <p className="mt-1 text-xs text-muted">
-              {timeLabel(reminder.trigger_at, reminder.timezone || timezone)} · {reminder.channel}
-            </p>
+            <ReminderControls reminderId={reminder.id} initial={reminder} timezone={timezone} />
           </li>
         ))}
       </ul>

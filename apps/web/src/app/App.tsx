@@ -17,12 +17,15 @@ import { Notice } from "../components/Card";
 import { CaptureScreen } from "../screens/CaptureScreen";
 import { InboxScreen } from "../screens/InboxScreen";
 import { NotificationsScreen } from "../screens/NotificationsScreen";
+import { ProjectsScreen } from "../screens/ProjectsScreen";
+import { SearchScreen } from "../screens/SearchScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { TasksScreen } from "../screens/TasksScreen";
 import { TodayScreen } from "../screens/TodayScreen";
+import { AuthGate } from "./AuthGate";
 import { SessionProvider, useSession } from "./session";
 
-const SURFACES = ["today", "capture", "inbox", "tasks", "alerts", "settings"] as const;
+const SURFACES = ["today", "capture", "inbox", "tasks", "projects", "search", "alerts", "settings"] as const;
 type Surface = (typeof SURFACES)[number];
 
 const LABEL: Record<Surface, string> = {
@@ -30,6 +33,8 @@ const LABEL: Record<Surface, string> = {
   capture: "Capture",
   inbox: "Inbox",
   tasks: "Tasks",
+  projects: "Projects",
+  search: "Search",
   alerts: "Alerts",
   settings: "Settings",
 };
@@ -39,6 +44,8 @@ const ICON: Record<Surface, IconName> = {
   capture: "mic",
   inbox: "inbox",
   tasks: "tasks",
+  projects: "pin",
+  search: "search",
   alerts: "bell",
   settings: "gear",
 };
@@ -184,6 +191,18 @@ function Shell() {
                   Fixture mode
                 </span>
               )}
+              {(["projects", "search"] as const).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  aria-label={LABEL[item]}
+                  aria-current={surface === item ? "page" : undefined}
+                  onClick={() => go(item)}
+                  className={`grid size-11 place-items-center rounded-full ${surface === item ? "bg-accent-soft text-accent" : "text-muted"}`}
+                >
+                  <Icon name={ICON[item]} />
+                </button>
+              ))}
               <button
                 type="button"
                 aria-label="Settings"
@@ -214,6 +233,8 @@ function Shell() {
           {surface === "capture" && <CaptureScreen />}
           {surface === "inbox" && <InboxScreen />}
           {surface === "tasks" && <TasksScreen />}
+          {surface === "projects" && <ProjectsScreen />}
+          {surface === "search" && <SearchScreen />}
           {surface === "alerts" && <NotificationsScreen />}
           {surface === "settings" && <SettingsScreen />}
         </main>
@@ -270,9 +291,11 @@ function DesktopGate({ children }: { children: ReactNode }) {
 export function App() {
   return (
     <DesktopGate>
-      <SessionProvider>
-        <Shell />
-      </SessionProvider>
+      <AuthGate>
+        <SessionProvider>
+          <Shell />
+        </SessionProvider>
+      </AuthGate>
     </DesktopGate>
   );
 }
