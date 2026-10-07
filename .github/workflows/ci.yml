@@ -1,0 +1,27 @@
+# Coordinator-owned. No cloud credentials, no model downloads, no paid calls:
+# real-ASR and AWS jobs are opt-in (workflow_dispatch) and not defined here.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: make bootstrap
+      - run: make check
+      - run: make test
+      - run: pnpm --filter @metis/web build
+      # make synth is added once infra/bin/metis.ts exists (infra-02).
