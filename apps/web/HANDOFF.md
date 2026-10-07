@@ -117,3 +117,29 @@ Backend gaps (not invented around; each flow stops at an honest state):
 | `POST /v1/projects/{id}/resume` | no response model in the contract (UI types it locally as `ResumePacket`); returns no next action/completion criterion |
 | `GET /v1/captures` | no list; deleted sources are reachable only via evidence links |
 | CORS/auth | local API rejects a Cognito-style bearer (401) as designed; sign-out confirm path could not be exercised in a browser without a real Cognito |
+
+## UI overhaul (web-ui-overhaul)
+
+**Direction: field notebook on a work desk.** Green-grey paper / near-black ink,
+one deep-teal accent (mint in dark), record-red reserved for the live mic,
+squared radii (2/4/6px). Signature: ruled mono eyebrow section headings and a
+margin line on page headers. Tokens and rationale: top of `src/styles.css`.
+Light/dark follow the system preference; no theme switch exists, none added.
+
+**Skills:** present and used — `frontend-design` (direction, critique),
+`vercel-web-design-guidelines` / `vercel-react-best-practices` (focus, live
+regions, tap targets, no layout shift — checked against existing code, no new
+patterns needed), `anthropic-webapp-testing` (Playwright not installed here, so
+Chrome automation was used instead). Sites skill not invoked.
+
+**Verified (Chrome, dark system theme):** Today/Capture/Inbox/Tasks/Alerts/
+Settings at 390 and 768/1440 via same-origin iframes (the window cannot be
+resized by the tool); no horizontal overflow on 22 of 24 surface×width checks
+(alerts/settings at 1440 not reached before the sweep timed out); typed
+capture → transcript review works. Fixed: eyebrow heading wrapping and
+clipped time inputs in Settings at 360px.
+
+**Not verified:** light theme visually (contrast computed from tokens only),
+real microphone, Projects/Search visual review, screenshots not archived in-repo.
+
+**Dependencies:** none. **Backend blockers:** none.
