@@ -8,7 +8,6 @@ which is what keeps the local and cloud paths honest about each other.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -44,7 +43,6 @@ from metis_contracts.api import (
     TodayResponse,
     UploadInstructions,
 )
-from metis_contracts.common import Page
 from metis_contracts.entities import ExtractionProposal, Job, TranscriptRevision
 from metis_contracts.enums import TASK_OPEN_STATES
 
@@ -214,21 +212,7 @@ def create_capture(ctx: RequestContext, request: CreateCaptureRequest) -> Create
 
 
 def _find_by_client_id(ctx: RequestContext, client_capture_id: str) -> SourceArtifact | None:
-    # ponytail: no public "find a source by client capture id" read exists on
-    # StateStore yet, so this uses the store's private pager. Promote it to a
-    # port method when a second caller needs it.
-    lister: Callable[..., Page[SourceArtifact]] | None = getattr(ctx.state, "_page", None)
-    if lister is None:
-        return None
-    cursor = None
-    while True:
-        page = lister("source", ctx.user_id, "", [], cursor=cursor, limit=200)
-        for source in page.items:
-            if source.client_capture_id == client_capture_id:
-                return source
-        if not page.next_cursor:
-            return None
-        cursor = page.next_cursor
+    return ctx.state.find_source_by_client_id(ctx.user_id, client_capture_id)
 
 
 def complete_capture(
@@ -372,19 +356,12 @@ def patch_transcript(ctx: RequestContext, capture_id: str, request: PatchTranscr
 def _supersede_proposals(ctx: RequestContext, source_id: str, old_version: int) -> list[dict[str, Any]]:
     from metis_contracts import ProposalDisposition
 
-    lister = getattr(ctx.state, "_page", None)
-    if lister is None:
-        return []
     out: list[dict[str, Any]] = []
     cursor = None
     while True:
-        page = lister("proposal", ctx.user_id, "", [], cursor=cursor, limit=200)
+        page = ctx.state.list_proposals(ctx.user_id, source_id=source_id, cursor=cursor, limit=200)
         for proposal in page.items:
-            if (
-                proposal.source_id == source_id
-                and proposal.source_version == old_version
-                and proposal.disposition is ProposalDisposition.PENDING
-            ):
+            if proposal.source_version == old_version and proposal.disposition is ProposalDisposition.PENDING:
                 out.append(
                     {
                         "record": proposal.model_copy(update={"disposition": ProposalDisposition.SUPERSEDED}),
@@ -442,15 +419,13 @@ def get_capture(ctx: RequestContext, capture_id: str) -> CaptureDetail:
         raise MetisError(ErrorCode.NOT_FOUND, f"capture {capture_id} not found")
     current = next((t for t in source.transcripts if t.source_version == source.current_version), None)
     proposals: list[ExtractionProposal] = []
-    lister: Callable[..., Page[ExtractionProposal]] | None = getattr(ctx.state, "_page", None)
-    if lister is not None:
-        cursor = None
-        while True:
-            page = lister("proposal", ctx.user_id, "", [], cursor=cursor, limit=200)
-            proposals.extend(p for p in page.items if p.source_id == capture_id)
-            if not page.next_cursor:
-                break
-            cursor = page.next_cursor
+    cursor = None
+    while True:
+        page = ctx.state.list_proposals(ctx.user_id, source_id=capture_id, cursor=cursor, limit=200)
+        proposals.extend(page.items)
+        if not page.next_cursor:
+            break
+        cursor = page.next_cursor
     created_tasks = [
         t.id
         for t in ctx.state.list_tasks(ctx.user_id, limit=200).items
@@ -464,11 +439,11 @@ def get_capture(ctx: RequestContext, capture_id: str) -> CaptureDetail:
     jobs: list[Job] = []
     cursor = None
     while True:
-        job_page = ctx.state.list_jobs(ctx.user_id, cursor=cursor, limit=200)
-        jobs.extend(j for j in job_page.items if j.target_id == capture_id)
-        if not job_page.next_cursor:
+        jobs_chunk = ctx.state.list_jobs(ctx.user_id, cursor=cursor, limit=200)
+        jobs.extend(j for j in jobs_chunk.items if j.target_id == capture_id)
+        if not jobs_chunk.next_cursor:
             break
-        cursor = job_page.next_cursor
+        cursor = jobs_chunk.next_cursor
     return CaptureDetail(
         source=source,
         transcript_text=current.text if current else None,
@@ -659,15 +634,12 @@ def _reconcile_reminders_for_target(ctx: RequestContext, target: Any, *, kind: s
 
 def _invalidate_plans(ctx: RequestContext) -> None:
     """Mark proposed plans stale once their inputs moved."""
-    lister = getattr(ctx.state, "_page", None)
-    if lister is None:
-        return
     epoch = ctx.state.get_planning_epoch(ctx.user_id)
     cursor = None
     while True:
-        page = lister("plan", ctx.user_id, "", [], cursor=cursor, limit=100)
+        page = ctx.state.list_plans(ctx.user_id, status=PlanStatus.PROPOSED, cursor=cursor, limit=100)
         for plan in page.items:
-            if plan.status is PlanStatus.PROPOSED and plan.planning_epoch != epoch:
+            if plan.planning_epoch != epoch:
                 with ctx.state.transaction(ctx.user_id) as tx:
                     tx.put(
                         "plan",
@@ -734,15 +706,12 @@ def get_today(ctx: RequestContext, local_date: date | None = None) -> TodayRespo
 
 
 def _latest_plan(ctx: RequestContext, day: date) -> Plan | None:
-    lister = getattr(ctx.state, "_page", None)
-    if lister is None:
-        return None
     best: Plan | None = None
     cursor = None
     while True:
-        page = lister("plan", ctx.user_id, "AND local_date = ?", [day.isoformat()], cursor=cursor, limit=100)
+        page = ctx.state.list_plans(ctx.user_id, cursor=cursor, limit=100)
         for plan in page.items:
-            if plan.status is PlanStatus.INVALIDATED:
+            if plan.local_date != day or plan.status is PlanStatus.INVALIDATED:
                 continue
             if best is None or plan.updated_at > best.updated_at:
                 best = plan
