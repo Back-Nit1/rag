@@ -42,6 +42,22 @@ the API with `METIS_SPEECH_ENGINE=remote`. `/v1/health` and `/v1/limits` stay
 unauthenticated by decision. Plan accept/adjust UI, export/delete UI, push
 subscription POST are absent (prompt 21).
 
+## Wave 1b / 2 integrations (2026-10-07)
+
+| Item | Branch / SHA | Result |
+| --- | --- | --- |
+| Durable export API (`POST/GET /v1/exports`, authenticated download, checksum re-verified) | `api/22a` `9c25c7e` | api tests pass; `download_url` is a relative authenticated path, no expiring URL (no `presign_get` port) |
+| Daily-plan schedule sync (Local + EventBridge adapters, handler) | `sched/22c` `8c34bd7` | 19 new tests; EventBridge DST gap behaviour **untested against AWS** |
+| Tauri v2 foundation + PyInstaller sidecar prototype | `desktop/11` `596d8f7` | cargo clippy/fmt/test (7), `tauri build --debug` ok; **webview/`tauri dev` not visually verified**; icon is placeholder |
+| Export worker (`export.requested` -> deterministic zip, READY only after verified write) | `pipe/22b` `6ec5aad` | 96 pipeline tests pass; sources not yet exported (port `list_sources` added `a1b321d`) |
+
+Integrated tree at `a1b321d`+: `make check` pass, 370 python + 28 web + 7 cargo
+tests pass. `make synth` still fails (`infra-02`). In flight: web/15 runtime
+bridge, api/22d daily planning API, state/list-sources + scheduler sync state.
+Lockfile: `@metis/desktop` importer committed. ADR 0004 item 1: PyInstaller
+worked first try (7.9MB, ~3s onefile start); one `metis-backend` executable with
+`api|worker|speech` subcommands recommended for prompt 16.
+
 ## Frozen base for parallel work (superseded, see Wave 0)
 
 ```
