@@ -128,6 +128,12 @@ class StateStore(Protocol):
         """The owner's source created with this client capture id, else None."""
         ...
 
+    def list_sources(
+        self, user_id: str, *, cursor: str | None = None, limit: int = 100
+    ) -> Page[SourceArtifact]:
+        """The owner's live (non-tombstoned) sources, stable id cursor."""
+        ...
+
     def list_proposals(
         self, user_id: str, *, source_id: str | None = None, cursor: str | None = None, limit: int = 100
     ) -> Page[ExtractionProposal]: ...
