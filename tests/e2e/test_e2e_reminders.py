@@ -101,3 +101,32 @@ def test_ordinary_reminder_makes_zero_model_calls(h):
     usage = h.client.get("/v1/usage").json()
     assert usage["model_calls"] == 0 and usage["measured_model_micro_usd"] == 0
     assert notifications(h)[0]["generated"] is False, "templated text, not model output"
+
+
+def test_unsupported_push_falls_back_to_the_visible_feed_and_never_claims_acceptance(h):
+    from e2e_support import NY, key
+    from metis_scheduler.transports import WebPushTransport
+
+    h.adapters.notification_transports["web_push"] = WebPushTransport(h.state, h.clock)  # no key, no subscription
+    task = make_task(h, "Register for the event")
+    rem = h.client.post(
+        "/v1/reminders",
+        json={"target_id": task["id"], "target_kind": "task", "expected_target_revision": task["revision"],
+              "local_date": "2026-10-07", "local_time": "09:00", "timezone": NY, "channel": "web_push"},
+        headers={"Idempotency-Key": key("push")},
+    ).json()
+    h.tick()
+    h.clock.set(DUE)
+    h.tick()
+    (note,) = notifications(h)
+    assert note["reminder_id"] == rem["id"], "the in-app feed still carries the reminder"
+    assert note["delivery_status"] == "unsupported" and note["accepted_at"] is None
+    assert note["delivery_detail"], "the reason is visible rather than a silent success"
+
+
+def test_fixture_delivery_evidence_is_labelled_as_not_a_real_delivery(h):
+    _scheduled_reminder(h)
+    h.clock.set(DUE)
+    h.tick()
+    (note,) = notifications(h)
+    assert "fixture" in (note["delivery_detail"] or "").lower()
