@@ -205,13 +205,6 @@ def test_resumption_keeps_failed_attempts_as_historical_evidence(h):
     assert hit["evidence"]["source_id"] == cap and hit["evidence"]["span_ref"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D9: nothing attaches an accepted capture's work_log/attempt memory to a project "
-    "(Memory.project_id is never set; ExtractedItem.project_hint is dropped), so "
-    "POST /v1/projects/{id}/resume cannot surface failed attempts from captured notes "
-    "(services/api/src/metis_api/proposals.py:_record_memory, owner: api)",
-)
 def test_resume_surfaces_failed_attempts_from_captured_notes(h):
     project = _project(h)
     cap = capture(h, "On Cerno I tried the stale cache approach and it failed.").json()["capture_id"]

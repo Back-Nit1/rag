@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from e2e_support import BLOOMBERG, NY, accept_all, capture, detail, key
 
 
@@ -114,11 +113,6 @@ def test_one_clarification_answer_resolves_date_and_reminder_time(h):
     assert h.client.get(f"/v1/reminders/{reminder['id']}").json()["state"] == "scheduled"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT: one event_intent item opens two clarification threads (event + registration task); "
-    "see handoff D1 (services/api/src/metis_api/proposals.py, owner: api)",
-)
 def test_one_extracted_item_opens_one_clarification_thread(h):
     cap = capture(h).json()["capture_id"]
     h.tick()

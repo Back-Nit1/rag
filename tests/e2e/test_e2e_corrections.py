@@ -42,11 +42,6 @@ def test_offline_retry_with_stable_client_id_yields_one_source_and_one_commitmen
     assert _counts(h) == (tasks, events, captures), "worker passes add nothing"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D2: resolving an already-accepted proposal with a fresh Idempotency-Key and the "
-    "current revision creates a second set of commitments (services/api/src/metis_api/proposals.py)",
-)
 def test_resolving_an_already_resolved_proposal_is_refused(h):
     cap = capture(h).json()["capture_id"]
     h.tick()
