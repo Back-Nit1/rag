@@ -200,12 +200,18 @@ def handle_capture_deleted(envelope: EventEnvelope, context: DispatchContext) ->
             deleter(prefix)
 
     # Derived memories and their vectors.
-    memory_ids: list[str] = []
-    for memory in _memories_for_source(state, envelope.user_id, payload.target_id):
-        memory_ids.append(memory.id)
-        state.tombstone(envelope.user_id, "memory", memory.id)
+    # Vectors first: a failed delete raises with the memories still listable,
+    # so the retry finds them again. Tombstone only after the vectors are gone.
+    memories = _memories_for_source(state, envelope.user_id, payload.target_id)
+    memory_ids = [m.id for m in memories]
     if memory_ids and context.memory_store is not None:
         context.memory_store.delete(envelope.user_id, memory_ids)
+    for memory_id in memory_ids:
+        state.tombstone(envelope.user_id, "memory", memory_id)
+
+    # Proposals derived from this source.
+    for proposal in _proposals_for_source(state, envelope.user_id, payload.target_id):
+        state.purge(envelope.user_id, "proposal", proposal.id)
 
     # Reminders whose only basis was this capture.
     for reminder in _reminders_for_source(state, envelope.user_id, payload.target_id):
@@ -272,9 +278,9 @@ def _finish_purge_job(
                     user_id=user_id,
                     state=JobState.READY,
                     result_refs={
-                        "purged": "source_record,source_object,reminders,tasks",
+                        "purged": "source_record,source_object,proposals,reminders,tasks",
                         "memory_records": "tombstoned_not_hard_deleted",
-                        "not_purged": "transcripts,proposals",
+                        "not_purged": "transcripts",
                         "vectors": "deleted" if vectors_deleted else "none_to_delete_or_no_vector_store",
                     },
                     metrics={"memories": float(memory_ids)},
@@ -303,6 +309,17 @@ def _memories_for_source(state: Any, user_id: str, source_id: str) -> list[Any]:
             break
         cursor = page.next_cursor
     return found
+
+
+def _proposals_for_source(state: Any, user_id: str, source_id: str) -> list[Any]:
+    found: list[Any] = []
+    cursor: str | None = None
+    while True:
+        page = state.list_proposals(user_id, source_id=source_id, cursor=cursor, limit=200)
+        found.extend(page.items)
+        if not page.next_cursor:
+            return found
+        cursor = page.next_cursor
 
 
 def _tasks_for_source(state: Any, user_id: str, source_id: str) -> list[Any]:
