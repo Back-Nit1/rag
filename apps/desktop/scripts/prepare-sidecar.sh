@@ -1,11 +1,15 @@
 #!/bin/sh
-# Build the health sidecar and place it where Tauri's externalBin expects it:
-# src-tauri/binaries/<name>-<host-target-triple>. Output is gitignored.
+# Make the workspace buildable and testable:
+#  - src-tauri/binaries/metis-backend-<triple>: the REAL packaged backend that
+#    Tauri's externalBin requires. Built once (slow, needs uv + network for
+#    PyInstaller) and reused; delete it or run python-backend/build.sh to rebuild.
+#  - target/debug/metis-health-sidecar: test-only fake backend (never bundled).
 set -eu
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
 triple=$(rustc -vV | sed -n 's/^host: //p')
-mkdir -p src-tauri/binaries
-cargo build --release -p metis-health-sidecar
 ext=""; case "$triple" in *windows*) ext=".exe";; esac
-cp "target/release/metis-health-sidecar$ext" "src-tauri/binaries/metis-health-sidecar-$triple$ext"
+if [ ! -f "src-tauri/binaries/metis-backend-$triple$ext" ]; then
+  sh python-backend/build.sh
+fi
+cargo build -p metis-health-sidecar

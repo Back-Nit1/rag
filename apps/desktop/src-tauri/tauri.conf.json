@@ -23,7 +23,7 @@
     "active": true,
     "targets": ["app"],
     "icon": ["icons/icon.png"],
-    "externalBin": ["binaries/metis-health-sidecar"],
+    "externalBin": ["binaries/metis-backend"],
     "macOS": { "minimumSystemVersion": "11.0" }
   }
 }

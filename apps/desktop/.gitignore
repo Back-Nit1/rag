@@ -1,6 +1,4 @@
 target/
 src-tauri/binaries/
 src-tauri/gen/
-python-sidecar-proto/build/
-python-sidecar-proto/dist/
-python-sidecar-proto/*.spec
+python-backend/.build/

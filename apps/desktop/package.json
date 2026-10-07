@@ -11,7 +11,9 @@
     "fmt:check": "cargo fmt --all --check",
     "lint": "pnpm sidecar:prepare && cargo clippy --workspace --all-targets -- -D warnings",
     "typecheck": "pnpm sidecar:prepare && cargo check --workspace --all-targets",
-    "test": "pnpm sidecar:prepare && cargo test --workspace"
+    "test": "pnpm sidecar:prepare && cargo test --workspace && pnpm test:backend",
+    "test:backend": "cd ../.. && PYTHONPATH=apps/desktop/python-backend uv run --frozen python -m pytest apps/desktop/python-backend/tests -q -p no:cacheprovider",
+    "backend:build": "sh python-backend/build.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.1"

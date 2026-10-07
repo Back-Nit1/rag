@@ -1,31 +1,36 @@
-//! Metis desktop shell: window + health command + sidecar supervision.
-pub mod sidecar;
+//! Metis desktop shell: window + supervised local stack (speech, API, worker).
+pub mod stack;
 
 use serde::Serialize;
-use std::sync::{Arc, Mutex};
+use stack::{Config, Stack, StackStatus};
+use std::path::PathBuf;
+use std::sync::Mutex;
 use tauri::{Manager, RunEvent};
 
-/// Name of the packaged sidecar (matches `bundle.externalBin`).
-const HEALTH_SIDECAR: &str = "metis-health-sidecar";
-
-#[derive(Clone, Serialize, Default)]
-struct SidecarStatus {
-    state: String,
-    port: Option<u16>,
-    error: Option<String>,
-}
+/// Name of the packaged backend (matches `bundle.externalBin`).
+const BACKEND: &str = "metis-backend";
 
 #[derive(Default)]
 struct AppState {
-    status: Arc<Mutex<SidecarStatus>>,
-    handle: Mutex<Option<sidecar::Handle>>,
+    stack: Mutex<Option<Stack>>,
+    startup_error: Mutex<Option<String>>,
 }
 
 #[derive(Serialize)]
 struct DesktopStatus {
     mode: &'static str,
     version: &'static str,
-    sidecar: SidecarStatus,
+    /// Sanitised aggregate health; None only if startup itself failed.
+    stack: Option<StackStatus>,
+    error: Option<String>,
+}
+
+/// Camel-case, exactly the shape `apps/web/src/lib/desktop.ts` parses.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectionDto {
+    api_base_url: String,
+    bearer: String,
 }
 
 #[tauri::command]
@@ -42,41 +47,23 @@ fn desktop_status(state: tauri::State<'_, AppState>) -> DesktopStatus {
             "release"
         },
         version: env!("CARGO_PKG_VERSION"),
-        sidecar: state.status.lock().unwrap().clone(),
+        stack: state.stack.lock().unwrap().as_ref().map(Stack::status),
+        error: state.startup_error.lock().unwrap().clone(),
     }
 }
 
-fn set_status(status: &Mutex<SidecarStatus>, ev: &sidecar::Event) {
-    use sidecar::Event::*;
-    let mut s = status.lock().unwrap();
-    match ev {
-        Ready { port } => {
-            *s = SidecarStatus {
-                state: "ready".into(),
-                port: Some(*port),
-                error: None,
-            }
-        }
-        Exited { expected: true, .. } => s.state = "stopped".into(),
-        Exited { code, .. } => {
-            *s = SidecarStatus {
-                state: "crashed".into(),
-                port: None,
-                error: Some(format!("exited unexpectedly (code {code:?})")),
-            }
-        }
-        Restarting { attempt, .. } => s.state = format!("restarting#{attempt}"),
-        GaveUp { attempts } => {
-            s.state = "failed".into();
-            s.error = Some(format!("gave up after {attempts} restarts"));
-        }
-        SpawnFailed(e) => {
-            *s = SidecarStatus {
-                state: "failed".into(),
-                port: None,
-                error: Some(e.clone()),
-            }
-        }
+/// Rejects exactly `not_ready` while the stack starts, `unavailable` when it cannot.
+#[tauri::command]
+fn desktop_connection(state: tauri::State<'_, AppState>) -> Result<ConnectionDto, String> {
+    match state.stack.lock().unwrap().as_ref() {
+        Some(stack) => stack
+            .connection()
+            .map(|c| ConnectionDto {
+                api_base_url: c.api_base_url,
+                bearer: c.bearer,
+            })
+            .map_err(str::to_string),
+        None => Err("unavailable".into()),
     }
 }
 
@@ -88,50 +75,49 @@ fn error_script(msg: &str) -> String {
     )
 }
 
+fn start_stack(data_dir: PathBuf) -> Result<Stack, String> {
+    let backend = std::env::current_exe()
+        .map_err(|e| e.to_string())?
+        .parent()
+        .ok_or("no executable directory")?
+        .join(format!("{BACKEND}{}", std::env::consts::EXE_SUFFIX));
+    Stack::start(Config::production(backend, &data_dir))
+}
+
 pub fn run() {
-    let state = AppState::default();
-    let status = state.status.clone();
-    let startup_error: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-    let err_for_load = startup_error.clone();
-
-    let result = sidecar::bundled_path(HEALTH_SIDECAR)
-        .map_err(|e| e.to_string())
-        .and_then(|path| {
-            let status = status.clone();
-            sidecar::spawn(
-                path,
-                vec![],
-                sidecar::Policy::default(),
-                Arc::new(move |ev| set_status(&status, &ev)),
-            )
-            .map_err(|e| e.to_string())
-        });
-    match result {
-        Ok(h) => *state.handle.lock().unwrap() = Some(h),
-        Err(e) => {
-            *status.lock().unwrap() = SidecarStatus {
-                state: "failed".into(),
-                port: None,
-                error: Some(e.clone()),
-            };
-            *startup_error.lock().unwrap() = Some(e);
-        }
-    }
-
     tauri::Builder::default()
-        .manage(state)
-        .invoke_handler(tauri::generate_handler![health, desktop_status])
-        .on_page_load(move |w, _| {
-            if let Some(e) = err_for_load.lock().unwrap().as_ref() {
-                let _ = w.eval(error_script(e));
+        .manage(AppState::default())
+        .invoke_handler(tauri::generate_handler![
+            health,
+            desktop_status,
+            desktop_connection
+        ])
+        .setup(|app| {
+            let state = app.state::<AppState>();
+            let started = app
+                .path()
+                .app_data_dir()
+                .map_err(|e| e.to_string())
+                .and_then(start_stack);
+            match started {
+                Ok(stack) => *state.stack.lock().unwrap() = Some(stack),
+                Err(e) => *state.startup_error.lock().unwrap() = Some(e),
+            }
+            Ok(())
+        })
+        .on_page_load(|w, _| {
+            let state = w.app_handle().state::<AppState>();
+            let err = state.startup_error.lock().unwrap().clone();
+            if let Some(e) = err {
+                let _ = w.eval(error_script(&e));
             }
         })
         .build(tauri::generate_context!())
         .expect("error building Metis desktop")
         .run(|app, event| {
             if let RunEvent::Exit = event {
-                if let Some(mut h) = app.state::<AppState>().handle.lock().unwrap().take() {
-                    h.shutdown();
+                if let Some(mut s) = app.state::<AppState>().stack.lock().unwrap().take() {
+                    s.shutdown();
                 }
             }
         });
