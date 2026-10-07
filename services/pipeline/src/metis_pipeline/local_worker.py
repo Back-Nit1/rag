@@ -132,7 +132,7 @@ def run(*, once: bool = False, interval: float = 2.0) -> int:
     idle_cycles = 0
     while True:
         result = dispatcher.run_once()
-        due = _fire_due_reminders(context)
+        due = _fire_due_reminders(context) + _fire_due_daily_plans(context)
         if result.processed or due:
             idle_cycles = 0
             log.info(
@@ -174,6 +174,23 @@ def _fire_due_reminders(context: Any) -> int:
         if raise_due_event(state, user_id=user_id, reminder_id=reminder_id, clock=context.clock):
             fired += 1
     return fired
+
+
+def _fire_due_daily_plans(context: Any) -> int:
+    """Local stand-in for the EventBridge daily-plan schedule.
+
+    metis_api owns the due logic (freshness, dedupe, plan.requested). The API
+    depends on this package, so it is imported lazily here, as the worker does
+    for the other services; absent API or schedule store means nothing to do.
+    """
+    if context.schedule_store is None:
+        return 0
+    try:
+        from metis_api.planning import run_local_daily_due
+    except ImportError:
+        return 0
+    results = run_local_daily_due(context.state_store, context.clock, context.schedule_store)
+    return sum(r["enqueued"] for r in results)
 
 
 def main(argv: list[str] | None = None) -> int:

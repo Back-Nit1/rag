@@ -164,7 +164,11 @@ def test_dst_fall_back_ambiguous_time_one_local_date():
 
 def _eb(monkeypatch):
     cfg = SimpleNamespace(
-        scheduler_group="g", scheduler_role_arn="r", reminder_target_arn="t", region="us-east-1"
+        scheduler_group="g",
+        scheduler_role_arn="r",
+        reminder_target_arn="t",
+        daily_plan_target_arn="d",
+        region="us-east-1",
     )
     monkeypatch.setattr("metis_scheduler.schedule_store.settings", lambda: SimpleNamespace(aws=cfg))
     client = MagicMock()
@@ -183,6 +187,20 @@ def test_eventbridge_cron_in_user_zone(monkeypatch):
     assert req["Name"] == daily_schedule_name("u|1") and "|" not in req["Name"]
     assert json.loads(req["Target"]["Input"])["scheduled_time"] == "<aws.scheduler.scheduled-time>"
     assert ref.endswith(req["Name"])
+    assert req["Target"]["Arn"] == "d"  # the daily-plan target, not the reminder one
+    assert json.loads(req["Target"]["Input"]) == {
+        "user_id": "u|1",
+        "scheduled_time": "<aws.scheduler.scheduled-time>",
+    }
+
+
+def test_eventbridge_requires_daily_target_arn(monkeypatch):
+    s, client = _eb(monkeypatch)
+    s._cfg.daily_plan_target_arn = None
+    with pytest.raises(MetisError, match="METIS_DAILY_PLAN_TARGET_ARN") as e:
+        s.upsert_daily(user_id="u", local_time="08:00", timezone=NY, payload={})
+    assert e.value.code is ErrorCode.PROVIDER_UNAVAILABLE
+    client.create_schedule.assert_not_called()
 
 
 def test_eventbridge_conflict_updates_not_duplicates(monkeypatch):
