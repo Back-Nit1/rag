@@ -9,7 +9,7 @@ export const UPDATE_LABEL: Record<StatusUpdateAction, string> = {
 /** Target is resolved only when exactly one id is present. */
 export function updateTarget(item: Pick<ExtractedItem, "target_ids">): { id: string } | null {
   const ids = item.target_ids ?? [];
-  return ids.length === 1 ? { id: ids[0] } : null;
+  return ids.length === 1 ? { id: ids[0]! } : null;
 }
 
 export function updateTargetText(item: Pick<ExtractedItem, "target_ids">): string {
