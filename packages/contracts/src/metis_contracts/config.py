@@ -189,6 +189,58 @@ class SpeechConfig:
     language: str | None = field(default_factory=lambda: _env("METIS_SPEECH_LANGUAGE", "en"))
 
 
+SPEECH_ENGINES = ("auto", "fixture", "faster_whisper", "remote")
+
+
+def _loopback_http(url: str) -> bool:
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    return parts.scheme == "http" and parts.hostname in ("127.0.0.1", "localhost") and parts.port is not None
+
+
+@dataclass(frozen=True)
+class DesktopConfig:
+    """Desktop shell wiring. All unset in ordinary dev, so nothing changes there.
+
+    ``auth_secret`` is the per-launch bearer the Tauri shell generates. It
+    authenticates the caller only; ownership is the stable per-install subject
+    stored at ``identity_path`` (created server-side on first use), never the
+    secret and never a request field.
+
+    ``speech_engine`` selects the transcriber independently of ``METIS_MODE``:
+    ``auto`` keeps the mode-based choice; ``remote`` calls the warm loopback
+    server at ``speech_endpoint`` with ``speech_secret``.
+    """
+
+    auth_secret: str | None = field(default_factory=lambda: _env("METIS_DESKTOP_AUTH_SECRET"))
+    identity_path: str = field(
+        default_factory=lambda: _env("METIS_DESKTOP_IDENTITY_PATH", ".metis/install_id") or ""
+    )
+    speech_engine: str = field(default_factory=lambda: _env("METIS_SPEECH_ENGINE", "auto") or "auto")
+    speech_endpoint: str | None = field(default_factory=lambda: _env("METIS_SPEECH_ENDPOINT"))
+    speech_secret: str | None = field(default_factory=lambda: _env("METIS_SPEECH_SECRET"))
+
+    @property
+    def enabled(self) -> bool:
+        return self.auth_secret is not None
+
+    def __post_init__(self) -> None:
+        if self.auth_secret is not None and len(self.auth_secret) < 32:
+            raise ValueError("METIS_DESKTOP_AUTH_SECRET must be at least 32 characters")
+        if self.speech_engine not in SPEECH_ENGINES:
+            raise ValueError(
+                f"METIS_SPEECH_ENGINE must be one of {SPEECH_ENGINES}; got {self.speech_engine!r}"
+            )
+        if self.speech_engine == "remote":
+            if not self.speech_endpoint or not _loopback_http(self.speech_endpoint):
+                raise ValueError(
+                    "METIS_SPEECH_ENDPOINT must be http://127.0.0.1:<port> for the remote engine"
+                )
+            if not self.speech_secret or len(self.speech_secret) < 32:
+                raise ValueError("METIS_SPEECH_SECRET (32+ chars) is required for the remote engine")
+
+
 @dataclass(frozen=True)
 class AwsConfig:
     region: str = field(default_factory=lambda: _env("AWS_REGION", "us-east-1") or "")
@@ -237,6 +289,7 @@ class Settings:
     models: ModelConfig = field(default_factory=ModelConfig)
     speech: SpeechConfig = field(default_factory=SpeechConfig)
     aws: AwsConfig = field(default_factory=AwsConfig)
+    desktop: DesktopConfig = field(default_factory=DesktopConfig)
 
     def __post_init__(self) -> None:
         if self.environment == "prod":
@@ -246,6 +299,8 @@ class Settings:
                 raise ValueError("METIS_ALLOW_FIXTURE_IDENTITY must be false when METIS_ENV=prod")
             if self.mode is not Mode.CLOUD:
                 raise ValueError("METIS_ENV=prod requires METIS_MODE=cloud")
+            if self.desktop.enabled:
+                raise ValueError("METIS_DESKTOP_AUTH_SECRET must be unset when METIS_ENV=prod")
             missing = [
                 name
                 for name, value in (
