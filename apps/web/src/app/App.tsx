@@ -113,7 +113,7 @@ function Shell() {
           aria-current={active ? "page" : undefined}
           onClick={() => go(item)}
           className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition-colors ${
-            active ? "bg-surface text-ink shadow-[inset_3px_0_0_var(--color-accent)]" : "text-muted hover:bg-raised hover:text-ink"
+            active ? "bg-surface font-semibold text-ink shadow-[inset_3px_0_0_var(--color-accent)]" : "text-muted hover:bg-raised hover:text-ink"
           }`}
         >
           <Icon name={ICON[item]} />
@@ -159,8 +159,8 @@ function Shell() {
       {/* wide: rail */}
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-line bg-rail px-3 py-5 lg:flex">
         <div className="px-3">
-          <p className="font-serif text-xl font-semibold tracking-tight">Metis</p>
-          <p className="text-xs text-muted">Voice notebook and daily desk</p>
+          <p className="font-serif text-2xl font-semibold leading-none tracking-tight">Metis</p>
+          <p className="mt-1.5 font-mono text-2xs uppercase tracking-[0.14em] text-muted">Notebook · Desk</p>
         </div>
         <nav aria-label="Surfaces" className="flex flex-col gap-1">
           {SURFACES.map((item) => (
@@ -173,8 +173,9 @@ function Shell() {
             {!session.online ? "Offline" : !session.reachable ? "Server unreachable" : "Connected"}
           </p>
           {fixtures.length > 0 && (
-            <p className="rounded-md border border-line-strong bg-surface px-2 py-1.5 text-ink">
-              <span className="font-medium">Fixture mode.</span> Results come from test adapters, not production.
+            <p className="rounded-md border border-dashed border-line-strong bg-surface px-2.5 py-2 text-ink">
+              <span className="block font-mono text-2xs font-semibold uppercase tracking-[0.12em]">Fixture mode</span>
+              Results come from test adapters, not production.
             </p>
           )}
         </div>
@@ -184,7 +185,7 @@ function Shell() {
         {/* small: header */}
         <header className="sticky top-0 z-20 border-b border-line bg-surface lg:hidden">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
-            <span className="font-serif text-lg font-semibold tracking-tight">Metis</span>
+            <span className="font-serif text-xl font-semibold tracking-tight">Metis</span>
             <div className="flex items-center gap-2 text-xs">
               {fixtures.length > 0 && (
                 <span
