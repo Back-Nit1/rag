@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from e2e_support import BLOOMBERG, DUE, NY, USER, accept_all, capture, detail, key, notifications, reminder
 
 
@@ -128,12 +127,6 @@ def test_correcting_a_date_after_scheduling_holds_the_old_reminder(h):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D3: one 'remind me to register' utterance yields two registration tasks "
-    "(a standalone task item plus the event's own registration task); "
-    "pipeline fixture extraction + api proposals.py",
-)
 def test_one_utterance_creates_one_registration_task(h):
     cap = capture(h).json()["capture_id"]
     h.tick()

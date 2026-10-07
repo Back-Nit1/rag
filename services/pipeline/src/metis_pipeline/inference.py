@@ -172,7 +172,8 @@ def _fixture_extraction(user_content: str) -> dict[str, Any]:
         )
         missing.append("event_date_time")
 
-    if "register" in lowered and "already registered" not in lowered:
+    event_registers = any("remind_to_register" in i.get("requested_actions", []) for i in items)
+    if "register" in lowered and "already registered" not in lowered and not event_registers:
         items.append(
             {
                 "kind": "task",
@@ -215,6 +216,13 @@ def _fixture_extraction(user_content: str) -> dict[str, Any]:
                 "evidence": span("span_thought"),
             }
         )
+
+    # Only an explicit "project <Name>" / "for <Name> project" phrase yields a hint.
+    match = re.search(r"\bproject\s+([A-Z][\w-]*)|\bfor\s+([A-Z][\w-]*)\s+project\b", text)
+    if match:
+        hint = match.group(1) or match.group(2)
+        for item in items:
+            item["project_hint"] = hint
 
     return {
         "items": items,

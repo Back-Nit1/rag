@@ -338,9 +338,22 @@ class ExtractionService:
         spans: list[SourceSpan] = []
         issues: list[str] = []
 
+        event_registers = any(
+            isinstance(r, dict) and "remind_to_register" in (r.get("requested_actions") or [])
+            for r in raw_items
+        )
         for index, raw in enumerate(raw_items):
             if not isinstance(raw, dict):
                 issues.append(f"item {index}: not an object")
+                continue
+            if (
+                event_registers
+                and raw.get("kind") == "task"
+                and str(raw.get("title", "")).strip().lower().startswith("register")
+            ):
+                issues.append(
+                    f"item {index}: duplicate registration task dropped; event carries remind_to_register"
+                )
                 continue
             try:
                 evidence_refs, item_spans = self._build_spans(

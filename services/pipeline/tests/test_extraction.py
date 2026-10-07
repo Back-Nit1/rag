@@ -348,3 +348,20 @@ def test_extraction_handler_commits_proposal_and_completed_event_together(store,
     assert [e.event_type for e in events] == [EventType.EXTRACTION_COMPLETED]
     proposal_id = events[0].payload["proposal_id"]
     assert store.get(USER, "proposal", proposal_id) is not None
+
+
+def test_fixture_event_register_has_no_standalone_registration_task():
+    from metis_pipeline.inference import _fixture_extraction
+
+    items = _fixture_extraction("NOTE:\n" + BLOOMBERG)["items"]
+    assert [i["kind"] for i in items] == ["event_intent"]
+    assert "remind_to_register" in items[0]["requested_actions"]
+
+
+def test_fixture_project_hint_only_when_explicit():
+    from metis_pipeline.inference import _fixture_extraction
+
+    hinted = _fixture_extraction("NOTE:\nNext step on project Atlas is to test it.")["items"]
+    assert {i["project_hint"] for i in hinted} == {"Atlas"}
+    plain = _fixture_extraction("NOTE:\nNext step is to test it.")["items"]
+    assert all("project_hint" not in i for i in plain)
