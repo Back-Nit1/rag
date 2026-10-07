@@ -193,11 +193,14 @@ export const EVENT_TYPES = [
   "capture.created",
   "capture.deleted",
   "event.changed",
+  "export.requested",
   "extraction.completed",
   "extraction.requested",
   "memory.index_requested",
   "memory.purge_requested",
   "notification.dispatch",
+  "plan.daily_due",
+  "plan.daily_schedule_sync",
   "plan.invalidated",
   "plan.requested",
   "proposal.resolved",
@@ -520,6 +523,19 @@ export interface Evidence {
   excerpt: string;
   recorded_at: string;
   validity?: "current" | "historical" | "superseded" | "uncertain";
+}
+
+/** Owner-scoped export state. ``download_url`` exists only once the archive */
+export interface ExportStatusResponse {
+  job_id: string;
+  state: JobState;
+  created_at: string;
+  finished_at?: string | null;
+  byte_size?: number | null;
+  sha256?: string | null;
+  download_url?: string | null;
+  download_expires_at?: string | null;
+  error_message?: string | null;
 }
 
 /** One proposed structured record. Unknown fields stay None, never guessed. */

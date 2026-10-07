@@ -4473,6 +4473,131 @@
       "type": "object",
       "x-contract-version": 1
     },
+    "ExportStatusResponse": {
+      "$defs": {
+        "JobState": {
+          "description": "Shared by capture/transcription/extraction/index/plan jobs.",
+          "enum": [
+            "uploading",
+            "queued",
+            "starting",
+            "transcribing",
+            "extracting",
+            "indexing",
+            "planning",
+            "ready",
+            "failed",
+            "canceled"
+          ],
+          "title": "JobState",
+          "type": "string"
+        }
+      },
+      "$id": "https://metis.local/schemas/v1/ExportStatusResponse.json",
+      "additionalProperties": false,
+      "description": "Owner-scoped export state. ``download_url`` exists only once the archive\nis durably stored and verified; queued/running/failed never carry one.",
+      "properties": {
+        "byte_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byte Size"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "download_expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Download Expires At"
+        },
+        "download_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Download Url"
+        },
+        "error_message": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Message"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Job Id",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "state": {
+          "$ref": "#/$defs/JobState"
+        }
+      },
+      "required": [
+        "job_id",
+        "state",
+        "created_at"
+      ],
+      "title": "ExportStatusResponse",
+      "type": "object",
+      "x-contract-version": 1
+    },
     "ExtractedItem": {
       "$defs": {
         "AttendanceStatus": {
@@ -16630,11 +16755,14 @@
     "capture.created",
     "capture.deleted",
     "event.changed",
+    "export.requested",
     "extraction.completed",
     "extraction.requested",
     "memory.index_requested",
     "memory.purge_requested",
     "notification.dispatch",
+    "plan.daily_due",
+    "plan.daily_schedule_sync",
     "plan.invalidated",
     "plan.requested",
     "proposal.resolved",
@@ -16649,6 +16777,7 @@
     "extraction.requested",
     "memory.index_requested",
     "notification.dispatch",
+    "plan.daily_schedule_sync",
     "plan.requested",
     "reminder.due",
     "reminder.schedule_sync",

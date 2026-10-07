@@ -43,6 +43,7 @@ from .entities import (
 from .enums import (
     AttendanceStatus,
     DeliveryChannel,
+    JobState,
     MemoryKind,
     RegistrationStatus,
     SourceKind,
@@ -404,6 +405,21 @@ class CreateExportRequest(StrictModel):
     include_sources: bool = True
     include_memories: bool = True
     include_commitments: bool = True
+
+
+class ExportStatusResponse(StrictModel):
+    """Owner-scoped export state. ``download_url`` exists only once the archive
+    is durably stored and verified; queued/running/failed never carry one."""
+
+    job_id: EntityId
+    state: JobState
+    created_at: datetime
+    finished_at: datetime | None = None
+    byte_size: Annotated[int | None, Field(default=None, ge=0)] = None
+    sha256: Annotated[str | None, Field(default=None, pattern=r"^[0-9a-f]{64}$")] = None
+    download_url: str | None = None
+    download_expires_at: datetime | None = None
+    error_message: Annotated[str | None, Field(default=None, max_length=1000)] = None
 
 
 class JobAccepted(StrictModel):

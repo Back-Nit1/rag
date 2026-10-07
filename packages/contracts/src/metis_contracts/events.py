@@ -36,6 +36,14 @@ class EventType:
     MEMORY_PURGE_REQUESTED = "memory.purge_requested"
     PLAN_REQUESTED = "plan.requested"
     PLAN_INVALIDATED = "plan.invalidated"
+    #: payload: {"job_id"}; the handler re-reads the job and its owner.
+    EXPORT_REQUESTED = "export.requested"
+    #: Preferences changed (time, timezone, enabled). target_id = the
+    #: preferences record, target_revision = the revision to sync.
+    DAILY_PLAN_SCHEDULE_SYNC = "plan.daily_schedule_sync"
+    #: Provider fired. payload: {"local_date": "YYYY-MM-DD", "scheduler_ref"}.
+    #: Never trusted: the API re-derives date and validity from preferences.
+    DAILY_PLAN_DUE = "plan.daily_due"
 
 
 ALL_EVENT_TYPES: frozenset[str] = frozenset(
@@ -53,6 +61,7 @@ REVISION_SENSITIVE: frozenset[str] = frozenset(
         EventType.NOTIFICATION_DISPATCH,
         EventType.MEMORY_INDEX_REQUESTED,
         EventType.PLAN_REQUESTED,
+        EventType.DAILY_PLAN_SCHEDULE_SYNC,
     }
 )
 

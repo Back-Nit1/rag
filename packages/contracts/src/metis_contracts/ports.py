@@ -381,6 +381,20 @@ class ScheduleStore(Protocol):
         """Local-mode only: reminder ids whose trigger has passed."""
         ...
 
+    def upsert_daily(self, *, user_id: str, local_time: str, timezone: str, payload: dict[str, Any]) -> str:
+        """One recurring daily schedule per user, evaluated in the IANA
+        ``timezone`` (never fixed UTC). Returns the provider reference.
+        Idempotent on user_id."""
+        ...
+
+    def delete_daily(self, *, user_id: str, scheduler_ref: str | None) -> None:
+        """Best effort; a stale invocation is re-validated by the API."""
+        ...
+
+    def list_due_daily(self, *, now: datetime, limit: int = 50) -> list[tuple[str, str]]:
+        """Local-mode only: (user_id, local_date ISO) occurrences that passed."""
+        ...
+
 
 @runtime_checkable
 class NotificationTransport(Protocol):
