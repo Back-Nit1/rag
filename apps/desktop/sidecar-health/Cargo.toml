@@ -1,0 +1,6 @@
+[package]
+name = "metis-health-sidecar"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Trivial loopback health sidecar proving Tauri externalBin mechanics (not a Metis service)"
