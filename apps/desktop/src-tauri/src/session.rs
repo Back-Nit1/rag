@@ -752,6 +752,8 @@ mod tests {
         fail_first_create: AtomicBool,
         deleted: AtomicUsize,
         last_upload_bytes: AtomicUsize,
+        /// 0 = finished review, 1 = still transcribing, 2 = transcript but no proposal yet.
+        get_mode: AtomicUsize,
     }
     impl Backend for Fake {
         fn ready(&self) -> Result<(), String> {
@@ -789,6 +791,15 @@ mod tests {
             Ok(())
         }
         fn get(&self, _: &str) -> Result<Value, ApiError> {
+            match self.get_mode.load(Ordering::SeqCst) {
+                1 => return Ok(json!({"source":{"lifecycle":"processing"},"proposals":[]})),
+                2 => {
+                    return Ok(
+                        json!({"source":{"lifecycle":"processing"},"transcript_text":"hi","proposals":[]}),
+                    )
+                }
+                _ => {}
+            }
             Ok(
                 json!({"source":{"lifecycle":"ready","transcripts":[{"speech":{"adapter_mode":"fixture"}}]},
                 "transcript_text":"call mom","proposals":[{"requires_clarification":false}]}),
@@ -946,6 +957,54 @@ mod tests {
             r.c.handle(m, 0);
         }
         assert_eq!(r.state(), State::Idle);
+    }
+
+    /// Cancel must stop in-flight work in both processing states: the machine goes
+    /// Idle, the worker deletes the capture it created, and nothing it sends later
+    /// can bring the state back.
+    fn cancel_in_flight(mode: usize, want: State) {
+        let mut r = rig();
+        r.backend.get_mode.store(mode, Ordering::SeqCst);
+        r.c.handle(Msg::Down, 0);
+        r.c.tick(200);
+        r.c.handle(Msg::Up, 500);
+        r.pump_until(want);
+        let events_before = r.events.lock().unwrap().len();
+        r.c.handle(Msg::Cancel, 600);
+        assert_eq!(r.state(), State::Idle);
+        let snap = r.c.shared.lock().unwrap().clone();
+        assert_eq!(
+            (snap.state, snap.capture_id, snap.transcript),
+            (State::Idle, None, None)
+        );
+        // The worker notices the flag, deletes the capture and stops polling.
+        let end = Instant::now() + Duration::from_secs(5);
+        while r.backend.deleted.load(Ordering::SeqCst) == 0 {
+            assert!(Instant::now() < end, "worker never abandoned the capture");
+            while let Ok(m) = r.rx.try_recv() {
+                r.c.handle(m, 0);
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        std::thread::sleep(Duration::from_millis(400));
+        while let Ok(m) = r.rx.try_recv() {
+            r.c.handle(m, 0);
+        }
+        assert_eq!(r.state(), State::Idle, "stale progress must be dropped");
+        assert_eq!(r.backend.deleted.load(Ordering::SeqCst), 1);
+        let ev = r.events.lock().unwrap();
+        assert_eq!(ev.last().unwrap().state, State::Idle);
+        assert!(ev.len() > events_before, "cancel was published");
+    }
+
+    #[test]
+    fn cancel_is_honoured_while_transcribing() {
+        cancel_in_flight(1, State::Transcribing);
+    }
+
+    #[test]
+    fn cancel_is_honoured_while_extracting() {
+        cancel_in_flight(2, State::Extracting);
     }
 
     #[test]
