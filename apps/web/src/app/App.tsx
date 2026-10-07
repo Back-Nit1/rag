@@ -1,12 +1,17 @@
 /**
- * The shell: five surfaces, one status bar, keyboard reachable throughout.
+ * The shell: six surfaces, one status area, keyboard reachable throughout.
  *
  * Routing is the URL hash — a reload keeps the surface and a link can point at
- * one, without a router dependency. The bottom bar is thumb-reachable on a
- * phone and never covers the transcript editor, which is why the main column
- * carries bottom padding.
+ * one, without a router dependency.
+ *
+ * Wide screens get a left rail (wordmark, surfaces, system status). Phones and
+ * tablets get a thumb-reach tab bar with Capture raised in the middle; the
+ * main column carries bottom padding so the bar never covers the transcript
+ * editor. Settings sits in the header on small screens.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Icon, type IconName } from "../components/Icon";
+import { Notice } from "../components/Card";
 import { CaptureScreen } from "../screens/CaptureScreen";
 import { InboxScreen } from "../screens/InboxScreen";
 import { NotificationsScreen } from "../screens/NotificationsScreen";
@@ -27,6 +32,17 @@ const LABEL: Record<Surface, string> = {
   settings: "Settings",
 };
 
+const ICON: Record<Surface, IconName> = {
+  today: "today",
+  capture: "mic",
+  inbox: "inbox",
+  tasks: "tasks",
+  alerts: "bell",
+  settings: "gear",
+};
+
+const BAR: Surface[] = ["today", "inbox", "capture", "tasks", "alerts"];
+
 function surfaceFromHash(): Surface {
   const value = window.location.hash.replace("#/", "");
   return (SURFACES as readonly string[]).includes(value) ? (value as Surface) : "today";
@@ -35,6 +51,8 @@ function surfaceFromHash(): Surface {
 function Shell() {
   const session = useSession();
   const [surface, setSurface] = useState<Surface>(surfaceFromHash);
+  const main = useRef<HTMLElement>(null);
+  const first = useRef(true);
 
   useEffect(() => {
     const sync = () => setSurface(surfaceFromHash());
@@ -42,75 +60,172 @@ function Shell() {
     return () => window.removeEventListener("hashchange", sync);
   }, []);
 
+  // After a navigation, move focus to the new surface so keyboard and screen
+  // reader users land on it; skip the very first render.
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    main.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0 });
+  }, [surface]);
+
   const go = (next: Surface) => {
     window.location.hash = `#/${next}`;
     setSurface(next);
   };
 
   const offline = !session.online || !session.reachable;
+  const fixtures = Object.entries(session.health?.adapters ?? {}).filter(([, v]) => v === "fixture");
+  const badge = (item: Surface) => (item === "alerts" && session.unreadCount > 0 ? session.unreadCount : 0);
+
+  const link = (item: Surface, tone: "rail" | "bar") => {
+    const active = surface === item;
+    const count = badge(item);
+    const label = (
+      <>
+        {LABEL[item]}
+        {count > 0 && (
+          <span className="ml-1.5 rounded-full bg-accent px-1.5 py-px font-mono text-2xs text-on-accent">
+            {count}
+            <span className="visually-hidden"> unread</span>
+          </span>
+        )}
+      </>
+    );
+    if (tone === "rail") {
+      return (
+        <button
+          type="button"
+          aria-current={active ? "page" : undefined}
+          onClick={() => go(item)}
+          className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition-colors ${
+            active ? "bg-surface text-ink shadow-[inset_3px_0_0_var(--color-accent)]" : "text-muted hover:bg-raised hover:text-ink"
+          }`}
+        >
+          <Icon name={ICON[item]} />
+          <span className="flex items-center">{label}</span>
+        </button>
+      );
+    }
+    const isCapture = item === "capture";
+    return (
+      <button
+        type="button"
+        aria-current={active ? "page" : undefined}
+        onClick={() => go(item)}
+        className={`flex w-full flex-col items-center justify-end gap-0.5 pb-1.5 pt-1 text-2xs font-medium ${
+          active ? "text-accent" : "text-muted"
+        }`}
+      >
+        {isCapture ? (
+          <span className="-mt-6 mb-0.5 grid size-14 place-items-center rounded-full border-4 border-canvas bg-accent text-on-accent shadow-lift">
+            <Icon name="mic" size={24} />
+          </span>
+        ) : (
+          <span
+            className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${active ? "bg-accent-soft" : ""}`}
+          >
+            <Icon name={ICON[item]} size={20} />
+          </span>
+        )}
+        <span className="flex items-center">{label}</span>
+      </button>
+    );
+  };
 
   return (
-    <div className="min-h-dvh bg-canvas text-ink">
+    <div className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
       <a
         href="#main"
-        className="visually-hidden focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-10 focus:bg-surface focus:px-3 focus:py-2"
+        className="visually-hidden focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2"
       >
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <span className="text-sm font-semibold tracking-tight">Metis</span>
-          <div className="flex items-center gap-2 text-xs">
-            {offline && (
-              <span className="rounded-full border border-warn/40 bg-warn-soft px-2 py-0.5 text-warn">
-                <span aria-hidden="true">⛌ </span>
-                {session.online ? "server unreachable" : "offline"}
-              </span>
-            )}
-            {session.health?.adapters?.inference === "fixture" && (
-              <span className="rounded-full border border-line bg-raised px-2 py-0.5 text-muted">
-                fixture adapters
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => go("alerts")}
-              className="rounded-full border border-line px-2 py-0.5 text-muted hover:text-ink"
-            >
-              {session.unreadCount > 0 ? `${session.unreadCount} unread` : "alerts"}
-            </button>
-          </div>
+      {/* wide: rail */}
+      <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-line bg-rail px-3 py-5 lg:flex">
+        <div className="px-3">
+          <p className="font-serif text-xl font-semibold tracking-tight">Metis</p>
+          <p className="text-xs text-muted">Voice notebook and daily desk</p>
         </div>
-      </header>
-
-      <main id="main" className="mx-auto max-w-3xl px-4 pb-28 pt-4">
-        {surface === "today" && <TodayScreen onOpenCapture={() => go("capture")} />}
-        {surface === "capture" && <CaptureScreen />}
-        {surface === "inbox" && <InboxScreen />}
-        {surface === "tasks" && <TasksScreen />}
-        {surface === "alerts" && <NotificationsScreen />}
-        {surface === "settings" && <SettingsScreen />}
-      </main>
-
-      <nav
-        aria-label="Surfaces"
-        className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
-      >
-        <ul className="mx-auto flex max-w-3xl">
+        <nav aria-label="Surfaces" className="flex flex-col gap-1">
           {SURFACES.map((item) => (
-            <li key={item} className="flex-1">
+            <div key={item}>{link(item, "rail")}</div>
+          ))}
+        </nav>
+        <div className="mt-auto flex flex-col gap-2 px-3 text-xs text-muted">
+          <p className="flex items-center gap-2">
+            <Icon name={offline ? "wifiOff" : "cloud"} size={14} />
+            {!session.online ? "Offline" : !session.reachable ? "Server unreachable" : "Connected"}
+          </p>
+          {fixtures.length > 0 && (
+            <p className="rounded-md border border-line-strong bg-surface px-2 py-1.5 text-ink">
+              <span className="font-medium">Fixture mode.</span> Results come from test adapters, not production.
+            </p>
+          )}
+        </div>
+      </aside>
+
+      <div className="min-w-0">
+        {/* small: header */}
+        <header className="sticky top-0 z-20 border-b border-line bg-surface lg:hidden">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
+            <span className="font-serif text-lg font-semibold tracking-tight">Metis</span>
+            <div className="flex items-center gap-2 text-xs">
+              {fixtures.length > 0 && (
+                <span
+                  className="rounded-full border border-line-strong bg-raised px-2 py-0.5 font-medium text-ink"
+                  title="Results come from test adapters, not production"
+                >
+                  Fixture mode
+                </span>
+              )}
               <button
                 type="button"
-                aria-current={surface === item ? "page" : undefined}
-                onClick={() => go(item)}
-                className={`w-full px-1 py-3 text-xs font-medium ${
-                  surface === item ? "text-accent underline decoration-2 underline-offset-4" : "text-muted"
-                }`}
+                aria-label="Settings"
+                aria-current={surface === "settings" ? "page" : undefined}
+                onClick={() => go("settings")}
+                className={`grid size-11 place-items-center rounded-full ${surface === "settings" ? "bg-accent-soft text-accent" : "text-muted"}`}
               >
-                {LABEL[item]}
-                {item === "alerts" && session.unreadCount > 0 ? ` (${session.unreadCount})` : ""}
+                <Icon name="gear" />
               </button>
+            </div>
+          </div>
+        </header>
+
+        <main
+          id="main"
+          ref={main}
+          tabIndex={-1}
+          className="mx-auto w-full max-w-3xl px-4 pb-32 pt-5 outline-none md:px-6 lg:max-w-5xl lg:px-10 lg:pb-16 lg:pt-8"
+        >
+          {offline && (
+            <Notice tone="warn" className="mb-4">
+              {!session.online
+                ? "You are offline. Typed notes are held on this device until you reconnect; they are not saved yet."
+                : "The Metis server is unreachable. Nothing new is being saved; typed notes are held on this device."}
+            </Notice>
+          )}
+          {surface === "today" && <TodayScreen onOpenCapture={() => go("capture")} />}
+          {surface === "capture" && <CaptureScreen />}
+          {surface === "inbox" && <InboxScreen />}
+          {surface === "tasks" && <TasksScreen />}
+          {surface === "alerts" && <NotificationsScreen />}
+          {surface === "settings" && <SettingsScreen />}
+        </main>
+      </div>
+
+      {/* small: tab bar */}
+      <nav
+        aria-label="Surfaces"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        <ul className="mx-auto flex max-w-xl items-end">
+          {BAR.map((item) => (
+            <li key={item} className="flex-1">
+              {link(item, "bar")}
             </li>
           ))}
         </ul>

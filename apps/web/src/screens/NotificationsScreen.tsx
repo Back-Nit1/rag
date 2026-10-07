@@ -6,7 +6,7 @@
  * separate fact from a transport accepting the message.
  */
 import { Button } from "../components/Button";
-import { Card, Empty, SectionHeading } from "../components/Card";
+import { Empty, Notice, PageHeader } from "../components/Card";
 import { useSession } from "../app/session";
 import { timeLabel } from "../lib/format";
 
@@ -14,44 +14,58 @@ export function NotificationsScreen() {
   const { notifications, markRead, timezone, notificationPermission, refreshNotifications } = useSession();
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card>
-        <SectionHeading hint={`${notifications.length} in the feed`}>Notifications</SectionHeading>
-        {notificationPermission !== "granted" && (
-          <p className="mb-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-xs text-warn">
-            System notifications are off, so reminders appear here only. Nothing was marked as delivered to your
-            device.
-          </p>
-        )}
-        <Button variant="quiet" className="mb-2 px-0" onClick={() => void refreshNotifications()}>
-          Refresh
-        </Button>
-        {notifications.length === 0 ? (
-          <Empty>No reminders have fired yet.</Empty>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {notifications.map((notification) => (
-              <li
-                key={notification.id}
-                className={`rounded-lg border px-3 py-2 ${notification.read_at ? "border-line bg-canvas" : "border-accent/40 bg-accent-soft"}`}
-              >
-                <p className="text-sm font-medium text-ink">{notification.title}</p>
-                <p className="text-xs text-muted">{notification.body}</p>
-                <p className="mt-1 text-[11px] text-muted">
-                  {timeLabel(notification.created_at, timezone)} · {notification.channel} ·{" "}
-                  {notification.delivery_status ?? "unknown"} delivery
-                  {notification.read_at ? " · read" : ""}
-                </p>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Alerts"
+        sub={`${notifications.length} in the feed`}
+        action={
+          <Button onClick={() => void refreshNotifications()}>Refresh</Button>
+        }
+      />
+      {notificationPermission !== "granted" && (
+        <Notice tone="warn">
+          {notificationPermission === "unsupported"
+            ? "This browser cannot show system notifications. Reminders appear here only, and nothing is marked as delivered to your device."
+            : "System notifications are off, so reminders appear here only. Nothing was marked as delivered to your device."}
+        </Notice>
+      )}
+      {notifications.length === 0 ? (
+        <Empty title="No reminders have fired yet">
+          When a reminder comes due it is recorded here first, whether or not your device could show it.
+        </Empty>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {notifications.map((notification) => (
+            <li
+              key={notification.id}
+              className={`defer-paint rounded-lg border p-4 ${
+                notification.read_at
+                  ? "border-line bg-surface"
+                  : "border-accent/60 border-l-4 bg-accent-soft"
+              }`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div className="min-w-0 flex-1 basis-56">
+                  <p className="font-serif text-base font-semibold text-ink">
+                    {!notification.read_at && <span className="mr-2 text-xs font-sans font-medium text-accent-ink">Unread</span>}
+                    {notification.title}
+                  </p>
+                  <p className="text-sm text-muted">{notification.body}</p>
+                  <p className="mt-1.5 text-xs text-muted">
+                    {timeLabel(notification.created_at, timezone)} <span aria-hidden="true">·</span>{" "}
+                    {notification.channel} <span aria-hidden="true">·</span>{" "}
+                    {notification.delivery_status ?? "unknown"} delivery
+                    {notification.read_at ? " · read" : ""}
+                  </p>
+                </div>
                 {!notification.read_at && (
-                  <Button variant="quiet" className="mt-1 px-0" onClick={() => void markRead(notification.id)}>
-                    Mark read
-                  </Button>
+                  <Button onClick={() => void markRead(notification.id)}>Mark read</Button>
                 )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -18,7 +18,8 @@ import {
   type Task,
 } from "../contracts/metis";
 import { Button } from "../components/Button";
-import { Card, SectionHeading } from "../components/Card";
+import { Card, Notice, PageHeader, SectionHeading } from "../components/Card";
+import { Icon } from "../components/Icon";
 import { ClarificationPrompt } from "../components/ClarificationPrompt";
 import { CreatedRecords } from "../components/CreatedRecords";
 import { ProposalReview } from "../components/ProposalReview";
@@ -227,19 +228,65 @@ export function CaptureScreen() {
 
   const remaining = Math.max(0, limits.max_audio_seconds - recorder.seconds);
   const status = FLOW_STATUS[recorder.state === "recording" ? "recording" : recorder.state === "paused" ? "paused" : recorder.state === "denied" ? "mic_denied" : flow];
+  const live = recorder.state === "recording" || recorder.state === "paused";
+  const step = STEP_OF[flow] ?? -1;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <LiveStatus status={status} />
+      <PageHeader
+        title="Capture"
+        sub="Speak or type. Nothing becomes a task until you have reviewed it."
+      />
 
       <Card>
-        <SectionHeading hint={`${Math.floor(limits.max_audio_seconds / 60)} min max · ${bytes(limits.max_upload_bytes)}`}>
-          Capture
-        </SectionHeading>
+        <label className="flex flex-col gap-1.5">
+          <span className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
+            <span className="font-medium text-ink">Type a note</span>
+            <span className="text-muted">
+              Up to {Math.floor(limits.max_audio_seconds / 60)} min of audio, {bytes(limits.max_upload_bytes)}
+            </span>
+          </span>
+          <textarea
+            className="note-field min-h-36"
+            placeholder="Register for the half marathon by March 3rd, remind me at 9am on March 1…"
+            value={text}
+            maxLength={limits.max_text_chars}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void submitText();
+            }}
+          />
+        </label>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {recorder.state === "recording" || recorder.state === "paused" ? (
-            <>
+        {live ? (
+          <div
+            className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-record/60 bg-record-soft px-4 py-3"
+            role="group"
+            aria-label="Recording controls"
+          >
+            <span className="flex items-center gap-2.5 text-record">
+              <span
+                className={`size-3 rounded-full bg-record ${recorder.state === "recording" ? "rec-ring" : ""}`}
+                aria-hidden="true"
+              />
+              <span className="text-sm font-semibold">{recorder.state === "recording" ? "Recording" : "Paused"}</span>
+            </span>
+            <span className="font-mono text-lg text-ink" aria-live="off">
+              {clock(recorder.seconds)}
+              <span className="text-sm text-muted"> / {clock(limits.max_audio_seconds)}</span>
+            </span>
+            {remaining <= 30 && (
+              <span className="text-xs font-medium text-warn">{clock(remaining)} left before the limit stops it</span>
+            )}
+            <span className="flex flex-wrap gap-2 sm:ml-auto">
+              {recorder.state === "recording" ? (
+                <Button onClick={recorder.pause}>
+                  <Icon name="pause" size={16} /> Pause
+                </Button>
+              ) : (
+                <Button onClick={recorder.resume}>Resume</Button>
+              )}
               <Button
                 variant="primary"
                 onClick={async () => {
@@ -248,13 +295,8 @@ export function CaptureScreen() {
                   else setFlow("canceled");
                 }}
               >
-                Stop and send
+                <Icon name="stop" size={16} /> Stop and send
               </Button>
-              {recorder.state === "recording" ? (
-                <Button onClick={recorder.pause}>Pause</Button>
-              ) : (
-                <Button onClick={recorder.resume}>Resume</Button>
-              )}
               <Button
                 variant="danger"
                 onClick={() => {
@@ -264,99 +306,122 @@ export function CaptureScreen() {
               >
                 Cancel
               </Button>
-              <span className="font-mono text-sm text-ink" aria-live="off">
-                {clock(recorder.seconds)}
-                <span className="text-muted"> / {clock(limits.max_audio_seconds)}</span>
-              </span>
-              {remaining <= 30 && (
-                <span className="text-xs text-warn">{clock(remaining)} left before the limit stops it</span>
-              )}
-            </>
-          ) : (
-            <Button
-              variant="primary"
-              className="min-h-11 px-4"
+            </span>
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
               disabled={!recorder.supported}
               onClick={() => void recorder.start()}
+              className="inline-flex min-h-14 items-center gap-3 rounded-full border-2 border-accent bg-surface py-1.5 pl-1.5 pr-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span aria-hidden="true">●</span> Record a thought
-            </Button>
-          )}
-          <StatusPill status={status} />
-        </div>
-
-        {!recorder.supported && (
-          <p className="mt-2 text-xs text-muted">
-            This browser has no MediaRecorder support. Typed capture below does the same thing.
-          </p>
-        )}
-        {recorder.error && <p className="mt-2 text-xs text-warn">{recorder.error}</p>}
-
-        <div className="mt-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted">Or type it</span>
-            <textarea
-              className="min-h-24 w-full resize-y rounded-lg border border-line bg-canvas p-3 text-sm text-ink"
-              placeholder="Register for the half marathon by March 3rd, remind me at 9am on March 1…"
-              value={text}
-              maxLength={limits.max_text_chars}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void submitText();
-              }}
-            />
-          </label>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Button variant="primary" disabled={!text.trim()} onClick={() => void submitText()}>
-              Send note
-            </Button>
-            <span className="text-xs text-muted">⌘/Ctrl + Enter</span>
-            {!online && <span className="text-xs text-warn">Offline — it will be held on this device.</span>}
-          </div>
-        </div>
-
-        {heldAudio && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2">
-            <span className="text-xs text-warn">
-              A {clock(heldAudio.durationSeconds)} recording ({bytes(heldAudio.blob.size)}) is still unsent.
-            </span>
-            <Button variant="secondary" onClick={() => void sendAudio(heldAudio)}>
-              Retry upload
-            </Button>
-            <Button variant="quiet" onClick={() => setHeldAudio(null)}>
-              Discard
-            </Button>
-          </div>
-        )}
-
-        {error && <p className="mt-3 rounded-lg border border-bad/40 bg-bad-soft px-3 py-2 text-xs text-bad">{error}</p>}
-
-        {notificationPermission !== "granted" && (
-          <p className="mt-3 text-xs text-muted">
-            {FLOW_STATUS.notifications_disabled.detail}{" "}
-            <button type="button" className="font-medium text-accent underline" onClick={() => void session.requestNotificationPermission()}>
-              Enable notifications
+              <span className="grid size-11 place-items-center rounded-full bg-accent text-on-accent">
+                <Icon name="mic" size={22} />
+              </span>
+              Record a thought
             </button>
-          </p>
+            <Button variant="primary" className="ml-auto min-h-12 px-5 md:min-h-11" disabled={!text.trim()} onClick={() => void submitText()}>
+              <Icon name="send" size={16} /> Send note
+            </Button>
+            <span className="hidden text-xs text-muted sm:inline">or press ⌘/Ctrl + Enter</span>
+          </div>
         )}
+
+        <div className="mt-4 border-t border-line pt-3">
+          <StatusPill status={status} />
+          {step >= 0 && (
+            <ol className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs" aria-label="Progress">
+              {STEPS.map((label, i) => (
+                <li
+                  key={label}
+                  aria-current={i === step ? "step" : undefined}
+                  className={i === step ? "font-semibold text-accent-ink" : i < step ? "text-ink" : "text-muted"}
+                >
+                  <span aria-hidden="true" className="mr-1 font-mono">
+                    {i < step ? "✓" : i === step ? "●" : "○"}
+                  </span>
+                  {label}
+                  {i < step && <span className="visually-hidden"> (done)</span>}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 empty:hidden">
+          {!recorder.supported && (
+            <Notice tone="info">This browser has no MediaRecorder support, so voice capture is off. Typing does the same thing.</Notice>
+          )}
+          {recorder.state === "denied" && (
+            <Notice tone="warn">
+              Microphone access was blocked. Allow it in the browser&apos;s site settings to record; typed capture works
+              meanwhile.
+            </Notice>
+          )}
+          {recorder.error && recorder.state !== "denied" && <Notice tone="warn">{recorder.error}</Notice>}
+          {!online && flow !== "offline" && <Notice tone="warn">Offline: a note you send is held on this device, not saved.</Notice>}
+          {flow === "budget_exceeded" && (
+            <Notice tone="warn">The daily cost limit stopped the paid step. Typed notes and reminders still work.</Notice>
+          )}
+          {heldAudio && (
+            <Notice
+              tone="warn"
+              action={
+                <span className="flex flex-wrap gap-2">
+                  <Button onClick={() => void sendAudio(heldAudio)}>Retry upload</Button>
+                  <Button variant="quiet" onClick={() => setHeldAudio(null)}>
+                    Discard recording
+                  </Button>
+                </span>
+              }
+            >
+              A {clock(heldAudio.durationSeconds)} recording ({bytes(heldAudio.blob.size)}) is still unsent. It is held
+              in memory only; closing this tab loses it.
+            </Notice>
+          )}
+          {error && (
+            <Notice tone="bad" live>
+              {error}
+            </Notice>
+          )}
+          {notificationPermission !== "granted" && (
+            <p className="text-xs text-muted">
+              {notificationPermission === "unsupported"
+                ? "This browser cannot show system notifications; reminders will appear in the Alerts feed."
+                : FLOW_STATUS.notifications_disabled.detail}{" "}
+              {notificationPermission !== "unsupported" && (
+                <button
+                  type="button"
+                  className="font-medium text-accent underline underline-offset-2"
+                  onClick={() => void session.requestNotificationPermission()}
+                >
+                  Enable notifications
+                </button>
+              )}
+            </p>
+          )}
+        </div>
       </Card>
 
       {queued.length > 0 && (
         <Card>
-          <SectionHeading hint="held on this device">Unsent notes</SectionHeading>
+          <SectionHeading hint="held on this device, not saved">Unsent notes</SectionHeading>
           <ul className="flex flex-col gap-2">
             {queued.map((entry) => (
-              <li key={entry.client_capture_id} className="rounded-lg border border-line bg-canvas px-3 py-2">
-                <p className="truncate text-sm text-ink">{entry.text}</p>
-                <p className="text-xs text-muted">
-                  {entry.attempts} attempt{entry.attempts === 1 ? "" : "s"}
+              <li key={entry.client_capture_id} className="rounded-md border border-warn/50 bg-warn-soft px-3 py-2 text-warn">
+                <p className="truncate font-serif text-base text-ink">{entry.text}</p>
+                <p className="text-xs">
+                  {entry.attempts === 0
+                    ? "Waiting to send"
+                    : `Not sent after ${entry.attempts} attempt${entry.attempts === 1 ? "" : "s"}`}
                   {entry.last_error ? ` · ${entry.last_error}` : ""}
                 </p>
               </li>
             ))}
           </ul>
-          <div className="mt-2 flex gap-2">
-            <Button variant="secondary" disabled={!online} onClick={() => void flush()}>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button disabled={!online} onClick={() => void flush()}>
               Sync now
             </Button>
             <span className="text-xs text-muted">
@@ -406,6 +471,19 @@ export function CaptureScreen() {
     </div>
   );
 }
+
+// The pipeline is a real sequence, so a stepper is honest here. Uploaded is
+// "Received", which is deliberately a different step from "Transcribed".
+const STEPS = ["Received", "Transcribing", "Extracting", "Review", "Saved"];
+const STEP_OF: Partial<Record<FlowState, number>> = {
+  upload_pending: 0,
+  queued: 0,
+  transcribing: 1,
+  extraction_pending: 2,
+  transcript_ready: 3,
+  clarification_required: 3,
+  saved: 4,
+};
 
 function describe(cause: unknown): string {
   if (cause instanceof ApiError) return `${cause.message} (${cause.code})`;
