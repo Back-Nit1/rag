@@ -7,12 +7,14 @@
  * controls.
  */
 import { useEffect, useState } from "react";
-import type { UsageResponse } from "../contracts/metis";
+import { JobState, type ExportStatusResponse, type TimeWindow, type UsageResponse } from "../contracts/metis";
 import { Button } from "../components/Button";
 import { Card, Notice, PageHeader, SectionHeading } from "../components/Card";
 import { Field, inputClass } from "../components/Field";
 import { useSession } from "../app/session";
-import { api } from "../lib/api";
+import { useAuth } from "../app/AuthGate";
+import { ApiError, api } from "../lib/api";
+import { buildPatch, dailyScheduleLabel, toDraft, validate, type PrefsDraft } from "../lib/prefs";
 
 const usd = (micro: number) => `$${(micro / 1_000_000).toFixed(2)}`;
 
@@ -29,26 +31,41 @@ export function SettingsScreen() {
   const session = useSession();
   const { preferences, health, limits, notificationPermission } = session;
   const [usage, setUsage] = useState<UsageResponse | null>(null);
-  const [timezone, setTimezone] = useState(preferences?.timezone ?? "");
+  const auth = useAuth();
+  const [draft, setDraft] = useState<PrefsDraft | null>(null);
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ tone: "good" | "warn"; text: string } | null>(null);
+  const [confirmOut, setConfirmOut] = useState(false);
 
   useEffect(() => {
     api.usage().then(setUsage).catch(() => setUsage(null));
   }, []);
 
-  useEffect(() => setTimezone(preferences?.timezone ?? ""), [preferences?.timezone]);
+  useEffect(() => setDraft(preferences ? toDraft(preferences) : null), [preferences]);
 
-  const saveTimezone = async () => {
-    if (!preferences) return;
+  const save = async () => {
+    if (!preferences || !draft) return;
+    const problem = validate(draft);
+    if (problem) return setNotice({ tone: "warn", text: problem });
+    const patch = buildPatch(preferences, draft);
+    if (Object.keys(patch).length === 0) return setNotice({ tone: "good", text: "Nothing changed." });
     setSaving(true);
     setNotice(null);
     try {
-      await api.patchPreferences({ expected_revision: preferences.revision ?? 1, timezone });
+      await api.patchPreferences({ expected_revision: preferences.revision ?? 1, ...patch });
       await session.refreshPreferences();
-      setNotice("Timezone saved.");
-    } catch {
-      setNotice("That timezone was rejected. Nothing changed.");
+      setNotice({ tone: "good", text: "Saved." });
+    } catch (cause) {
+      await session.refreshPreferences();
+      setNotice({
+        tone: "warn",
+        text:
+          cause instanceof ApiError && cause.currentRevision !== null
+            ? "Your preferences changed elsewhere. Nothing was overwritten; the latest values are shown."
+            : cause instanceof ApiError
+              ? `Not saved: ${cause.message}`
+              : "The request did not reach Metis. Nothing changed.",
+      });
     } finally {
       setSaving(false);
     }
@@ -64,38 +81,50 @@ export function SettingsScreen() {
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         <Card>
           <SectionHeading>Preferences</SectionHeading>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Field label="Timezone" hint="Used for every local date and reminder time.">
-                <input className={inputClass} name="timezone" autoComplete="off" spellCheck={false} value={timezone} onChange={(e) => setTimezone(e.target.value)} />
-              </Field>
-            </div>
-            <Field label="Focus tasks per day" hint="Read only here.">
-              <input className={inputClass} value={preferences?.max_focus_tasks ?? ""} readOnly />
-            </Field>
-            <Field label="Quiet hours" hint="Read only here.">
-              <input
-                className={inputClass}
-                readOnly
-                value={(preferences?.quiet_hours ?? []).map((w) => `${w.start}–${w.end}`).join(", ") || "none"}
-              />
-            </Field>
-            <Field label="Active hours" hint="Read only here.">
-              <input
-                className={inputClass}
-                readOnly
-                value={(preferences?.work_hours ?? []).map((w) => `${w.start}–${w.end}`).join(", ") || "none"}
-              />
-            </Field>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button variant="primary" disabled={saving || !timezone} onClick={() => void saveTimezone()}>
-              {saving ? "Saving…" : "Save timezone"}
-            </Button>
-            <span role="status" className="text-xs text-muted">
-              {notice}
-            </span>
-          </div>
+          {!draft ? (
+            <Notice tone="info">Preferences could not be read right now.</Notice>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Timezone" hint="Used for every local date and reminder time.">
+                  <input className={inputClass} name="timezone" autoComplete="off" spellCheck={false} value={draft.timezone} onChange={(e) => setDraft({ ...draft, timezone: e.target.value })} />
+                </Field>
+                <Field label="Focus tasks per day" hint="1 to 10.">
+                  <input className={inputClass} type="number" min={1} max={10} value={draft.maxFocus} onChange={(e) => setDraft({ ...draft, maxFocus: e.target.value })} />
+                </Field>
+                <Windows legend="Work hours" value={draft.workHours} onChange={(workHours) => setDraft({ ...draft, workHours })} />
+                <Windows legend="Quiet hours" hint="No reminders in these windows. May cross midnight." value={draft.quietHours} onChange={(quietHours) => setDraft({ ...draft, quietHours })} />
+                <Field label="Daily budget (USD)" hint="Cap on paid model calls per day. Blank keeps the current value.">
+                  <input className={inputClass} type="number" min={0} step="0.01" inputMode="decimal" value={draft.dailyBudgetUsd} onChange={(e) => setDraft({ ...draft, dailyBudgetUsd: e.target.value })} />
+                </Field>
+              </div>
+              <fieldset className="mt-4 rounded-md border border-line p-3">
+                <legend className="px-1 text-xs font-medium">Daily plan</legend>
+                <div className="flex flex-wrap items-end gap-4">
+                  <label className="flex min-h-10 items-center gap-2 text-sm">
+                    <input type="checkbox" checked={draft.dailyEnabled} onChange={(e) => setDraft({ ...draft, dailyEnabled: e.target.checked })} />
+                    Prepare a plan every morning
+                  </label>
+                  <Field label="At (local time)">
+                    <input className={`${inputClass} w-32`} type="time" value={draft.dailyTime} onChange={(e) => setDraft({ ...draft, dailyTime: e.target.value })} />
+                  </Field>
+                </div>
+                {preferences && (
+                  <p className="mt-2 text-xs text-muted" role="status">
+                    Server state: <strong className="font-semibold text-ink">{dailyScheduleLabel(preferences).label}</strong>
+                  </p>
+                )}
+              </fieldset>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button variant="primary" disabled={saving} onClick={() => void save()}>
+                  {saving ? "Saving…" : "Save preferences"}
+                </Button>
+                <span role="status" className={`text-xs ${notice?.tone === "warn" ? "text-warn" : "text-muted"}`}>
+                  {notice?.text}
+                </span>
+              </div>
+            </>
+          )}
         </Card>
 
         <Card>
@@ -117,6 +146,16 @@ export function SettingsScreen() {
             Web push needs browser and platform support, and delivery is never guaranteed. Every reminder also lands
             in the in-app feed, which is the record we can vouch for.
           </p>
+          {draft && (
+            <label className="mt-3 flex min-h-10 items-center gap-2 text-sm">
+              <input type="checkbox" checked={draft.webPush} onChange={(e) => setDraft({ ...draft, webPush: e.target.checked })} />
+              Also send reminders as web push (saved with Preferences)
+            </label>
+          )}
+          <Notice tone="info" className="mt-3">
+            Push registration is not available yet: the server does not publish the public key a browser needs to
+            subscribe, so this device is not registered and nothing is sent to it. In-app alerts still work.
+          </Notice>
           {(notificationPermission === "default" || notificationPermission === "denied") && (
             <Button className="mt-3" onClick={() => void session.requestNotificationPermission()}>
               Ask for permission
@@ -176,17 +215,25 @@ export function SettingsScreen() {
           ) : null}
         </Card>
 
-        <Card>
-          <SectionHeading hint="your data">Export and delete</SectionHeading>
-          <p className="max-w-prose text-sm text-muted">
-            An export is queued as a job on the server and takes a moment; a delete removes access immediately and the
-            derived copies are purged by a follow-up job. Neither is instant, and this screen will say which stage it
-            is in rather than claiming completion.
-          </p>
-          <Notice tone="info" className="mt-3">
-            Not available in this build: the export endpoint exists, the confirmation flow does not.
-          </Notice>
-        </Card>
+        <ExportCard />
+
+        {auth.signOut && (
+          <Card>
+            <SectionHeading hint="signed in">Account</SectionHeading>
+            {confirmOut ? (
+              <Notice tone="warn" action={
+                <div className="flex gap-2">
+                  <Button variant="danger" onClick={auth.signOut}>Sign out and clear this device</Button>
+                  <Button variant="quiet" onClick={() => setConfirmOut(false)}>Stay signed in</Button>
+                </div>
+              }>
+                Notes not yet sent are held only on this device and will be discarded.
+              </Notice>
+            ) : (
+              <Button onClick={() => setConfirmOut(true)}>Sign out</Button>
+            )}
+          </Card>
+        )}
       </div>
 
       <details className="group rounded-lg border border-line bg-surface p-4 md:p-5">
@@ -211,5 +258,123 @@ export function SettingsScreen() {
         </dl>
       </details>
     </div>
+  );
+}
+
+/** Editable list of HH:MM windows. */
+function Windows({ legend, hint, value, onChange }: { legend: string; hint?: string; value: TimeWindow[]; onChange: (v: TimeWindow[]) => void }) {
+  return (
+    <fieldset className="flex min-w-0 flex-col gap-1.5 text-xs">
+      <legend className="mb-1 font-medium text-ink">{legend}</legend>
+      {value.length === 0 && <p className="text-muted">none</p>}
+      {value.map((w, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <input aria-label={`${legend} ${i + 1} start`} className={inputClass} type="time" value={w.start} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))} />
+          <span aria-hidden="true">–</span>
+          <input aria-label={`${legend} ${i + 1} end`} className={inputClass} type="time" value={w.end} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))} />
+          <Button variant="quiet" aria-label={`Remove ${legend} ${i + 1}`} onClick={() => onChange(value.filter((_, j) => j !== i))}>Remove</Button>
+        </div>
+      ))}
+      <div>
+        <Button variant="quiet" onClick={() => onChange([...value, { start: "09:00", end: "17:00" }])}>Add window</Button>
+      </div>
+      {hint && <span className="text-2xs text-muted">{hint}</span>}
+    </fieldset>
+  );
+}
+
+const POLL = new Set<string>([JobState.QUEUED, JobState.STARTING, JobState.UPLOADING]);
+
+/** Export is a server job; this reflects its state and offers an authenticated download only when ready. */
+function ExportCard() {
+  const [status, setStatus] = useState<ExportStatusResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [key, setKey] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+
+  const start = async () => {
+    setBusy(true);
+    setError(null);
+    const k = key ?? `export:${crypto.randomUUID()}`;
+    setKey(k); // a retry after a dropped response replays the same job
+    try {
+      const accepted = await api.createExport({ include_sources: true, include_memories: true, include_commitments: true }, k);
+      setKey(null);
+      setStatus(null);
+      setJobId(accepted.job_id);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "The request did not reach Metis. Nothing was queued.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!jobId) return;
+    let stop = false;
+    let timer = 0;
+    const tick = async () => {
+      try {
+        const next = await api.getExport(jobId);
+        if (stop) return;
+        setStatus(next);
+        if (next.state === JobState.READY || next.state === JobState.FAILED || next.state === JobState.CANCELED) return;
+      } catch {
+        if (stop) return;
+        setError("The export status could not be read. Retrying.");
+      }
+      timer = window.setTimeout(tick, 2000);
+    };
+    void tick();
+    return () => {
+      stop = true;
+      window.clearTimeout(timer);
+    };
+  }, [jobId]);
+
+  const download = async () => {
+    if (!jobId) return;
+    try {
+      const blob = await api.downloadExport(jobId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `metis-export-${jobId}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setError(null);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "The download did not reach Metis.");
+    }
+  };
+
+  const working = !!jobId && (!status || POLL.has(status.state) || (status.state !== JobState.READY && status.state !== JobState.FAILED && status.state !== JobState.CANCELED));
+  return (
+    <Card>
+      <SectionHeading hint="your data">Export and delete</SectionHeading>
+      <p className="max-w-prose text-sm text-muted">
+        An export is a server job and takes a moment. To delete a source, open it from any &ldquo;source&rdquo; link; the
+        delete removes access at once and a background job purges derived copies, and its state is shown there.
+      </p>
+      {error && <Notice tone="warn" live className="mt-3">{error}</Notice>}
+      {jobId && (
+        <p role="status" className="mt-3 text-sm">
+          {!status && "Checking the export…"}
+          {status?.state === JobState.READY && `Ready${status.byte_size != null ? ` · ${(status.byte_size / 1024).toFixed(0)} KB` : ""}. Verified by the server.`}
+          {status?.state === JobState.FAILED && `The export failed${status.error_message ? `: ${status.error_message}` : ""}.`}
+          {status?.state === JobState.CANCELED && "The export was canceled."}
+          {working && status && `Working on it (${status.state}). Nothing is downloadable yet.`}
+        </p>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button disabled={busy || working} onClick={() => void start()}>
+          {busy ? "Queuing…" : jobId && !working ? "Export again" : "Request export"}
+        </Button>
+        {status?.state === JobState.READY && status.download_url && (
+          <Button variant="primary" onClick={() => void download()}>Download</Button>
+        )}
+      </div>
+    </Card>
   );
 }

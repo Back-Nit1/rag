@@ -6,6 +6,7 @@
  * separate fact from a transport accepting the message.
  */
 import { Button } from "../components/Button";
+import { ReminderControls } from "../components/ReminderControls";
 import { Empty, Notice, PageHeader } from "../components/Card";
 import { useSession } from "../app/session";
 import { timeLabel } from "../lib/format";
@@ -57,6 +58,9 @@ export function NotificationsScreen() {
                     {notification.delivery_status ?? "unknown"} delivery
                     {notification.read_at ? " · read" : ""}
                   </p>
+                  {notification.reminder_id && (
+                    <ReminderControls reminderId={notification.reminder_id} timezone={timezone} />
+                  )}
                 </div>
                 {!notification.read_at && (
                   <Button onClick={() => void markRead(notification.id)}>Mark read</Button>
