@@ -722,7 +722,9 @@ def test_availability_patch_and_delete_are_revision_checked(client):
     ok = client.patch("/v1/availability/avail_e?expected_revision=1", json=_avail(kind="busy"))
     assert ok.status_code == 200 and ok.json()["kind"] == "busy" and ok.json()["revision"] == 2
     assert client.delete("/v1/availability/avail_e?expected_revision=1").status_code == 409
+    before = client.app.state.adapters.state_store.get_planning_epoch(USER)
     assert client.delete("/v1/availability/avail_e?expected_revision=2").status_code == 204
+    assert client.app.state.adapters.state_store.get_planning_epoch(USER) > before
     assert client.get("/v1/availability?local_date=2026-10-05").json() == []
     assert client.delete("/v1/availability/avail_e?expected_revision=2").status_code == 404
 

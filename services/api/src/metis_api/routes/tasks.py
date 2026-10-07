@@ -189,6 +189,10 @@ def delete_availability(block_id: str, ctx: Context, expected_revision: int = Qu
     """Tombstone a block (revision-checked); it no longer appears in listings."""
     _live_block(ctx, block_id, expected_revision)
     ctx.state.tombstone(ctx.user_id, "availability", block_id)
+    # tombstone() bypasses the transaction that bumps the planning epoch on
+    # writes; removed free/busy time must still make a proposed plan stale.
+    with ctx.state.transaction(ctx.user_id) as tx:
+        tx.bump_planning_epoch(ctx.user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
