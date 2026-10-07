@@ -272,8 +272,23 @@ class FasterWhisperTranscriber:
 
 
 def build_transcriber() -> Any:
-    """Fixture transcriber locally; the real decoder in hybrid/cloud mode."""
+    """Honour ``METIS_SPEECH_ENGINE`` independently of ``METIS_MODE``.
+
+    ``auto`` keeps the mode-based choice: fixture locally, the real decoder in
+    hybrid/cloud mode.
+    """
     cfg = settings()
+    engine = cfg.desktop.speech_engine
+    if engine == "fixture":
+        return FixtureTranscriber()
+    if engine == "faster_whisper":
+        return FasterWhisperTranscriber()
+    if engine == "remote":
+        from .remote import RemoteTranscriber
+
+        # Config validation guarantees a loopback endpoint and a secret here.
+        assert cfg.desktop.speech_endpoint and cfg.desktop.speech_secret
+        return RemoteTranscriber(cfg.desktop.speech_endpoint, cfg.desktop.speech_secret)
     if cfg.uses_real_inference:
         return FasterWhisperTranscriber()
     return FixtureTranscriber()
