@@ -1,0 +1,60 @@
+{
+ "import_seconds": 1.0734828329877928,
+ "model_load_seconds": 21.46820045809727,
+ "first_decode": {
+  "n": 22,
+  "wall_mean": 1.0590602784967897,
+  "wall_p50": 1.0369745419593528,
+  "wall_p95": 1.144643708015792,
+  "wall_max": 2.11117579205893,
+  "rtf": 0.3510150523062111
+ },
+ "first_file_first_decode_wall": 2.11117579205893,
+ "warm": {
+  "n": 66,
+  "wall_mean": 1.0408790315974108,
+  "wall_p50": 1.0522677500266582,
+  "wall_p95": 1.2358646250795573,
+  "wall_max": 1.5778111249674112,
+  "rtf": 0.34498905788365003
+ },
+ "silence_wall": [
+  0.03227120800875127,
+  0.014333291095681489,
+  0.00925758306402713,
+  0.012993457959964871
+ ],
+ "no_speech_ids": [
+  "ev_silence_01",
+  "ev_silence_02"
+ ],
+ "env": {
+  "os": "macOS-26.4-arm64-arm-64bit",
+  "machine": "arm64",
+  "python": "3.12.6",
+  "cpu_count": 12,
+  "meta_sample": {
+   "model_id": "small.en",
+   "artifact_revision": "d1d751a5f8271d482d14ca55d9e2deeebbae577f",
+   "library_version": "1.0.3",
+   "compute_type": "int8",
+   "beam_size": 1,
+   "temperature": 0.0,
+   "vad_enabled": true,
+   "language": "en",
+   "language_detected": "en",
+   "adapter_mode": "cloud",
+   "decode_seconds": 1.943,
+   "audio_seconds": 3.055,
+   "cold_start": true,
+   "model_load_seconds": 0.0,
+   "input_codec": "opus"
+  },
+  "versions": {
+   "faster_whisper": "1.0.3",
+   "ctranslate2": "4.4.0",
+   "av": "12.3.0",
+   "numpy": "1.26.4"
+  }
+ }
+}

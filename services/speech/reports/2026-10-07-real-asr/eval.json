@@ -1,0 +1,193 @@
+{
+  "splits": {
+    "dev": {
+      "items": 14,
+      "mean_wer": 0.0696,
+      "name_fidelity": 0.8889,
+      "date_fidelity": 0.6667,
+      "negation_fidelity": 1.0,
+      "per_item": [
+        {
+          "id": "ev_clean_01",
+          "wer": 0.0,
+          "names": "2/2",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_clean_02",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_clean_03",
+          "wer": 0.0,
+          "names": "1/1",
+          "dates": "1/1",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_names_01",
+          "wer": 0.1429,
+          "names": "1/1",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_names_02",
+          "wer": 0.1111,
+          "names": "1/2",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_dates_01",
+          "wer": 0.2,
+          "names": "0/0",
+          "dates": "0/2",
+          "negations": "1/1"
+        },
+        {
+          "id": "ev_dates_02",
+          "wer": 0.1429,
+          "names": "0/0",
+          "dates": "1/1",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_neg_01",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "1/1",
+          "negations": "1/1"
+        },
+        {
+          "id": "ev_neg_02",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "1/1"
+        },
+        {
+          "id": "ev_fast_01",
+          "wer": 0.2105,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_fast_02",
+          "wer": 0.0,
+          "names": "1/1",
+          "dates": "1/1",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_pause_01",
+          "wer": 0.1667,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_noise_01",
+          "wer": 0.0,
+          "names": "2/2",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_silence_01",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "0/0"
+        }
+      ]
+    },
+    "heldout": {
+      "items": 10,
+      "mean_wer": 0.0368,
+      "name_fidelity": 1.0,
+      "date_fidelity": 0.8,
+      "negation_fidelity": 1.0,
+      "per_item": [
+        {
+          "id": "ev_names_03",
+          "wer": 0.0,
+          "names": "3/3",
+          "dates": "0/0",
+          "negations": "1/1"
+        },
+        {
+          "id": "ev_dates_03",
+          "wer": 0.125,
+          "names": "0/0",
+          "dates": "2/2",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_dates_04",
+          "wer": 0.1429,
+          "names": "0/0",
+          "dates": "1/1",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_neg_03",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "1/1"
+        },
+        {
+          "id": "ev_neg_04",
+          "wer": 0.0,
+          "names": "1/1",
+          "dates": "0/0",
+          "negations": "1/1"
+        },
+        {
+          "id": "ev_fast_03",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "1/1",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_pause_02",
+          "wer": 0.0,
+          "names": "1/1",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_noise_02",
+          "wer": 0.1,
+          "names": "0/0",
+          "dates": "0/1",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_silence_02",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "0/0"
+        },
+        {
+          "id": "ev_nonspeech_01",
+          "wer": 0.0,
+          "names": "0/0",
+          "dates": "0/0",
+          "negations": "0/0"
+        }
+      ]
+    }
+  },
+  "missing_hypotheses": [],
+  "normalization": "NFKC, casefold, strip punctuation except ' and -, collapse whitespace",
+  "caveat": "A pilot set of this size cannot support a universal accuracy claim. Report these numbers with the machine, model artifact and decode parameters used."
+}
