@@ -11,7 +11,7 @@ export function Card({
   as?: "section" | "article" | "li" | "div";
   className?: string;
 }) {
-  return <Tag className={`rounded-lg border border-line bg-surface p-4 shadow-card md:p-5 ${className}`}>{children}</Tag>;
+  return <Tag className={`rise rounded-lg border border-line bg-surface p-4 shadow-card md:p-5 ${className}`}>{children}</Tag>;
 }
 
 /**
@@ -147,7 +147,7 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line-strong/50 pb-4">
+    <header className="rise flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line-strong/50 pb-4">
       <div className="min-w-0">
         <h1 className="font-serif text-[1.75rem] font-semibold leading-tight tracking-tight text-ink md:text-4xl">{title}</h1>
         {sub && <p className="mt-1 max-w-prose text-sm text-muted">{sub}</p>}

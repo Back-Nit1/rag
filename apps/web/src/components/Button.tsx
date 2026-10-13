@@ -20,7 +20,7 @@ export function Button({
     <button
       type="button"
       {...rest}
-      className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border px-4.5 py-1.5 text-sm font-medium transition-[background-color,filter,color] duration-150 select-none disabled:cursor-not-allowed disabled:opacity-50 md:min-h-10 ${VARIANT[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border px-4.5 py-1.5 text-sm font-medium press select-none disabled:cursor-not-allowed disabled:opacity-50 md:min-h-10 ${VARIANT[variant]} ${className}`}
     />
   );
 }

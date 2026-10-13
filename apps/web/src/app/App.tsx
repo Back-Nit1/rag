@@ -119,10 +119,14 @@ function Shell() {
           onClick={() => go(item)}
           className={`relative flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition-colors ${
             active
-              ? "bg-rail-raised font-semibold text-rail-ink before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-rail-accent"
+              ? "bg-rail-raised font-semibold text-rail-ink"
               : "text-rail-muted hover:bg-rail-raised/60 hover:text-rail-ink"
           }`}
         >
+          <span
+            aria-hidden="true"
+            className={`absolute inset-y-2 left-0 w-[3px] origin-center rounded-full bg-rail-accent transition-transform duration-300 ease-out ${active ? "scale-y-100" : "scale-y-0"}`}
+          />
           <Icon name={ICON[item]} />
           <span className="flex flex-1 items-center justify-between">{label}</span>
         </button>
@@ -144,7 +148,7 @@ function Shell() {
           </span>
         ) : (
           <span
-            className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${active ? "bg-accent-soft" : ""}`}
+            className={`grid h-7 place-items-center rounded-full transition-[width,background-color] duration-300 ease-out ${active ? "w-14 bg-accent-soft" : "w-9"}`}
           >
             <Icon name={ICON[item]} size={20} />
           </span>

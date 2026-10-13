@@ -11,9 +11,11 @@ export function ThemeToggle({ className = "", label = false }: { className?: str
       onClick={toggle}
       aria-label={`Switch to ${next} mode`}
       title={`Switch to ${next} mode`}
-      className={`inline-flex items-center gap-2 rounded-full ${className}`}
+      className={`press inline-flex items-center gap-2 rounded-full ${className}`}
     >
-      <Icon name={theme === "dark" ? "sun" : "moon"} />
+      <span key={theme} className="turn grid">
+        <Icon name={theme === "dark" ? "sun" : "moon"} />
+      </span>
       {label && <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
     </button>
   );

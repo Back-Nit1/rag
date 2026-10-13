@@ -259,6 +259,56 @@ aside :where(a, button):focus-visible {
   }
 }
 
+/*
+ * Motion. One easing, short distances, and only where it explains something:
+ * a surface settles into place (.rise, staggered by sibling position and
+ * capped so long lists never wait), the nav marker grows from the item you
+ * chose, controls press down. Keyframes have a `from` only, so with motion
+ * off every element simply renders in its final state.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.rise {
+  animation: rise 360ms var(--ease-out) both;
+}
+.rise:nth-child(2) { animation-delay: 50ms; }
+.rise:nth-child(3) { animation-delay: 90ms; }
+.rise:nth-child(4) { animation-delay: 125ms; }
+.rise:nth-child(5) { animation-delay: 155ms; }
+.rise:nth-child(n + 6) { animation-delay: 180ms; }
+
+/* Interactive rows lift a hair on hover; the shadow does the work, not scale. */
+.lift {
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), border-color 180ms var(--ease-out);
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--color-line-strong);
+}
+
+.press {
+  transition: transform 120ms var(--ease-out), opacity 150ms, background-color 150ms, color 150ms;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Theme icon swaps with a quarter turn so the change reads as a toggle. */
+@keyframes turn {
+  from {
+    opacity: 0;
+    transform: rotate(-70deg) scale(0.6);
+  }
+}
+.turn {
+  animation: turn 280ms var(--ease-out) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
