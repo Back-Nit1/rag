@@ -358,13 +358,35 @@ def test_fixture_event_register_has_no_standalone_registration_task():
     assert "remind_to_register" in items[0]["requested_actions"]
 
 
-def test_fixture_project_hint_only_when_explicit():
+def test_fixture_project_hint_offer_and_resolve():
     from metis_pipeline.inference import _fixture_extraction
 
-    hinted = _fixture_extraction("NOTE:\nNext step on project Atlas is to test it.")["items"]
-    assert {i["project_hint"] for i in hinted} == {"Atlas"}
-    plain = _fixture_extraction("NOTE:\nNext step is to test it.")["items"]
-    assert all("project_hint" not in i for i in plain)
+    offered = "proj_1 | project | Atlas\n\n"
+
+    def hints(text, head=offered):
+        return [i.get("project_hint") for i in _fixture_extraction(f"{head}NOTE:\n{text}")["items"]]
+
+    assert hints("Next step on project Atlas is to test it.") == ["proj_1"]
+    assert hints("On Atlas I tried the stale cache and it failed.") == ["proj_1"]
+    # Not offered, not in an explicit scoping phrase, or no offer at all: no hint.
+    assert hints("Next step on project Zed is to test it.") == [None]
+    assert hints("The Atlas next step is to test it.") == [None]
+    assert hints("Next step on project Atlas is to test it.", head="") == [None]
+
+
+def test_extraction_drops_project_hint_not_offered(store, clock):
+    class Echo:
+        def complete_json(self, **kw):
+            item = {"kind": "thought", "title": "t", "evidence": [{"start_char": 0, "end_char": 4}]}
+            return {"items": [{**item, "project_hint": h} for h in ("proj_x", "Atlas", "ghost")],
+                    "requires_clarification": False}, {}
+
+    from metis_contracts import Project
+
+    with store.transaction(USER) as tx:
+        tx.put("project", Project(id="proj_x", user_id=USER, created_at=T0, updated_at=T0, title="Atlas"))
+    out = ExtractionService(state_store=store, inference=Echo(), clock=clock).extract(source("Note text"), source_version=1)
+    assert [i.project_hint for i in out.proposal.items] == ["proj_x", "proj_x", None]
 
 
 # --- status_update target validation ---------------------------------------- #

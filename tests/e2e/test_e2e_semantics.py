@@ -210,13 +210,6 @@ def test_resumption_keeps_failed_attempts_as_historical_evidence(h):
     assert hit["evidence"]["source_id"] == cap and hit["evidence"]["span_ref"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT D9 (open, narrowed): the API now attaches a memory to a project when the item carries a "
-    "project_hint that matches an owner project, but nothing in extraction emits project_hint (fixture "
-    "extractor, services/pipeline). Matching project names in free text was tried and rejected as a guess "
-    "(owner: pipeline)",
-)
 def test_resume_surfaces_failed_attempts_from_captured_notes(h):
     project = _project(h)
     cap = capture(h, "On Cerno I tried the stale cache approach and it failed.").json()["capture_id"]

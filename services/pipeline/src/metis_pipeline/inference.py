@@ -248,12 +248,20 @@ def _fixture_extraction(user_content: str) -> dict[str, Any]:
             }
         )
 
-    # Only an explicit "project <Name>" / "for <Name> project" phrase yields a hint.
-    match = re.search(r"\bproject\s+([A-Z][\w-]*)|\bfor\s+([A-Z][\w-]*)\s+project\b", text)
-    if match:
-        hint = match.group(1) or match.group(2)
+    # Offer-and-resolve: a hint is emitted only for a project the prompt offered, and only
+    # when the note names it in an explicit scoping phrase ("project <Name>", "for <Name>
+    # project", or a clause-initial "On <Name>"). Names elsewhere in free text never count.
+    offered = {
+        t.casefold(): i
+        for i, t in re.findall(r"^(\S+) \| project \| (.+)$", head, re.MULTILINE)
+    }
+    match = re.search(
+        r"\bproject\s+([A-Z][\w-]*)|\bfor\s+([A-Z][\w-]*)\s+project\b|(?:^|[.!?]\s+)On\s+([A-Z][\w-]*)\b",
+        text,
+    )
+    if match and (pid := offered.get(next(g for g in match.groups() if g).casefold())):
         for item in items:
-            item["project_hint"] = hint
+            item["project_hint"] = pid
 
     return {
         "items": items,

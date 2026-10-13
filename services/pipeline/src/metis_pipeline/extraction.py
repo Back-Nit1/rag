@@ -161,15 +161,23 @@ def build_prompt(
     captured_local_date: date,
     capture_timezone: str,
     candidates: list[tuple[str, str, str]] = (),  # type: ignore[assignment]
+    projects: list[tuple[str, str]] = (),  # type: ignore[assignment]
 ) -> str:
     """Bounded, typed context — not a concatenation of the user's history.
 
     ``candidates`` are (id, "event"|"task", title) rows a status update may target.
+    ``projects`` are (id, title) rows ``project_hint`` may name; nothing else is accepted.
     """
     block = ""
+    if projects:
+        rows = "\n".join(f"{i} | project | {t[:80]}" for i, t in projects)
+        block += (
+            "PROJECTS (the owner's projects; set project_hint to one of these ids only when the "
+            "note itself says the item belongs to it, otherwise null):\n" + rows + "\n\n"
+        )
     if candidates:
         rows = "\n".join(f"{i} | {k} | {t[:80]}" for i, k, t in candidates)
-        block = (
+        block += (
             "CANDIDATES (open records a status update such as 'I registered' or 'cancel that' may "
             "target; return the ids in target_ids, never guess):\n" + rows + "\n\n"
         )
@@ -232,9 +240,11 @@ class ExtractionService:
         deferred = max(0, _ranges_needed(window, limits.extraction_max_input_tokens * 3) - len(ranges))
 
         candidates = self._candidates(source.user_id)
+        projects = self._projects(source.user_id)
         prompt = build_prompt(
             window,
             candidates=candidates,
+            projects=projects,
             captured_local_date=capture_local_date(source.captured_at, source.capture_timezone),
             capture_timezone=source.capture_timezone,
         )
@@ -275,6 +285,7 @@ class ExtractionService:
             offset=char_start,
             window=window,
             offered={c[0] for c in candidates},
+            offered_projects={pid: pid for pid, _ in projects} | {t.casefold(): pid for pid, t in projects},
         )
 
         requires_clarification = bool(payload.get("requires_clarification")) or any(
@@ -327,6 +338,10 @@ class ExtractionService:
         tasks = self._state.list_tasks(user_id, states=sorted(TASK_OPEN_STATES), limit=10).items[:10]
         return [(e.id, "event", e.title) for e in events] + [(t.id, "task", t.title) for t in tasks]
 
+    def _projects(self, user_id: str) -> list[tuple[str, str]]:
+        """(id, title) of at most 20 owner projects. project_hint may only name these."""
+        return [(p.id, p.title) for p in self._state.list_projects(user_id, limit=20).items]
+
     def _text_for(self, source: SourceArtifact, source_version: int) -> str:
         for transcript in source.transcripts:
             if transcript.source_version == source_version:
@@ -367,6 +382,7 @@ class ExtractionService:
         offset: int,
         window: str,
         offered: set[str] = frozenset(),  # type: ignore[assignment]
+        offered_projects: dict[str, str] = {},  # noqa: B006  # name or id -> project id, read-only
     ) -> tuple[list[ExtractedItem], list[SourceSpan], list[str]]:
         """Schema-shaped output still has to survive semantic checks."""
         raw_items = payload.get("items")
@@ -415,6 +431,15 @@ class ExtractionService:
                 if key in ExtractedItem.model_fields and key != "evidence"
             }
             cleaned["evidence"] = evidence_refs
+
+            # project_hint resolves only against the offered projects (never free-text matching).
+            if hint := cleaned.get("project_hint"):
+                pid = offered_projects.get(str(hint).strip().casefold()) or offered_projects.get(
+                    str(hint).strip()
+                )
+                if pid is None:
+                    issues.append(f"item {index}: project_hint not among the offered projects dropped")
+                cleaned["project_hint"] = pid
 
             # Semantic check: an absurd deadline is a model error, not intent.
             if deadline := cleaned.get("deadline_local_date"):
