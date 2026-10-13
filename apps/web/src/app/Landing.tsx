@@ -170,7 +170,7 @@ export function Landing({ onOpen }: { onOpen: () => void }) {
           <Illustration />
         </section>
 
-        <section id="how" className="border-y border-line bg-raised">
+        <section id="how" className="scroll-mt-16 border-y border-line bg-raised">
           <div className="mx-auto max-w-6xl px-5 py-24">
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted">How it works</p>
             <h2 data-reveal className="mt-4 max-w-2xl text-[clamp(2rem,4.5vw,3.25rem)] font-medium leading-[1.05] tracking-[-0.03em]">
@@ -193,7 +193,7 @@ export function Landing({ onOpen }: { onOpen: () => void }) {
           </div>
         </section>
 
-        <section id="principles" className="mx-auto max-w-6xl px-5 py-24">
+        <section id="principles" className="scroll-mt-16 mx-auto max-w-6xl px-5 py-24">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted">Principles</p>
           <h2 data-reveal className="mt-4 max-w-2xl text-[clamp(2rem,4.5vw,3.25rem)] font-medium leading-[1.05] tracking-[-0.03em]">
             An assistant that tells you what it knows, and what it doesn’t.
@@ -210,7 +210,7 @@ export function Landing({ onOpen }: { onOpen: () => void }) {
           </dl>
         </section>
 
-        <section id="where" className="border-t border-line bg-raised">
+        <section id="where" className="scroll-mt-16 border-t border-line bg-raised">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-24 md:grid-cols-2">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted">Where it runs</p>

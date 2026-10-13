@@ -170,7 +170,9 @@ function Shell() {
       {/* wide: rail */}
       <aside className="sticky top-0 hidden h-dvh flex-col gap-5 bg-rail px-3 py-5 text-rail-ink lg:flex">
         <div className="px-3">
-          <p className="font-serif text-[1.75rem] font-semibold leading-none tracking-tight">Metis</p>
+          <a href="#" className="block font-serif text-[1.75rem] font-semibold leading-none tracking-tight" title="About Metis">
+            Metis
+          </a>
           <p className="mt-1.5 font-mono text-2xs uppercase tracking-[0.14em] text-rail-muted">Voice-first assistant</p>
         </div>
         <button
@@ -334,10 +336,13 @@ function DesktopGate({ children }: { children: ReactNode }) {
   );
 }
 
-/** Browser visitors at the bare URL see the landing page; the desktop shell and
- *  any deep link or sign-in redirect go straight to the app. */
+/** Browser visitors see the landing page unless the URL names an app surface
+ *  (`#/today`) or is a sign-in redirect. The landing page's own anchors stay on
+ *  it; the app's skip link (`#main`) must not bounce a signed-in user back here. The desktop shell always opens the app. */
+const LANDING_HASHES = ["", "#", "#how", "#principles", "#where"];
+
 function wantsLanding(): boolean {
-  return !isDesktop() && window.location.hash === "" && !window.location.search.includes("code=");
+  return !isDesktop() && LANDING_HASHES.includes(window.location.hash) && !window.location.search.includes("code=");
 }
 
 export function App() {
