@@ -20,6 +20,7 @@ from metis_contracts.api import (
     NotificationPage,
     RegisterPushRequest,
     ReminderPage,
+    RescheduleReminderRequest,
     SnoozeReminderRequest,
 )
 from metis_pipeline.timeref import to_instant
@@ -138,6 +139,62 @@ def snooze(reminder_id: str, body: SnoozeReminderRequest, ctx: Context) -> Remin
         clock=ctx.adapters.clock,
         correlation_id=ctx.correlation_id,
     )
+
+
+@router.post("/reminders/{reminder_id}/reschedule", response_model=Reminder)
+def reschedule(reminder_id: str, body: RescheduleReminderRequest, ctx: Context) -> Reminder:
+    """Move a reminder to a new trigger.
+
+    The reminder goes back to `pending_schedule` and a sync request commits with
+    it; it is `scheduled` again only after the dispatcher confirms the provider
+    schedule. A stale revision is a 409; a replayed Idempotency-Key returns the
+    first response.
+    """
+    from metis_scheduler import retarget_reminder
+
+    if replayed := ctx.replay():
+        return Reminder.model_validate(replayed)
+    reminder = ctx.require("reminder", reminder_id, Reminder)
+    if reminder.revision != body.expected_revision:
+        raise MetisError(
+            ErrorCode.REVISION_CONFLICT,
+            f"reminder {reminder_id} is at revision {reminder.revision}",
+            current_revision=reminder.revision,
+        )
+    target = ctx.state.get(ctx.user_id, reminder.target_kind, reminder.target_id)
+    if target is None:
+        raise MetisError(ErrorCode.NOT_FOUND, f"{reminder.target_kind} {reminder.target_id} not found")
+
+    if body.trigger_at is not None:
+        trigger_at = body.trigger_at
+    else:
+        assert body.local_date and body.local_time  # guaranteed by the contract
+        hour, minute = (int(part) for part in body.local_time.split(":"))
+        resolution = to_instant(body.local_date, time(hour, minute), reminder.timezone)
+        if resolution.instant is None:
+            raise MetisError(
+                ErrorCode.SEMANTIC_VALIDATION_FAILED,
+                "that local time does not exist on that date because of a daylight-saving change",
+            )
+        if resolution.dst == "ambiguous":
+            raise MetisError(
+                ErrorCode.AMBIGUOUS_TARGET,
+                "that local time occurs twice on that date; please pick the earlier or later one",
+            )
+        trigger_at = resolution.instant
+    if trigger_at <= ctx.adapters.clock.now():
+        raise MetisError(ErrorCode.SEMANTIC_VALIDATION_FAILED, "a reminder cannot be moved into the past")
+
+    updated = retarget_reminder(
+        ctx.state,
+        reminder,
+        trigger_at=trigger_at,
+        target_revision=target.revision,
+        clock=ctx.adapters.clock,
+        correlation_id=ctx.correlation_id,
+    )
+    ctx.remember(updated.model_dump(mode="json"))
+    return updated
 
 
 @router.get("/notifications", response_model=NotificationPage)

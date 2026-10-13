@@ -1,0 +1,58 @@
+{
+  "$id": "https://metis.local/schemas/v1/RescheduleReminderRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Move a reminder. The result is `pending_schedule` until the sync confirms.",
+  "properties": {
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "local_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Local Date"
+    },
+    "local_time": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{2}:\\d{2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Local Time"
+    },
+    "trigger_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trigger At"
+    }
+  },
+  "required": [
+    "expected_revision"
+  ],
+  "title": "RescheduleReminderRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

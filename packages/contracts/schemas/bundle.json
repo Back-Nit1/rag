@@ -85,6 +85,30 @@
       "type": "object",
       "x-contract-version": 1
     },
+    "AttachCaptureProjectRequest": {
+      "$id": "https://metis.local/schemas/v1/AttachCaptureProjectRequest.json",
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "project_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Project Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "project_id"
+      ],
+      "title": "AttachCaptureProjectRequest",
+      "type": "object",
+      "x-contract-version": 1
+    },
     "Attempt": {
       "$defs": {
         "SourceRef": {
@@ -946,6 +970,13 @@
               "title": "Source Version",
               "type": "integer"
             },
+            "target_choices": {
+              "items": {
+                "$ref": "#/$defs/TargetChoice"
+              },
+              "title": "Target Choices",
+              "type": "array"
+            },
             "unresolved_reason": {
               "anyOf": [
                 {
@@ -1412,6 +1443,20 @@
               ],
               "default": null
             },
+            "project_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Project Id"
+            },
             "retention_expires_at": {
               "anyOf": [
                 {
@@ -1713,6 +1758,49 @@
           ],
           "title": "StatusUpdateAction",
           "type": "string"
+        },
+        "TargetChoice": {
+          "additionalProperties": false,
+          "description": "An ambiguous status update awaiting an explicit target.\n\nRecorded when a resolved proposal's status_update item had no single target.\n``chosen_id`` stays null until the user picks one of ``candidate_ids``; the\nserver never picks and never matches by title.",
+          "properties": {
+            "candidate_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Candidate Ids",
+              "type": "array"
+            },
+            "chosen_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Chosen Id"
+            },
+            "item_index": {
+              "minimum": 0,
+              "title": "Item Index",
+              "type": "integer"
+            },
+            "update_action": {
+              "$ref": "#/$defs/StatusUpdateAction"
+            }
+          },
+          "required": [
+            "item_index",
+            "update_action"
+          ],
+          "title": "TargetChoice",
+          "type": "object"
         },
         "TranscriptRevision": {
           "additionalProperties": false,
@@ -2066,6 +2154,20 @@
                 }
               ],
               "default": null
+            },
+            "project_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Project Id"
             },
             "retention_expires_at": {
               "anyOf": [
@@ -2456,6 +2558,37 @@
         "items"
       ],
       "title": "CapturePage",
+      "type": "object",
+      "x-contract-version": 1
+    },
+    "ChooseTargetRequest": {
+      "$id": "https://metis.local/schemas/v1/ChooseTargetRequest.json",
+      "additionalProperties": false,
+      "description": "Answer an ambiguous status_update: pick one of the recorded candidates.",
+      "properties": {
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "item_index": {
+          "minimum": 0,
+          "title": "Item Index",
+          "type": "integer"
+        },
+        "target_id": {
+          "maxLength": 128,
+          "minLength": 3,
+          "title": "Target Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "item_index",
+        "target_id"
+      ],
+      "title": "ChooseTargetRequest",
       "type": "object",
       "x-contract-version": 1
     },
@@ -5454,6 +5587,49 @@
           ],
           "title": "StatusUpdateAction",
           "type": "string"
+        },
+        "TargetChoice": {
+          "additionalProperties": false,
+          "description": "An ambiguous status update awaiting an explicit target.\n\nRecorded when a resolved proposal's status_update item had no single target.\n``chosen_id`` stays null until the user picks one of ``candidate_ids``; the\nserver never picks and never matches by title.",
+          "properties": {
+            "candidate_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Candidate Ids",
+              "type": "array"
+            },
+            "chosen_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Chosen Id"
+            },
+            "item_index": {
+              "minimum": 0,
+              "title": "Item Index",
+              "type": "integer"
+            },
+            "update_action": {
+              "$ref": "#/$defs/StatusUpdateAction"
+            }
+          },
+          "required": [
+            "item_index",
+            "update_action"
+          ],
+          "title": "TargetChoice",
+          "type": "object"
         }
       },
       "$id": "https://metis.local/schemas/v1/ExtractionProposal.json",
@@ -5545,6 +5721,13 @@
           "minimum": 1,
           "title": "Source Version",
           "type": "integer"
+        },
+        "target_choices": {
+          "items": {
+            "$ref": "#/$defs/TargetChoice"
+          },
+          "title": "Target Choices",
+          "type": "array"
         },
         "unresolved_reason": {
           "anyOf": [
@@ -8248,6 +8431,93 @@
         "expected_revision"
       ],
       "title": "PatchPreferencesRequest",
+      "type": "object",
+      "x-contract-version": 1
+    },
+    "PatchProjectRequest": {
+      "$id": "https://metis.local/schemas/v1/PatchProjectRequest.json",
+      "additionalProperties": false,
+      "description": "Omitted key = unchanged. Explicit null clears objective/pinned_context.",
+      "properties": {
+        "aliases": {
+          "anyOf": [
+            {
+              "items": {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aliases"
+        },
+        "archived": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Archived"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Objective"
+        },
+        "pinned_context": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pinned Context"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "title": "PatchProjectRequest",
       "type": "object",
       "x-contract-version": 1
     },
@@ -11639,6 +11909,63 @@
       "type": "object",
       "x-contract-version": 1
     },
+    "RescheduleReminderRequest": {
+      "$id": "https://metis.local/schemas/v1/RescheduleReminderRequest.json",
+      "additionalProperties": false,
+      "description": "Move a reminder. The result is `pending_schedule` until the sync confirms.",
+      "properties": {
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "local_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Date"
+        },
+        "local_time": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{2}:\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Time"
+        },
+        "trigger_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trigger At"
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "title": "RescheduleReminderRequest",
+      "type": "object",
+      "x-contract-version": 1
+    },
     "ResolveProposalRequest": {
       "$defs": {
         "AttendanceStatus": {
@@ -12585,6 +12912,13 @@
               "title": "Source Version",
               "type": "integer"
             },
+            "target_choices": {
+              "items": {
+                "$ref": "#/$defs/TargetChoice"
+              },
+              "title": "Target Choices",
+              "type": "array"
+            },
             "unresolved_reason": {
               "anyOf": [
                 {
@@ -12699,6 +13033,49 @@
           ],
           "title": "StatusUpdateAction",
           "type": "string"
+        },
+        "TargetChoice": {
+          "additionalProperties": false,
+          "description": "An ambiguous status update awaiting an explicit target.\n\nRecorded when a resolved proposal's status_update item had no single target.\n``chosen_id`` stays null until the user picks one of ``candidate_ids``; the\nserver never picks and never matches by title.",
+          "properties": {
+            "candidate_ids": {
+              "items": {
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "title": "Candidate Ids",
+              "type": "array"
+            },
+            "chosen_id": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Chosen Id"
+            },
+            "item_index": {
+              "minimum": 0,
+              "title": "Item Index",
+              "type": "integer"
+            },
+            "update_action": {
+              "$ref": "#/$defs/StatusUpdateAction"
+            }
+          },
+          "required": [
+            "item_index",
+            "update_action"
+          ],
+          "title": "TargetChoice",
+          "type": "object"
         }
       },
       "$id": "https://metis.local/schemas/v1/ResolveProposalResponse.json",
@@ -13689,6 +14066,20 @@
           ],
           "default": null
         },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
         "retention_expires_at": {
           "anyOf": [
             {
@@ -13977,6 +14368,61 @@
         "audio_seconds"
       ],
       "title": "SpeechMetadata",
+      "type": "object",
+      "x-contract-version": 1
+    },
+    "TargetChoice": {
+      "$defs": {
+        "StatusUpdateAction": {
+          "enum": [
+            "registered",
+            "canceled"
+          ],
+          "title": "StatusUpdateAction",
+          "type": "string"
+        }
+      },
+      "$id": "https://metis.local/schemas/v1/TargetChoice.json",
+      "additionalProperties": false,
+      "description": "An ambiguous status update awaiting an explicit target.\n\nRecorded when a resolved proposal's status_update item had no single target.\n``chosen_id`` stays null until the user picks one of ``candidate_ids``; the\nserver never picks and never matches by title.",
+      "properties": {
+        "candidate_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
+        "chosen_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chosen Id"
+        },
+        "item_index": {
+          "minimum": 0,
+          "title": "Item Index",
+          "type": "integer"
+        },
+        "update_action": {
+          "$ref": "#/$defs/StatusUpdateAction"
+        }
+      },
+      "required": [
+        "item_index",
+        "update_action"
+      ],
+      "title": "TargetChoice",
       "type": "object",
       "x-contract-version": 1
     },

@@ -21,6 +21,7 @@ from metis_contracts import (
     Plan,
     PlanStatus,
     Preferences,
+    Project,
     SourceArtifact,
     SourceKind,
     SourceLifecycle,
@@ -31,6 +32,7 @@ from metis_contracts import (
     settings,
 )
 from metis_contracts.api import (
+    AttachCaptureProjectRequest,
     CaptureDetail,
     CompleteCaptureRequest,
     CompleteCaptureResponse,
@@ -453,6 +455,62 @@ def get_capture(ctx: RequestContext, capture_id: str) -> CaptureDetail:
         created_task_ids=created_tasks,
         created_event_ids=created_events,
     )
+
+
+def attach_capture_to_project(
+    ctx: RequestContext, capture_id: str, request: AttachCaptureProjectRequest
+) -> SourceArtifact:
+    """Attach a capture to an owned project, and its not-yet-filed derivatives.
+
+    Tasks, events and memories already derived from this capture that have no
+    project are filed under it in the same transaction. One that already has a
+    project (the user's or the extractor's hint) is never overwritten.
+    """
+    source = ctx.require("source", capture_id, SourceArtifact)
+    if source.revision != request.expected_revision:
+        raise MetisError(
+            ErrorCode.REVISION_CONFLICT,
+            f"capture {capture_id} is at revision {source.revision}",
+            current_revision=source.revision,
+        )
+    project = ctx.state.get(ctx.user_id, "project", request.project_id)
+    if not isinstance(project, Project):
+        raise MetisError(ErrorCode.NOT_FOUND, f"project {request.project_id} not found")
+    if project.archived:
+        raise MetisError(ErrorCode.INVALID_STATE_TRANSITION, "an archived project cannot take new captures")
+
+    def _from_source(record: Any) -> bool:
+        return record.project_id is None and any(r.source_id == capture_id for r in record.source_refs)
+
+    def _all(lister: Any) -> list[Any]:
+        out: list[Any] = []
+        cursor = None
+        while True:
+            page = lister(ctx.user_id, cursor=cursor, limit=200)
+            out.extend(page.items)
+            if not page.next_cursor:
+                return out
+            cursor = page.next_cursor
+
+    derived = {
+        "task": [t for t in _all(ctx.state.list_tasks) if _from_source(t)],
+        "event": [e for e in _all(ctx.state.list_events) if _from_source(e)],
+        "memory": [m for m in _all(ctx.state.list_memories) if _from_source(m)],
+    }
+    with ctx.state.transaction(ctx.user_id) as tx:
+        stored = tx.put(
+            "source",
+            source.model_copy(update={"project_id": project.id}),
+            expected_revision=source.revision,
+        )
+        for kind, records in derived.items():
+            for record in records:
+                tx.put(
+                    kind,
+                    record.model_copy(update={"project_id": project.id}),
+                    expected_revision=record.revision,
+                )
+    return stored
 
 
 def delete_capture(

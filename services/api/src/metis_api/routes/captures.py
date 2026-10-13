@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request, Response, status
-from metis_contracts import ErrorCode, MetisError, ObjectRef, settings
+from metis_contracts import ErrorCode, MetisError, ObjectRef, SourceArtifact, settings
 from metis_contracts.api import (
+    AttachCaptureProjectRequest,
     CaptureDetail,
     CapturePage,
+    ChooseTargetRequest,
     CompleteCaptureRequest,
     CompleteCaptureResponse,
     CreateCaptureRequest,
@@ -20,7 +22,7 @@ from metis_contracts.entities import Job
 
 from .. import services
 from ..deps import Context
-from ..proposals import resolve_proposal
+from ..proposals import choose_status_target, resolve_proposal
 
 router = APIRouter(prefix="/v1", tags=["captures"])
 
@@ -65,6 +67,17 @@ def patch_transcript(capture_id: str, body: PatchTranscriptRequest, ctx: Context
     return services.patch_transcript(ctx, capture_id, body)
 
 
+@router.post("/captures/{capture_id}/project", response_model=SourceArtifact)
+def attach_capture_project(
+    capture_id: str, body: AttachCaptureProjectRequest, ctx: Context
+) -> SourceArtifact:
+    if replayed := ctx.replay():
+        return SourceArtifact.model_validate(replayed)
+    result = services.attach_capture_to_project(ctx, capture_id, body)
+    ctx.remember(result.model_dump(mode="json"))
+    return result
+
+
 @router.delete("/captures/{capture_id}", response_model=DeleteCaptureResponse)
 def delete_capture(capture_id: str, ctx: Context) -> DeleteCaptureResponse:
     return DeleteCaptureResponse.model_validate(services.delete_capture(ctx, capture_id))
@@ -75,6 +88,15 @@ def resolve(proposal_id: str, body: ResolveProposalRequest, ctx: Context) -> Res
     if replayed := ctx.replay():
         return ResolveProposalResponse.model_validate(replayed)
     result = resolve_proposal(ctx, proposal_id, body)
+    ctx.remember(result.model_dump(mode="json"))
+    return result
+
+
+@router.post("/proposals/{proposal_id}/target", response_model=ResolveProposalResponse)
+def choose_target(proposal_id: str, body: ChooseTargetRequest, ctx: Context) -> ResolveProposalResponse:
+    if replayed := ctx.replay():
+        return ResolveProposalResponse.model_validate(replayed)
+    result = choose_status_target(ctx, proposal_id, body)
     ctx.remember(result.model_dump(mode="json"))
     return result
 

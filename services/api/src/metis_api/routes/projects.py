@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Query, status
 from metis_contracts import ErrorCode, MetisError, Project, new_id
 from metis_contracts.api import (
+    PatchProjectRequest,
     ProjectDetail,
     ProjectPage,
     ResumeProjectRequest,
@@ -42,6 +43,27 @@ def create_project(body: Project, ctx: Context) -> Project:
     )
     with ctx.state.transaction(ctx.user_id) as tx:
         return tx.put("project", project)
+
+
+@router.patch("/projects/{project_id}", response_model=Project)
+def patch_project(project_id: str, body: PatchProjectRequest, ctx: Context) -> Project:
+    """Omitted key = unchanged; null clears objective/pinned_context only."""
+    if replayed := ctx.replay():
+        return Project.model_validate(replayed)
+    project = ctx.require("project", project_id, Project)
+    if project.revision != body.expected_revision:
+        raise MetisError(
+            ErrorCode.REVISION_CONFLICT,
+            f"project {project_id} is at revision {project.revision}",
+            current_revision=project.revision,
+        )
+    patch = body.model_dump(exclude_unset=True, exclude={"expected_revision"})
+    if "aliases" in patch:
+        patch["aliases"] = list(dict.fromkeys(patch["aliases"]))
+    with ctx.state.transaction(ctx.user_id) as tx:
+        stored = tx.put("project", project.model_copy(update=patch), expected_revision=project.revision)
+    ctx.remember(stored.model_dump(mode="json"))
+    return stored
 
 
 @router.get("/projects/{project_id}", response_model=ProjectDetail)

@@ -1,0 +1,25 @@
+{
+  "$id": "https://metis.local/schemas/v1/AttachCaptureProjectRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "project_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Project Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "project_id"
+  ],
+  "title": "AttachCaptureProjectRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

@@ -1,0 +1,32 @@
+{
+  "$id": "https://metis.local/schemas/v1/ChooseTargetRequest.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Answer an ambiguous status_update: pick one of the recorded candidates.",
+  "properties": {
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "item_index": {
+      "minimum": 0,
+      "title": "Item Index",
+      "type": "integer"
+    },
+    "target_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "title": "Target Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "item_index",
+    "target_id"
+  ],
+  "title": "ChooseTargetRequest",
+  "type": "object",
+  "x-contract-version": 1
+}

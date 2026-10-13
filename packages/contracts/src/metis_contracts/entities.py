@@ -125,6 +125,8 @@ class SourceArtifact(Record):
     """Stable client-generated id for the offline outbox, used for dedupe."""
     failure: FailureCategory | None = None
     error_message: Annotated[str | None, Field(default=None, max_length=1000)] = None
+    project_id: EntityId | None = None
+    """Project this capture was explicitly attached to by the user; never inferred."""
 
     def current_text(self) -> str | None:
         for t in self.transcripts:
@@ -189,6 +191,20 @@ class ExtractedItem(StrictModel):
         return self
 
 
+class TargetChoice(StrictModel):
+    """An ambiguous status update awaiting an explicit target.
+
+    Recorded when a resolved proposal's status_update item had no single target.
+    ``chosen_id`` stays null until the user picks one of ``candidate_ids``; the
+    server never picks and never matches by title.
+    """
+
+    item_index: Annotated[int, Field(ge=0)]
+    update_action: StatusUpdateAction
+    candidate_ids: list[EntityId] = Field(default_factory=list)
+    chosen_id: EntityId | None = None
+
+
 class ExtractionProposal(Record):
     """Model output after schema + semantic validation. Not yet authoritative."""
 
@@ -207,6 +223,8 @@ class ExtractionProposal(Record):
     range_count: Annotated[int, Field(ge=1)] = 1
     created_entity_ids: list[EntityId] = Field(default_factory=list)
     unresolved_reason: Annotated[str | None, Field(default=None, max_length=500)] = None
+    target_choices: list[TargetChoice] = Field(default_factory=list)
+    """Ambiguous status updates left by resolution; answered via the target route."""
 
 
 # --------------------------------------------------------------------------- #

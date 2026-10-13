@@ -188,6 +188,20 @@
           ],
           "default": null
         },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
         "retention_expires_at": {
           "anyOf": [
             {

@@ -156,6 +156,14 @@ class ItemDecision(StrictModel):
         return self
 
 
+class ChooseTargetRequest(StrictModel):
+    """Answer an ambiguous status_update: pick one of the recorded candidates."""
+
+    expected_revision: Revision
+    item_index: Annotated[int, Field(ge=0)]
+    target_id: EntityId
+
+
 class ResolveProposalResponse(StrictModel):
     proposal: ExtractionProposal
     created_task_ids: list[EntityId] = Field(default_factory=list)
@@ -216,6 +224,29 @@ class PatchEventRequest(StrictModel):
     registration_deadline_local_date: date | None = None
 
 
+class PatchProjectRequest(StrictModel):
+    """Omitted key = unchanged. Explicit null clears objective/pinned_context."""
+
+    expected_revision: Revision
+    title: Annotated[str | None, Field(default=None, min_length=1, max_length=500)] = None
+    aliases: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = None
+    objective: Annotated[str | None, Field(default=None, max_length=20000)] = None
+    pinned_context: Annotated[str | None, Field(default=None, max_length=20000)] = None
+    archived: bool | None = None
+
+    @model_validator(mode="after")
+    def _required_not_null(self) -> PatchProjectRequest:
+        for name in ("title", "aliases", "archived"):
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be cleared")
+        return self
+
+
+class AttachCaptureProjectRequest(StrictModel):
+    expected_revision: Revision
+    project_id: EntityId
+
+
 class CreateTaskRequest(StrictModel):
     title: Annotated[str, Field(min_length=1, max_length=500)]
     body: Annotated[str | None, Field(default=None, max_length=20000)] = None
@@ -267,6 +298,22 @@ class CreateReminderRequest(StrictModel):
 class SnoozeReminderRequest(StrictModel):
     expected_revision: Revision
     snooze_minutes: Annotated[int, Field(ge=1, le=60 * 24 * 7)]
+
+
+class RescheduleReminderRequest(StrictModel):
+    """Move a reminder. The result is `pending_schedule` until the sync confirms."""
+
+    expected_revision: Revision
+    trigger_at: datetime | None = None
+    local_date: date | None = None
+    local_time: Annotated[str | None, Field(default=None, pattern=r"^\d{2}:\d{2}$")] = None
+    """Resolved in the reminder's own timezone."""
+
+    @model_validator(mode="after")
+    def _resolvable_trigger(self) -> RescheduleReminderRequest:
+        if self.trigger_at is None and not (self.local_date and self.local_time):
+            raise ValueError("reschedule needs trigger_at or a resolvable local_date + local_time")
+        return self
 
 
 class RegisterPushRequest(StrictModel):

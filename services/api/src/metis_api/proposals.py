@@ -28,12 +28,18 @@ from metis_contracts import (
     RequestedAction,
     SourceRef,
     StatusUpdateAction,
+    TargetChoice,
     Task,
     TaskPurpose,
     TaskState,
     new_id,
 )
-from metis_contracts.api import ClarificationRequest, ResolveProposalRequest, ResolveProposalResponse
+from metis_contracts.api import (
+    ChooseTargetRequest,
+    ClarificationRequest,
+    ResolveProposalRequest,
+    ResolveProposalResponse,
+)
 from metis_pipeline.timeref import to_instant
 
 from .deps import RequestContext
@@ -78,6 +84,7 @@ def resolve_proposal(
     clarifications: list[ClarificationRequest] = []
     edited = False
     seen_items: set[int] = set()
+    target_choices: list[TargetChoice] = []
 
     for decision in request.decisions:
         if decision.item_index >= len(proposal.items):
@@ -170,7 +177,9 @@ def resolve_proposal(
                 )
 
         elif item.kind is ExtractedItemKind.STATUS_UPDATE:
-            clarification = _apply_status_update(ctx, item, source, now)
+            clarification, choice = _apply_status_update(ctx, item, decision.item_index, source, now)
+            if choice is not None:
+                target_choices.append(choice)
             if clarification:
                 clarifications.append(clarification)
 
@@ -200,6 +209,7 @@ def resolve_proposal(
                 update={
                     "disposition": disposition,
                     "created_entity_ids": [*created_tasks, *created_events],
+                    "target_choices": target_choices,
                 }
             ),
             expected_revision=proposal.revision,
@@ -214,78 +224,147 @@ def resolve_proposal(
     )
 
 
+def _owned_candidates(ctx: RequestContext, target_ids: list[str]) -> list[tuple[str, Any]]:
+    return [
+        (kind, row)
+        for tid in dict.fromkeys(target_ids)
+        for kind in ("event", "task")
+        if (row := ctx.state.get(ctx.user_id, kind, tid)) is not None
+    ]
+
+
 def _apply_status_update(
-    ctx: RequestContext, item: ExtractedItem, source: Any, now: datetime
-) -> ClarificationRequest | None:
+    ctx: RequestContext, item: ExtractedItem, index: int, source: Any, now: datetime
+) -> tuple[ClarificationRequest | None, TargetChoice | None]:
     """Apply "registered" / "canceled" to exactly one owned target, else ask and change nothing.
 
     The target ids come from the (validated) item; ownership is re-checked here with
-    the authenticated user_id. Nothing is matched by title.
+    the authenticated user_id. Nothing is matched by title. An ambiguous item also
+    yields a TargetChoice, recorded on the proposal so the user's explicit answer
+    can be validated against what was offered.
     """
-    state, uid = ctx.state, ctx.user_id
-    owned = [
-        (kind, row)
-        for tid in dict.fromkeys(item.target_ids)
-        for kind in ("event", "task")
-        if (row := state.get(uid, kind, tid)) is not None
-    ]
+    owned = _owned_candidates(ctx, item.target_ids)
     if "target" in item.missing_fields or len(owned) != 1:
         titles = "; ".join(f"'{row.title}'" for _, row in owned) or "none found"
-        return ClarificationRequest(
+        candidate_ids = [row.id for _, row in owned]
+        clarification = ClarificationRequest(
             clarification_id=new_id("clar"),
             source_id=source.id,
             target_id=None,
             question=f"Which one did you mean? Candidates: {titles}"[:500],
             missing_fields=["target"],
             blocking=False,
-            candidate_ids=[row.id for _, row in owned],
+            candidate_ids=candidate_ids,
         )
+        choice = (
+            TargetChoice(item_index=index, update_action=item.update_action, candidate_ids=candidate_ids)
+            if candidate_ids and item.update_action is not None
+            else None
+        )
+        return clarification, choice
     kind, target = owned[0]
-    if item.update_action is StatusUpdateAction.CANCELED:
-        with state.transaction(uid) as tx:
-            if kind == "event":
-                tx.put(
-                    "event",
-                    target.model_copy(update={"attendance_status": AttendanceStatus.CANCELED}),
-                    expected_revision=target.revision,
-                )
-            else:
-                tx.put(
-                    "task",
-                    target.model_copy(update={"state": TaskState.CANCELED, "canceled_at": now}),
-                    expected_revision=target.revision,
-                )
-        return None
-    # registered: a task with an event resolves to that event; a bare task is just done.
-    if kind == "task" and target.event_id is None:
-        with state.transaction(uid) as tx:
+    with ctx.state.transaction(ctx.user_id) as tx:
+        _apply_to_target(ctx, tx, kind, target, item.update_action, now)
+    return None, None
+
+
+def _apply_to_target(
+    ctx: RequestContext, tx: Any, kind: str, target: Any, action: StatusUpdateAction | None, now: datetime
+) -> None:
+    """Write the status change for one owned target inside the caller's transaction."""
+    state, uid = ctx.state, ctx.user_id
+    if action is StatusUpdateAction.CANCELED:
+        if kind == "event":
             tx.put(
-                "task",
-                target.model_copy(update={"state": TaskState.DONE, "completed_at": now}),
+                "event",
+                target.model_copy(update={"attendance_status": AttendanceStatus.CANCELED}),
                 expected_revision=target.revision,
             )
-        return None
+        else:
+            tx.put(
+                "task",
+                target.model_copy(update={"state": TaskState.CANCELED, "canceled_at": now}),
+                expected_revision=target.revision,
+            )
+        return
+    # registered: a task with an event resolves to that event; a bare task is just done.
+    if kind == "task" and target.event_id is None:
+        tx.put(
+            "task",
+            target.model_copy(update={"state": TaskState.DONE, "completed_at": now}),
+            expected_revision=target.revision,
+        )
+        return
     event = target if kind == "event" else state.get(uid, "event", target.event_id)
     if event is None:
-        return None
+        return
     follow_ups = [
         t
         for t in state.list_tasks(uid, states=sorted(TASK_OPEN_STATES), limit=500).items
         if t.event_id == event.id and t.purpose is TaskPurpose.REGISTRATION
     ]
-    with state.transaction(uid) as tx:
+    tx.put(
+        "event",
+        event.model_copy(update={"registration_status": RegistrationStatus.REGISTERED}),
+        expected_revision=event.revision,
+    )
+    for t in follow_ups:
         tx.put(
-            "event",
-            event.model_copy(update={"registration_status": RegistrationStatus.REGISTERED}),
-            expected_revision=event.revision,
+            "task",
+            t.model_copy(update={"state": TaskState.DONE, "completed_at": now}),
+            expected_revision=t.revision,
         )
-        for t in follow_ups:
-            tx.put(
-                "task",
-                t.model_copy(update={"state": TaskState.DONE, "completed_at": now}),
-                expected_revision=t.revision,
-            )
-    return None
+
+
+def choose_status_target(
+    ctx: RequestContext, proposal_id: str, request: ChooseTargetRequest
+) -> ResolveProposalResponse:
+    """Answer an ambiguous status_update by choosing one recorded candidate.
+
+    Only an id the server recorded as a candidate is accepted; a title or any
+    other id is refused. The change and the proposal's bookkeeping commit
+    together, and a second answer is a conflict, not a second mutation.
+    """
+    proposal = ctx.state.get(ctx.user_id, "proposal", proposal_id)
+    if proposal is None:
+        raise MetisError(ErrorCode.NOT_FOUND, f"proposal {proposal_id} not found")
+    if proposal.revision != request.expected_revision:
+        raise MetisError(
+            ErrorCode.REVISION_CONFLICT,
+            f"proposal {proposal_id} is at revision {proposal.revision}",
+            current_revision=proposal.revision,
+        )
+    choice = next((c for c in proposal.target_choices if c.item_index == request.item_index), None)
+    if choice is None:
+        raise MetisError(
+            ErrorCode.VALIDATION_FAILED, f"item {request.item_index} has no ambiguous target to choose"
+        )
+    if choice.chosen_id is not None:
+        raise MetisError(
+            ErrorCode.REVISION_CONFLICT,
+            f"item {request.item_index} was already resolved",
+            current_revision=proposal.revision,
+        )
+    if request.target_id not in choice.candidate_ids:
+        raise MetisError(ErrorCode.VALIDATION_FAILED, "that target was not one of the candidates offered")
+    owned = _owned_candidates(ctx, [request.target_id])
+    if len(owned) != 1:
+        raise MetisError(ErrorCode.NOT_FOUND, f"target {request.target_id} no longer exists")
+    kind, target = owned[0]
+
+    now = ctx.adapters.clock.now()
+    choices = [
+        c.model_copy(update={"chosen_id": request.target_id}) if c is choice else c
+        for c in proposal.target_choices
+    ]
+    with ctx.state.transaction(ctx.user_id) as tx:
+        _apply_to_target(ctx, tx, kind, target, choice.update_action, now)
+        stored = tx.put(
+            "proposal",
+            proposal.model_copy(update={"target_choices": choices}),
+            expected_revision=proposal.revision,
+        )
+    return ResolveProposalResponse(proposal=stored)
 
 
 def _ref(item: ExtractedItem, source: Any) -> SourceRef:
@@ -313,6 +392,7 @@ def _task_from(ctx: RequestContext, item: ExtractedItem, source: Any, now: datet
         timezone=item.timezone,
         duration_estimate=item.duration_estimate,
         source_refs=[_ref(item, source)],
+        project_id=source.project_id,
     )
 
 
@@ -333,6 +413,7 @@ def _event_from(ctx: RequestContext, item: ExtractedItem, source: Any, now: date
         attendance_status=item.attendance_status or AttendanceStatus.TENTATIVE,
         registration_status=item.registration_status or RegistrationStatus.UNKNOWN,
         source_refs=[_ref(item, source)],
+        project_id=source.project_id,
     )
 
 
@@ -431,7 +512,7 @@ def _record_memory(ctx: RequestContext, item: ExtractedItem, source: Any, now: d
         content_hash=content_hash(content),
         embedding_model_id=getattr(embedder, "model_id", None),
         embedding_dimensions=getattr(embedder, "dimensions", None),
-        project_id=_project_id_for(ctx, item.project_hint, content),
+        project_id=_project_id_for(ctx, item.project_hint, content) or source.project_id,
     )
     with ctx.state.transaction(ctx.user_id) as tx:
         stored = tx.put("memory", memory)

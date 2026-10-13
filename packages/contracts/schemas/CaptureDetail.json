@@ -426,6 +426,13 @@
           "title": "Source Version",
           "type": "integer"
         },
+        "target_choices": {
+          "items": {
+            "$ref": "#/$defs/TargetChoice"
+          },
+          "title": "Target Choices",
+          "type": "array"
+        },
         "unresolved_reason": {
           "anyOf": [
             {
@@ -892,6 +899,20 @@
           ],
           "default": null
         },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
         "retention_expires_at": {
           "anyOf": [
             {
@@ -1193,6 +1214,49 @@
       ],
       "title": "StatusUpdateAction",
       "type": "string"
+    },
+    "TargetChoice": {
+      "additionalProperties": false,
+      "description": "An ambiguous status update awaiting an explicit target.\n\nRecorded when a resolved proposal's status_update item had no single target.\n``chosen_id`` stays null until the user picks one of ``candidate_ids``; the\nserver never picks and never matches by title.",
+      "properties": {
+        "candidate_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 3,
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
+        "chosen_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chosen Id"
+        },
+        "item_index": {
+          "minimum": 0,
+          "title": "Item Index",
+          "type": "integer"
+        },
+        "update_action": {
+          "$ref": "#/$defs/StatusUpdateAction"
+        }
+      },
+      "required": [
+        "item_index",
+        "update_action"
+      ],
+      "title": "TargetChoice",
+      "type": "object"
     },
     "TranscriptRevision": {
       "additionalProperties": false,
