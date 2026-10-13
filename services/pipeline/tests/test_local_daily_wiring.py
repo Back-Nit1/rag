@@ -52,3 +52,21 @@ def test_tick_without_schedule_store_is_a_noop(tmp_path):
     clock = FixedClock(datetime(2026, 10, 5, 10, 0, tzinfo=UTC))
     ctx = DispatchContext(state_store=None, source_store=None, clock=clock)
     assert _fire_due_daily_plans(ctx) == 0
+
+
+def test_worker_prints_one_readiness_record_before_looping(tmp_path, monkeypatch, capsys):
+    import json
+
+    from metis_contracts import reset_settings_cache
+    from metis_pipeline import local_worker
+
+    monkeypatch.setenv("METIS_MODE", "local")
+    monkeypatch.setenv("METIS_SQLITE_PATH", str(tmp_path / "s.sqlite"))
+    monkeypatch.setenv("METIS_LOCAL_OBJECTS_DIR", str(tmp_path / "objects"))
+    reset_settings_cache()
+    try:
+        assert local_worker.main(["--once"]) == 0
+    finally:
+        reset_settings_cache()
+    (record,) = [json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")]
+    assert record["event"] == "started" and record["service"] == "worker" and record["protocol"] == 1

@@ -10,7 +10,9 @@ polls both so `make dev` needs no AWS account.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import os
 import signal
 import sys
 import time
@@ -20,6 +22,9 @@ from typing import Any
 from metis_contracts import SystemClock, settings
 
 log = logging.getLogger("metis.pipeline.worker")
+
+#: Bump when the readiness record's shape changes; the desktop supervisor checks it.
+READINESS_PROTOCOL = 1
 
 _stop = False
 
@@ -112,6 +117,16 @@ def build_registry() -> Any:
     return registry
 
 
+def emit_readiness() -> None:
+    """One JSON line on stdout once adapters and handlers are wired, before the loop.
+
+    Logs go to stderr; stdout carries only this record so a supervisor can read it.
+    """
+    record = {"event": "started", "service": "worker", "protocol": READINESS_PROTOCOL, "pid": os.getpid()}
+    sys.stdout.write(json.dumps(record) + "\n")
+    sys.stdout.flush()
+
+
 def run(*, once: bool = False, interval: float = 2.0) -> int:
     logging.basicConfig(level=settings().log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     signal.signal(signal.SIGINT, _request_stop)
@@ -129,6 +144,7 @@ def run(*, once: bool = False, interval: float = 2.0) -> int:
         context.worker_id,
     )
 
+    emit_readiness()
     idle_cycles = 0
     while True:
         result = dispatcher.run_once()

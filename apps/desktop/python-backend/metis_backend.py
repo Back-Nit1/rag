@@ -6,17 +6,15 @@ needs and the services do not provide yet:
 
 * every subcommand exits when its stdin closes (the parent died or asked us to
   stop), so no orphan survives the app;
-* `worker` prints one structured record once its handlers are registered.
 
 Readiness records (stdout, one line each, never secrets):
   api    METIS_API_PORT=<n>            (service-owned)
   speech {"event":"listening","protocol":1,"host","port","pid"}   (service-owned)
-  worker {"event":"started","service":"worker","protocol":1,"pid"}  (this file)
+  worker {"event":"started","service":"worker","protocol":1,"pid"}  (service-owned)
 """
 
 from __future__ import annotations
 
-import json
 import os
 import signal
 import sys
@@ -24,7 +22,6 @@ import threading
 import types
 from collections.abc import Callable
 
-WORKER_PROTOCOL = 1
 SERVICES = ("api", "worker", "speech")
 
 
@@ -62,26 +59,16 @@ def run_worker(argv: list[str]) -> int:
 
     stop = threading.Event()
     original_stop = local_worker._request_stop
-    original_registry = local_worker.build_registry
 
     def request_stop(signum: int, frame: object) -> None:
         original_stop(signum, frame)  # type: ignore[arg-type]
         stop.set()
-
-    def build_registry() -> object:
-        registry = original_registry()
-        # The context and every handler are wired; the loop starts next.
-        record = {"event": "started", "service": "worker", "protocol": WORKER_PROTOCOL, "pid": os.getpid()}
-        sys.stdout.write(json.dumps(record) + "\n")
-        sys.stdout.flush()
-        return registry
 
     def stop_now() -> None:
         local_worker._stop = True
         stop.set()
 
     local_worker._request_stop = request_stop
-    local_worker.build_registry = build_registry
     # Idle sleeps wake immediately on stop instead of finishing a 2-10s nap.
     local_worker.time = types.SimpleNamespace(sleep=lambda seconds: stop.wait(seconds))  # type: ignore[assignment]
     _on_stdin_eof(stop_now)
