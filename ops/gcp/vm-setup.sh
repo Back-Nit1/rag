@@ -47,6 +47,7 @@ METIS_ENV=dev
 METIS_ALLOW_FIXTURE_IDENTITY=true
 METIS_FIXTURE_USER_ID=demo_authenticated_subject
 METIS_DESKTOP_IDENTITY_PATH=$DATA/install_id
+METIS_ALLOWED_HOSTS=$HOST
 METIS_SQLITE_PATH=$DATA/metis.sqlite
 METIS_LOCAL_OBJECTS_DIR=$DATA/objects
 METIS_CORS_ORIGINS=http://localhost:5173,https://metis-delta.vercel.app
