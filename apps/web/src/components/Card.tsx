@@ -31,10 +31,10 @@ export function SectionHeading({
 }) {
   return (
     <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-      <Tag id={id} className="font-mono text-xs font-bold uppercase tracking-[0.12em] whitespace-nowrap text-ink">
+      <Tag id={id} className="text-[0.8125rem] font-semibold tracking-[-0.005em] whitespace-nowrap text-ink">
         {children}
       </Tag>
-      <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-line-strong/60" />
+      <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-line" />
       {hint && <span className="text-xs text-muted max-sm:order-last max-sm:basis-full">{hint}</span>}
     </div>
   );
@@ -53,7 +53,7 @@ export function Empty({
   icon?: IconName;
 }) {
   return (
-    <div className="flex items-start gap-3.5 rounded-lg border border-dashed border-line-strong bg-surface/60 px-4 py-5 text-sm text-muted">
+    <div className="flex items-start gap-3.5 rounded-lg border border-line bg-raised px-4 py-5 text-sm text-muted">
       <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-raised text-muted">
         <Icon name={icon} size={18} />
       </span>
@@ -147,9 +147,9 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="rise flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line-strong/50 pb-4">
+    <header className="rise flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line pb-5">
       <div className="min-w-0">
-        <h1 className="font-serif text-[1.75rem] font-semibold leading-tight tracking-tight text-ink md:text-4xl">{title}</h1>
+        <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-ink md:text-[2.25rem]">{title}</h1>
         {sub && <p className="mt-1 max-w-prose text-sm text-muted">{sub}</p>}
       </div>
       {action}
