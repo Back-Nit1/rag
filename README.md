@@ -49,8 +49,9 @@ What is **not** done or **not verified**, stated plainly:
   duplicate registration task, project attachment of captured notes).
 - **Desktop packaging** is unsigned, un-notarized, one target triple, ~100 MB.
 - **Fixture extraction** is the only extraction in local mode.
-- **No login on the deployment.** It uses fixture identity, so the VM is
-  reachable only through an IAP SSH tunnel and the public UI has no data.
+- **Single shared access key, not accounts.** The public API accepts one
+  random key (`/etc/metis-api.env` on the VM). Anyone holding it has full access
+  to the one data set; there is no per-user identity, rotation UI or lockout.
 - **Dictation is not usable end to end.** Desktop shortcut, text insertion, the
   settings UI, spoken self-correction and Command Mode are not built.
 
@@ -104,23 +105,27 @@ real hardware yet.
 
 ### Deployment (GCP VM + Vercel UI)
 
-One private Compute Engine VM runs `METIS_MODE=local` (SQLite, fixture
-inference, real faster-whisper) as four systemd units on loopback: API `:8000`,
-worker, speech/dictation `:8787`, static web `:5173`. It has no external IP;
-the only way in is SSH through IAP.
+One Compute Engine VM runs `METIS_MODE=local` (SQLite, fixture inference, real
+faster-whisper) as systemd units: API `:8000`, worker, speech/dictation `:8787`,
+static web `:5173`, all on loopback. The only public surface is Caddy on
+`:443` at `<ip>.sslip.io` (automatic TLS), proxying to the API. The API requires
+the single access key as a bearer on every route except `/v1/health`; `/docs` is
+blocked; SSH is IAP-only; `:8787` and `:5173` are never exposed.
 
 ```bash
-PROJECT=<gcp-project-id> ops/gcp/deploy.sh   # idempotent: provision + ship committed HEAD
+PROJECT=<gcp-project-id> ops/gcp/deploy.sh      # idempotent: provision + ship committed HEAD
+PROJECT=<gcp-project-id> ops/vercel/deploy.sh   # build the UI against that host and publish
 ```
 
-`deploy.sh` prints the tunnel command. The UI is also published as a static
-bundle on Vercel (`ops/vercel/vercel.json`); it calls `http://localhost:8000`,
-so it works only for someone with the tunnel open, and the VM allows that
-origin through `METIS_CORS_ORIGINS`. The dictation bearer secret is generated on
-the VM at `/etc/metis-speech.env`. Idle cost drops to disk plus NAT after
+`deploy.sh` prints the commands to read the access key and the dictation secret
+(both are generated on the VM and never committed). The Vercel bundle holds the
+API URL and a "key required" flag; the UI asks for the key once per tab and
+keeps it in sessionStorage. Dictation (`:8787`) is reached only through an IAP
+tunnel. Idle cost drops to disk plus the static IP after
 `gcloud compute instances stop metis --zone us-central1-a`; teardown is
-deleting the project. Do not open a public port until real auth replaces
-fixture identity.
+deleting the project. Rotate the key by deleting `/etc/metis-api.env` and
+redeploying. Before more than one person uses this, replace the shared key with
+real authentication (Cognito is already supported by the web client).
 
 ### Dictation (Flow)
 
