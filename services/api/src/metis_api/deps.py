@@ -210,6 +210,10 @@ class RequestContext:
             )
         return record
 
+    def throttle(self, scope: str, *, per_minute: int) -> None:
+        """A tighter per-user limit for an endpoint that makes a paid call."""
+        _limiter.check(f"{scope}:{self.user_id}", limit=per_minute)
+
     def require_idempotency_key(self) -> str:
         if not self.idempotency_key:
             raise MetisError(

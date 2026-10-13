@@ -226,3 +226,9 @@ def test_project_ids_are_plain_tokens(client):
     for bad in ("proj_a#b", "proj_../x", "proj_%00"):
         assert client.post("/v1/projects", json={**base, "id": bad}).status_code == 422
     assert client.post("/v1/projects", json={**base, "id": "proj_ok_1"}).status_code == 201
+
+
+def test_search_has_its_own_ceiling(client):
+    codes = [client.post("/v1/search", json={"query": "q"}).status_code for _ in range(22)]
+    assert codes[:20] == [200] * 20
+    assert codes[20] == 429
