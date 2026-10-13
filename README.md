@@ -15,35 +15,44 @@ full specification is `prompt (1).md`; role-scoped extracts are in
 `docs/spec/`. Agent instructions are in `CLAUDE.md` / `AGENTS.md`, and the live
 work ledger is `docs/progress.md`.
 
-## Status: local mode works end to end; nothing is deployed
+## Status: local mode works end to end; one private dev deployment exists
 
 What runs on a laptop with no cloud account and no AI provider key (fixture
 inference and fixture transcription are labelled as such in the UI):
 
 | Area | State |
 | --- | --- |
-| Contracts | v1, generated from Pydantic (93 artifacts), verified by `make contracts-check`. |
+| Contracts | v1, generated from Pydantic (101 artifacts), verified by `make contracts-check`. |
 | API | FastAPI with bearer auth, `Idempotency-Key` replay, `409` on stale revisions, durable exports, daily-plan enqueueing, desktop-local auth. |
 | State / pipeline / scheduler / retrieval / planner | SQLite store with transactional outbox, local worker loop, honest reminder states, scoped search, deterministic plan validation. |
 | Web | React/Vite PWA: capture, proposals, Today, plans, projects, search, settings, export, optional Cognito PKCE (only when `VITE_METIS_COGNITO_*` is set), desktop HUD route. |
+| Dictation ("Flow") | Hold-to-dictate sessions on the speech server (chunked PCM, provisional partials, finalize on release), deterministic cleanup with dictionary, snippets and per-app style, settings under `Preferences.flow`. Server side only: desktop insertion is not built (ADR 0005). |
 | Desktop | Tauri v2 shell with a packaged `metis-backend` (api/worker/speech) supervised by Rust, hold-to-talk state machine and uploader, HUD window. Built and tested on aarch64 macOS only. |
 | Infra | CDK app synthesizes 7 stacks (`make synth`), template assertions pass. `ops/` has runbook, cost worksheet and procedures. |
 | Checks | `make check`, `make test` (python, web, E2E in `tests/e2e`) and `pnpm --filter @metis/desktop test` pass. Exact counts: `docs/progress.md`. |
 
 What is **not** done or **not verified**, stated plainly:
 
-- **No real speech recognition has run.** No model artifact is pinned or fetched;
-  `make speech-bench` without `--hypotheses` echoes the reference text. The
-  desktop app refuses to record until a model is placed in `<app-data>/models`.
+- **No transcription of real audio has been verified.** The GCP VM loads the
+  faster-whisper `small.en` model (pinned to the Hugging Face commit resolved at
+  deploy time, not checksummed), but no recording has been decoded end to end and
+  nothing is benchmarked. `make speech-bench` without `--hypotheses` echoes the
+  reference text. The desktop app refuses to record until a model is placed in
+  `<app-data>/models`.
 - **No hardware pass.** The global shortcut, microphone capture and the HUD
   window have not been exercised by a person. Steps are in the desktop handoff.
-- **Nothing is deployed.** Every cloud check is UNRUN (`ops/runbook.md`).
-  DynamoDB parity is tested against a SQLite-backed stand-in, not DynamoDB.
+- **The AWS stack is not deployed.** Every AWS check is UNRUN (`ops/runbook.md`).
+  DynamoDB parity is tested against a SQLite-backed stand-in, not DynamoDB. The
+  only deployment is the private GCP dev VM below, which runs local mode.
 - **Known product defects** are strict `xfail` tests in `tests/e2e/` (spoken
   "already registered"/"cancel that", registration-reminder suppression,
   duplicate registration task, project attachment of captured notes).
 - **Desktop packaging** is unsigned, un-notarized, one target triple, ~100 MB.
 - **Fixture extraction** is the only extraction in local mode.
+- **No login on the deployment.** It uses fixture identity, so the VM is
+  reachable only through an IAP SSH tunnel and the public UI has no data.
+- **Dictation is not usable end to end.** Desktop shortcut, text insertion, the
+  settings UI, spoken self-correction and Command Mode are not built.
 
 ## Requirements
 
@@ -93,6 +102,36 @@ API, worker and the speech model are all healthy. Place a model under
 runtime. Hold-to-talk is `Cmd+Option+Space`; this has **not** been exercised on
 real hardware yet.
 
+### Deployment (GCP VM + Vercel UI)
+
+One private Compute Engine VM runs `METIS_MODE=local` (SQLite, fixture
+inference, real faster-whisper) as four systemd units on loopback: API `:8000`,
+worker, speech/dictation `:8787`, static web `:5173`. It has no external IP;
+the only way in is SSH through IAP.
+
+```bash
+PROJECT=<gcp-project-id> ops/gcp/deploy.sh   # idempotent: provision + ship committed HEAD
+```
+
+`deploy.sh` prints the tunnel command. The UI is also published as a static
+bundle on Vercel (`ops/vercel/vercel.json`); it calls `http://localhost:8000`,
+so it works only for someone with the tunnel open, and the VM allows that
+origin through `METIS_CORS_ORIGINS`. The dictation bearer secret is generated on
+the VM at `/etc/metis-speech.env`. Idle cost drops to disk plus NAT after
+`gcloud compute instances stop metis --zone us-central1-a`; teardown is
+deleting the project. Do not open a public port until real auth replaces
+fixture identity.
+
+### Dictation (Flow)
+
+Hold-to-dictate is a second voice mode beside Capture. Audio streams to the
+warm speech server only while the key is held; partials are provisional and
+final text exists only after `finish`. Cleanup is deterministic (fillers, case,
+dictionary, snippets, `scratch that`, `new line`/`new paragraph`, per-app
+style), makes no model call and never rewrites dates, names or negation. Config
+is `Preferences.flow`. Protocol, scope and what is deliberately unbuilt:
+`docs/architecture/0005-flow-dictation.md`.
+
 ### Fixture identity
 
 Local mode (without desktop auth) accepts any bearer token and resolves it to
@@ -131,7 +170,7 @@ services/speech/     owned faster-whisper ASR worker + Dockerfile
 services/retrieval/  memory ingestion, embeddings, scoped search
 services/planner/    context assembly, plan generation, validation
 infra/               AWS CDK stacks
-ops/                 runbooks, cost worksheet, procedures
+ops/                 runbooks, cost worksheet, procedures; gcp/ and vercel/ deploy
 tests/e2e/           cross-feature scenarios (fixture adapters)
 docs/                spec extracts, ADRs, progress ledger
 ```

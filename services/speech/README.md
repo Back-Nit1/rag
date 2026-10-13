@@ -18,9 +18,30 @@ mistakes does not update any model weights.
 | --- | --- |
 | `transcriber.py` | `FasterWhisperTranscriber` (production) and `FixtureTranscriber` (local, always reports `adapter_mode=fixture`) |
 | `audio.py` | envelope checks, PyAV decode to mono 16 kHz, decoded-duration enforcement, silence detection |
+| `server.py` | warm loopback HTTP server (`/v1/transcribe`, `/v1/ready`, `/v1/flow/sessions…`), bearer secret, one decode at a time, `--port` for a fixed port |
+| `flow.py` | hold-to-dictate sessions: in-memory PCM buffer, one live session, size cap |
+| `polish.py` | deterministic dictation cleanup: fillers, case, dictionary, snippets, per-app style |
+| `remote.py` | client used by the API/worker to reach the warm server |
 | `worker.py` | container entrypoint: one job, persist the result, exit with a category-specific code |
 | `evaluate.py` | WER plus separate name / date / negation fidelity, dev vs held-out splits |
 | `Dockerfile` | model artifacts pinned and baked at build time; non-root; one job per container |
+
+## Dictation sessions (Flow)
+
+Served by `server.py`; every request needs `Authorization: Bearer $METIS_SPEECH_SECRET`.
+Audio is raw PCM16 mono 16 kHz, held in memory only, never logged.
+
+| Request | Result |
+| --- | --- |
+| `POST /v1/flow/sessions` `{language?, app?, settings?}` | `{session_id, max_seconds}`; a new session supersedes an abandoned one |
+| `POST /v1/flow/sessions/{id}/audio` raw chunk | `{seconds, partial}`; `partial.provisional` is always `true`, HUD-only |
+| `POST /v1/flow/sessions/{id}/finish` | `{text, raw_text, applied, no_speech, segments, speech}`; the only insertable text |
+| `DELETE /v1/flow/sessions/{id}` | discard the audio |
+
+`settings` is a `FlowSettings` (contracts). `polish` never changes dates, names
+or negation; `raw_text` is returned beside the polished text, and an empty
+recording sets `no_speech` and inserts nothing. See
+`docs/architecture/0005-flow-dictation.md`.
 
 ## Why the duration check is on decoded audio
 
