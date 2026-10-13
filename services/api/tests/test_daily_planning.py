@@ -83,6 +83,20 @@ def test_duplicate_invocation_is_suppressed(client, adapters):
     assert second["plan_id"] == first["plan_id"]
 
 
+def test_failed_enqueue_does_not_poison_the_retry(client, adapters, monkeypatch):
+    patch_prefs(client)
+    real = adapters.state_store.get_planning_epoch
+    monkeypatch.setattr(
+        adapters.state_store, "get_planning_epoch", lambda *a: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
+    with pytest.raises(RuntimeError):
+        due(adapters)
+    monkeypatch.setattr(adapters.state_store, "get_planning_epoch", real)
+    first = due(adapters)
+    assert (first["enqueued"], first["reason"]) == (1, "enqueued")
+    assert due(adapters)["reason"] == "duplicate"
+
+
 def test_payload_cannot_choose_owner_or_date(client, adapters):
     patch_prefs(client)
     assert due(adapters, scheduled_time="2026-10-04T12:00:00+00:00")["reason"] == "stale_date"

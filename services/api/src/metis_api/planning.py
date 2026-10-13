@@ -13,7 +13,9 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from metis_contracts import (
+    ErrorCode,
     EventType,
+    MetisError,
     JobState,
     OutboxEvent,
     Plan,
@@ -40,13 +42,19 @@ def request_plan(
     time_budget_minutes: int,
     correlation_id: str,
     idempotency_key: str | None = None,
+    plan_id: str | None = None,
 ) -> tuple[Plan, Job]:
-    """Create one pending plan, its job and the outbox event atomically."""
+    """Create one pending plan, its job and the outbox event atomically.
+
+    A caller-chosen ``plan_id`` makes creation single-winner: a second attempt
+    hits REVISION_CONFLICT inside the transaction, and a failed attempt leaves
+    nothing behind, so a retry can still succeed.
+    """
     now = clock.now()
     epoch = state.get_planning_epoch(user_id)
     key = idempotency_key or f"plan:{local_date.isoformat()}:{epoch}"
     plan = Plan(
-        id=new_id("plan"),
+        id=plan_id or new_id("plan"),
         user_id=user_id,
         created_at=now,
         updated_at=now,
@@ -71,6 +79,8 @@ def request_plan(
     with state.transaction(user_id) as tx:
         stored_plan = tx.put("plan", plan)
         stored_job = tx.put("job", job)
+        if plan_id:
+            tx.remember_idempotent(key, {"plan_id": stored_plan.id, "job_id": stored_job.id})
         tx.append_outbox(
             OutboxEvent(
                 id=new_id("obx"),
@@ -169,21 +179,24 @@ def handle_daily_due(
     key = f"daily-plan:{day.isoformat()}"
     if (prior := state.recall_idempotent(user_id, key)) is not None:
         return {"enqueued": 0, "reason": "duplicate", **prior}
-    if not state.claim_once(user_id, key, "daily-planning"):
-        return skip("duplicate")
-
-    plan, job = request_plan(
-        state,
-        clock,
-        user_id=user_id,
-        local_date=day,
-        timezone=prefs.timezone,
-        time_budget_minutes=0,
-        correlation_id=f"daily:{user_id}:{day.isoformat()}",
-        idempotency_key=key,
-    )
+    try:
+        plan, job = request_plan(
+            state,
+            clock,
+            user_id=user_id,
+            local_date=day,
+            timezone=prefs.timezone,
+            time_budget_minutes=0,
+            correlation_id=f"daily:{user_id}:{day.isoformat()}",
+            idempotency_key=key,
+            plan_id=f"plan_daily_{day.isoformat()}",
+        )
+    except MetisError as exc:
+        if exc.code is not ErrorCode.REVISION_CONFLICT:
+            raise
+        prior = state.recall_idempotent(user_id, key) or {}
+        return {"enqueued": 0, "reason": "duplicate", **prior}
     result = {"plan_id": plan.id, "job_id": job.id}
-    state.remember_idempotent(user_id, key, result)
     return {"enqueued": 1, "reason": "enqueued", **result}
 
 
