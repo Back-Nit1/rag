@@ -15,8 +15,8 @@ from typing import Any
 from metis_contracts import (
     ErrorCode,
     EventType,
-    MetisError,
     JobState,
+    MetisError,
     OutboxEvent,
     Plan,
     PlanStatus,

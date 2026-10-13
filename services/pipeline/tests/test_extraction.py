@@ -378,14 +378,18 @@ def test_extraction_drops_project_hint_not_offered(store, clock):
     class Echo:
         def complete_json(self, **kw):
             item = {"kind": "thought", "title": "t", "evidence": [{"start_char": 0, "end_char": 4}]}
-            return {"items": [{**item, "project_hint": h} for h in ("proj_x", "Atlas", "ghost")],
-                    "requires_clarification": False}, {}
+            return {
+                "items": [{**item, "project_hint": h} for h in ("proj_x", "Atlas", "ghost")],
+                "requires_clarification": False,
+            }, {}
 
     from metis_contracts import Project
 
     with store.transaction(USER) as tx:
         tx.put("project", Project(id="proj_x", user_id=USER, created_at=T0, updated_at=T0, title="Atlas"))
-    out = ExtractionService(state_store=store, inference=Echo(), clock=clock).extract(source("Note text"), source_version=1)
+    out = ExtractionService(state_store=store, inference=Echo(), clock=clock).extract(
+        source("Note text"), source_version=1
+    )
     assert [i.project_hint for i in out.proposal.items] == ["proj_x", "proj_x", None]
 
 
