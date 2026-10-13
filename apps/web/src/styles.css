@@ -309,6 +309,21 @@ aside :where(a, button):focus-visible {
   animation: turn 280ms var(--ease-out) both;
 }
 
+/* Landing: blocks settle in once as they scroll into view. Hidden only when
+   motion is allowed, so nothing is ever stranded invisible. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
+    transition-delay: var(--d, 0ms);
+  }
+  [data-reveal].in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

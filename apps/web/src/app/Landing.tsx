@@ -3,6 +3,7 @@
  * it works, and nothing on it talks to the API. The product illustration is
  * labelled as an illustration: it is not output from a real account.
  */
+import { useEffect } from "react";
 import { Icon } from "../components/Icon";
 import { ThemeToggle } from "../components/ThemeToggle";
 
@@ -52,7 +53,7 @@ function Wordmark() {
 function Illustration() {
   return (
     <figure className="w-full max-w-xl">
-      <div className="overflow-hidden rounded-3xl border border-line bg-surface shadow-lift">
+      <div className="rise overflow-hidden rounded-3xl border border-line bg-surface shadow-lift">
         <div className="flex items-center gap-2 border-b border-line px-5 py-3 font-mono text-2xs uppercase tracking-[0.12em] text-muted">
           <span className="size-2 rounded-full bg-record" aria-hidden="true" />
           Note · 9:12 AM
@@ -66,8 +67,12 @@ function Illustration() {
             ["Task", "Register for the Boston half marathon", "Due date not stated", "warn"],
             ["Event", "Dentist", "Tue 3:00 PM · fixed", "good"],
             ["Reminder", "Call mom", "Tonight · waiting for confirmation", "busy"],
-          ].map(([kind, title, detail, tone]) => (
-            <li key={title} className="flex items-start gap-3 px-5 py-3.5">
+          ].map(([kind, title, detail, tone], i) => (
+            <li
+              key={title}
+              style={{ animationDelay: `${700 + i * 220}ms` }}
+              className="rise flex items-start gap-3 px-5 py-3.5"
+            >
               <span className="mt-0.5 rounded-full border border-line-strong px-2 py-0.5 font-mono text-2xs uppercase tracking-[0.1em] text-muted">
                 {kind}
               </span>
@@ -90,6 +95,26 @@ function Illustration() {
 }
 
 export function Landing({ onOpen }: { onOpen: () => void }) {
+  useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>("[data-reveal]");
+    if (!("IntersectionObserver" in window)) {
+      els.forEach((el) => el.classList.add("in"));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+            io.unobserve(e.target);
+          }
+        }),
+      { threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
   const cta =
     "inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-[15px] font-semibold text-on-accent transition-opacity hover:opacity-85";
   return (
@@ -148,12 +173,17 @@ export function Landing({ onOpen }: { onOpen: () => void }) {
         <section id="how" className="border-y border-line bg-raised">
           <div className="mx-auto max-w-6xl px-5 py-24">
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted">How it works</p>
-            <h2 className="mt-4 max-w-2xl text-[clamp(2rem,4.5vw,3.25rem)] font-medium leading-[1.05] tracking-[-0.03em]">
+            <h2 data-reveal className="mt-4 max-w-2xl text-[clamp(2rem,4.5vw,3.25rem)] font-medium leading-[1.05] tracking-[-0.03em]">
               From a passing thought to a plan you can trust.
             </h2>
             <ol className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, i) => (
-                <li key={step.title} className="rounded-2xl border border-line bg-surface p-6">
+                <li
+                  key={step.title}
+                  data-reveal
+                  style={{ "--d": `${i * 90}ms` } as React.CSSProperties}
+                  className="rounded-2xl border border-line bg-surface p-6"
+                >
                   <span className="font-mono text-xs text-muted">Step {i + 1}</span>
                   <h3 className="mt-3 text-xl font-medium">{step.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted">{step.body}</p>
@@ -165,12 +195,14 @@ export function Landing({ onOpen }: { onOpen: () => void }) {
 
         <section id="principles" className="mx-auto max-w-6xl px-5 py-24">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted">Principles</p>
-          <h2 className="mt-4 max-w-2xl text-[clamp(2rem,4.5vw,3.25rem)] font-medium leading-[1.05] tracking-[-0.03em]">
+          <h2 data-reveal className="mt-4 max-w-2xl text-[clamp(2rem,4.5vw,3.25rem)] font-medium leading-[1.05] tracking-[-0.03em]">
             An assistant that tells you what it knows, and what it doesn’t.
           </h2>
           <dl className="mt-14 grid gap-x-12 gap-y-10 md:grid-cols-2">
-            {PRINCIPLES.map((p) => (
-              <div key={p.title} className="border-t border-line-strong pt-5">
+            {PRINCIPLES.map((p, i) => (
+              <div key={p.title} data-reveal
+                style={{ "--d": `${(i % 2) * 90}ms` } as React.CSSProperties}
+                className="border-t border-line-strong pt-5">
                 <dt className="text-xl font-medium">{p.title}</dt>
                 <dd className="mt-2 max-w-md text-[15px] leading-relaxed text-muted">{p.body}</dd>
               </div>
@@ -186,7 +218,7 @@ export function Landing({ onOpen }: { onOpen: () => void }) {
                 In your browser, or on your desktop.
               </h2>
             </div>
-            <div className="space-y-6 text-[15px] leading-relaxed text-muted">
+            <div data-reveal className="space-y-6 text-[15px] leading-relaxed text-muted">
               <p>
                 <strong className="font-medium text-ink">Browser.</strong> Installable as an app on your phone or
                 laptop. Capture works offline: notes wait on your device until you reconnect, and Metis says so.
@@ -200,7 +232,7 @@ export function Landing({ onOpen }: { onOpen: () => void }) {
         </section>
 
         <section className="mx-auto max-w-6xl px-5 py-28 text-center">
-          <h2 className="mx-auto max-w-3xl text-[clamp(2.25rem,5.5vw,4rem)] font-medium leading-[1] tracking-[-0.035em]">
+          <h2 data-reveal className="mx-auto max-w-3xl text-[clamp(2.25rem,5.5vw,4rem)] font-medium leading-[1] tracking-[-0.035em]">
             Capture your first thought.
           </h2>
           <button type="button" onClick={onOpen} className={`${cta} mt-9`}>
