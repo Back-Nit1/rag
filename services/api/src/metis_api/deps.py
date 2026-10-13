@@ -6,7 +6,9 @@ them for a fixture and the whole API behaves deterministically.
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 import threading
 import time
 from collections import defaultdict, deque
@@ -14,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Annotated, Any
 
 from fastapi import Depends, Header, Request
-from metis_contracts import ErrorCode, MetisError, SystemClock, new_id, settings
+from metis_contracts import ErrorCode, MetisError, SystemClock, settings
 from metis_contracts.common import Record
 from metis_contracts.ports import (
     Clock,
@@ -29,6 +31,10 @@ from metis_contracts.ports import (
 )
 
 from .auth import Principal, principal_from_header
+from .guards import clean_correlation_id
+
+_FINGERPRINT_FIELD = "__fingerprint"
+_IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9_.:=-]{1,128}")
 
 log = logging.getLogger("metis.api.deps")
 
@@ -176,6 +182,8 @@ class RequestContext:
     adapters: Adapters
     correlation_id: str
     idempotency_key: str | None = None
+    #: Hash of method + path + body; ties a stored response to the request it answered.
+    fingerprint: str | None = None
 
     @property
     def user_id(self) -> str:
@@ -214,11 +222,22 @@ class RequestContext:
         """A repeated successful mutation returns its stored response."""
         if not self.idempotency_key:
             return None
-        return self.state.recall_idempotent(self.user_id, self.idempotency_key)
+        stored = self.state.recall_idempotent(self.user_id, self.idempotency_key)
+        if stored is None:
+            return None
+        stored = dict(stored)
+        if stored.pop(_FINGERPRINT_FIELD, None) not in (None, self.fingerprint):
+            # Replaying the first response here would silently drop this request.
+            raise MetisError(
+                ErrorCode.VALIDATION_FAILED, "this Idempotency-Key was already used for a different request"
+            )
+        return stored
 
     def remember(self, response: dict[str, Any]) -> None:
         if self.idempotency_key:
-            self.state.remember_idempotent(self.user_id, self.idempotency_key, response)
+            self.state.remember_idempotent(
+                self.user_id, self.idempotency_key, {**response, _FINGERPRINT_FIELD: self.fingerprint}
+            )
 
 
 def get_adapters(request: Request) -> Adapters:
@@ -228,16 +247,24 @@ def get_adapters(request: Request) -> Adapters:
     return adapters
 
 
-def get_context(
+async def get_context(
     request: Request,
     adapters: Annotated[Adapters, Depends(get_adapters)],
     authorization: Annotated[str | None, Header()] = None,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     x_correlation_id: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
 ) -> RequestContext:
+    fingerprint: str | None = None
     principal = principal_from_header(authorization)
     _limiter.check(principal.user_id, limit=settings().limits.api_rate_per_minute)
-    correlation_id = x_correlation_id or new_id("run")
+    correlation_id = clean_correlation_id(x_correlation_id)
+    if idempotency_key is not None:
+        if not _IDEMPOTENCY_KEY.fullmatch(idempotency_key):
+            raise MetisError(ErrorCode.VALIDATION_FAILED, "Idempotency-Key must be 1-128 of [A-Za-z0-9_.:=-]")
+        body = await request.body()
+        fingerprint = hashlib.sha256(
+            request.method.encode() + b"\0" + request.url.path.encode() + b"\0" + body
+        ).hexdigest()
     request.state.correlation_id = correlation_id
     request.state.user_id = principal.user_id
     return RequestContext(
@@ -245,6 +272,7 @@ def get_context(
         adapters=adapters,
         correlation_id=correlation_id,
         idempotency_key=idempotency_key,
+        fingerprint=fingerprint,
     )
 
 

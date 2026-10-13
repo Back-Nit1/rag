@@ -14,6 +14,10 @@ from dataclasses import dataclass
 from metis_contracts import ErrorCode, MetisError
 
 TARGET_SAMPLE_RATE = 16_000  # what Whisper expects
+#: Containers the browser/desktop recorders produce. Without this, the file's
+#: own bytes pick the demuxer, and ffmpeg ships ones that open sockets (sdp,
+#: rtsp), fetch URLs (hls) or read local paths (concat).
+ALLOWED_DEMUXERS = "matroska,webm,ogg,mov,mp4,m4a,mp3,wav,flac"
 MAX_DECODE_FRAMES = 60 * 60 * TARGET_SAMPLE_RATE  # hard ceiling: one hour of samples
 
 
@@ -58,7 +62,7 @@ def decode_to_mono16k(body: bytes, *, max_seconds: int) -> DecodedAudio:
     codec = "unknown"
 
     try:
-        with av.open(io.BytesIO(body)) as container:
+        with av.open(io.BytesIO(body), options={"format_whitelist": ALLOWED_DEMUXERS}) as container:
             streams = [s for s in container.streams if s.type == "audio"]
             if not streams:
                 raise MetisError(ErrorCode.UNSUPPORTED_MEDIA, "the file contains no audio stream")

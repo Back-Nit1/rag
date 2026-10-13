@@ -68,37 +68,25 @@ def verify_cognito_token(token: str) -> Principal:
 
     issuer = f"https://cognito-idp.{cfg.region}.amazonaws.com/{cfg.cognito_user_pool_id}"
     try:
-        signing_key = _jwks().get_signing_key_from_jwt(token)
+        # Cognito access tokens carry no ``aud`` (the app client is ``client_id``),
+        # id tokens carry ``aud``. Signature, issuer and expiry are verified here;
+        # the client binding is checked explicitly below, per token type.
         claims = jwt.decode(
             token,
-            signing_key.key,
+            _jwks().get_signing_key_from_jwt(token).key,
             algorithms=["RS256"],
             issuer=issuer,
-            options={"require": ["exp", "iat", "sub", "token_use"]},
-            audience=cfg.cognito_client_id,
+            options={"verify_aud": False, "require": ["exp", "iat", "sub", "token_use"]},
         )
     except jwt.ExpiredSignatureError as exc:
         raise MetisError(ErrorCode.UNAUTHENTICATED, "the access token has expired") from exc
-    except jwt.InvalidAudienceError:
-        # Access tokens carry client_id rather than aud; retry without the
-        # audience check and verify client_id explicitly.
-        try:
-            claims = jwt.decode(
-                token,
-                _jwks().get_signing_key_from_jwt(token).key,
-                algorithms=["RS256"],
-                issuer=issuer,
-                options={"verify_aud": False, "require": ["exp", "iat", "sub", "token_use"]},
-            )
-        except Exception as exc:
-            raise MetisError(ErrorCode.UNAUTHENTICATED, "the token could not be verified") from exc
-        if claims.get("client_id") != cfg.cognito_client_id:
-            raise MetisError(ErrorCode.UNAUTHENTICATED, "the token was issued to another client") from None
     except Exception as exc:
         raise MetisError(ErrorCode.UNAUTHENTICATED, "the token could not be verified") from exc
 
-    if claims.get("token_use") not in ("access", "id"):
-        raise MetisError(ErrorCode.UNAUTHENTICATED, "unexpected token_use")
+    token_use = claims.get("token_use")
+    bound_client = claims.get("client_id") if token_use == "access" else claims.get("aud")
+    if token_use not in ("access", "id") or bound_client != cfg.cognito_client_id:
+        raise MetisError(ErrorCode.UNAUTHENTICATED, "the token was not issued to this client")
     subject = claims.get("sub")
     if not subject:
         raise MetisError(ErrorCode.UNAUTHENTICATED, "the token has no subject")

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request, Response, status
-from metis_contracts import ErrorCode, MetisError, ObjectRef, SourceArtifact, settings
+from metis_contracts import ErrorCode, MetisError, ObjectRef, SourceArtifact, SourceLifecycle, settings
 from metis_contracts.api import (
     AttachCaptureProjectRequest,
     CaptureDetail,
@@ -122,6 +122,15 @@ async def local_upload(capture_id: str, request: Request, ctx: Context) -> Respo
     if not ctx.adapters.source_store.owns_key(ctx.user_id, source.object_ref.key):
         raise MetisError(ErrorCode.FORBIDDEN, "the object key is outside your prefix")
 
+    if source.lifecycle is not SourceLifecycle.PENDING_UPLOAD:
+        # An accepted recording is immutable: replacing it after completion would
+        # make the transcript describe bytes that are no longer stored.
+        raise MetisError(ErrorCode.INVALID_STATE_TRANSITION, "the recording was already completed")
+    declared = (source.object_ref.content_type or "").split(";")[0].strip().lower()
+    sent = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if declared and sent != declared:
+        raise MetisError(ErrorCode.UNSUPPORTED_MEDIA, f"expected {declared}, got {sent or 'no content type'}")
+
     body = await request.body()
     limit = settings().limits.max_upload_bytes
     if len(body) > limit:
@@ -131,6 +140,6 @@ async def local_upload(capture_id: str, request: Request, ctx: Context) -> Respo
     ctx.adapters.source_store.put_bytes(
         ObjectRef(bucket=source.object_ref.bucket, key=source.object_ref.key),
         body,
-        content_type=request.headers.get("content-type", "application/octet-stream"),
+        content_type=declared or "application/octet-stream",
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

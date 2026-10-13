@@ -18,6 +18,33 @@ from metis_contracts.enums import AdapterMode
 
 log = logging.getLogger("metis.scheduler.transport")
 
+#: Browser push services. The endpoint is a URL the *client* supplied and the
+#: server will POST to, so anything outside this list is a server-side request
+#: forgery primitive (cloud metadata, VPC-internal hosts).
+PUSH_SERVICE_SUFFIXES = (
+    ".googleapis.com",
+    ".push.services.mozilla.com",
+    ".push.apple.com",
+    ".notify.windows.com",
+)
+
+
+def is_push_endpoint_allowed(endpoint: str) -> bool:
+    from urllib.parse import urlsplit
+
+    try:
+        parts = urlsplit(endpoint)
+        host = (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError:
+        return False
+    return (
+        parts.scheme == "https"
+        and port in (None, 443)
+        and not parts.username
+        and host.endswith(PUSH_SERVICE_SUFFIXES)
+    )
+
 
 class InAppTransport:
     """Writes to the user's own notification feed; always supported."""
@@ -122,6 +149,9 @@ class WebPushTransport:
         accepted = 0
         failures: list[str] = []
         for subscription in subscriptions:
+            if not is_push_endpoint_allowed(subscription.endpoint):
+                failures.append("endpoint is not a recognised push service")
+                continue
             try:
                 webpush(
                     subscription_info={

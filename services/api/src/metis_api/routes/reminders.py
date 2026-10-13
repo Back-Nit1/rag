@@ -225,6 +225,14 @@ def register_push(body: RegisterPushRequest, ctx: Context) -> PushSubscription:
     Ownership comes from the token, never the body. Web push needs browser and
     platform support; delivery is not a universal guarantee.
     """
+    from metis_scheduler.transports import is_push_endpoint_allowed
+
+    if not is_push_endpoint_allowed(body.endpoint):
+        raise MetisError(
+            ErrorCode.VALIDATION_FAILED, "endpoint must be an https URL of a browser push service"
+        )
+    if len(body.p256dh) > 256 or len(body.auth) > 64:
+        raise MetisError(ErrorCode.VALIDATION_FAILED, "push key material is too long")
     now = ctx.adapters.clock.now()
     subscription = PushSubscription(
         id=new_id("push"),

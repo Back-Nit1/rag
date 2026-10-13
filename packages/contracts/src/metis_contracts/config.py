@@ -293,6 +293,11 @@ class Settings:
     desktop: DesktopConfig = field(default_factory=DesktopConfig)
 
     def __post_init__(self) -> None:
+        if self.mode is Mode.CLOUD and self.allow_fixture_identity:
+            # The default is True for local development; a deployed (staging or
+            # otherwise non-prod) cloud stack must not answer anonymous callers
+            # as the demo user.
+            raise ValueError("METIS_ALLOW_FIXTURE_IDENTITY must be false when METIS_MODE=cloud")
         if self.environment == "prod":
             # A production deployment must not be able to fall back to a
             # fixture identity or a fixture model when auth or Bedrock fails.

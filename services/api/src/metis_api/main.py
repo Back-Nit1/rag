@@ -17,9 +17,10 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from metis_contracts import CONTRACT_VERSION, ErrorBody, ErrorCode, MetisError, new_id, settings
+from metis_contracts import CONTRACT_VERSION, ErrorBody, ErrorCode, MetisError, settings
 
 from .deps import build_adapters
+from .guards import BodyLimitMiddleware, HostGuardMiddleware, clean_correlation_id
 from .routes import captures, notifications, plans, projects, reminders, tasks
 
 log = logging.getLogger("metis.api")
@@ -73,6 +74,10 @@ def create_app() -> FastAPI:
         expose_headers=["X-Correlation-Id"],
     )
 
+    # Outermost last: Host is checked first, then the body is bounded as it streams.
+    app.add_middleware(BodyLimitMiddleware)
+    app.add_middleware(HostGuardMiddleware)
+
     @app.middleware("http")
     async def correlate(request: Request, call_next: Callable[[Request], Awaitable[Any]]) -> Any:
         """Attach a correlation id to every request, response and log line.
@@ -80,7 +85,7 @@ def create_app() -> FastAPI:
         This is what makes a missed reminder debuggable: the same id appears on
         the API call, the queue message, the model call and the notification.
         """
-        correlation_id = request.headers.get("X-Correlation-Id") or new_id("run")
+        correlation_id = clean_correlation_id(request.headers.get("X-Correlation-Id"))
         request.state.correlation_id = correlation_id
         started = time.monotonic()
         try:

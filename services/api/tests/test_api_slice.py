@@ -89,8 +89,15 @@ def test_a_repeated_capture_with_the_same_client_id_creates_one_source(client):
 
 def test_a_replayed_idempotency_key_returns_the_first_response(client):
     first = capture_text(client, idem="same-key").json()
-    second = capture_text(client, text="a different note", idem="same-key").json()
+    second = capture_text(client, idem="same-key").json()
     assert first["capture_id"] == second["capture_id"]
+
+
+def test_an_idempotency_key_reused_for_a_different_request_is_refused_not_dropped(client):
+    capture_text(client, idem="same-key")
+    reused = capture_text(client, text="a different note", idem="same-key")
+    assert reused.status_code == 422
+    assert "different request" in reused.json()["message"]
 
 
 # --- proposal -> commitments ------------------------------------------------ #
