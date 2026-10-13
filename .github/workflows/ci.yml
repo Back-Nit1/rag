@@ -26,6 +26,9 @@ jobs:
       - run: pnpm --filter @metis/web build
       - run: make synth
       - run: pnpm --filter @metis/infra test
+      - run: pnpm audit --prod --audit-level high
+      - run: uvx pip-audit -r <(uv export --frozen --no-hashes --all-packages | grep -v '^-e') --disable-pip --no-deps
+        shell: bash
 
   desktop:
     runs-on: macos-latest

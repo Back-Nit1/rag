@@ -159,10 +159,27 @@ export class ApiStack extends Stack {
       authorizer: new apigw.HttpNoneAuthorizer(),
     });
 
-    new logs.LogGroup(this, 'AccessLogs', {
+    const accessLogs = new logs.LogGroup(this, 'AccessLogs', {
       logGroupName: `/aws/apigateway/${resourceName(this, config, 'api')}`,
       retention: logs.RetentionDays.ONE_MONTH,
     });
+    // The in-process limiter is per Lambda container, so the edge is the real
+    // limit: bound the whole API (denial-of-wallet through Bedrock/ASR) and log
+    // who called what. Method/path/status only; no bodies or tokens.
+    const stage = this.httpApi.defaultStage?.node.defaultChild as apigw.CfnStage;
+    stage.defaultRouteSettings = { throttlingBurstLimit: 50, throttlingRateLimit: 25 };
+    stage.accessLogSettings = {
+      destinationArn: accessLogs.logGroupArn,
+      format: JSON.stringify({
+        requestId: '$context.requestId',
+        ip: '$context.identity.sourceIp',
+        method: '$context.httpMethod',
+        path: '$context.path',
+        status: '$context.status',
+        latencyMs: '$context.responseLatency',
+        sub: '$context.authorizer.claims.sub',
+      }),
+    };
 
     new CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
   }

@@ -246,10 +246,20 @@ export const api = {
       : {};
     let response: Response;
     try {
+      // S3 presigned POST: every returned field, then the file last, as multipart.
+      // The browser sets the multipart Content-Type itself.
+      const form = new FormData();
+      const fields = upload.method === "POST" ? upload.fields ?? {} : null;
+      if (fields) {
+        for (const [k, v] of Object.entries(fields)) form.append(k, v);
+        form.append("file", blob);
+      }
       response = await fetch(url, {
         method: upload.method ?? "PUT",
-        headers: { "Content-Type": blob.type || "application/octet-stream", ...(upload.headers ?? {}), ...own },
-        body: blob,
+        headers: fields
+          ? { ...(upload.headers ?? {}), ...own }
+          : { "Content-Type": blob.type || "application/octet-stream", ...(upload.headers ?? {}), ...own },
+        body: fields ? form : blob,
       });
     } catch (cause) {
       throw new OfflineError(cause);

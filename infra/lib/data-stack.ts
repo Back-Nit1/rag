@@ -93,8 +93,8 @@ export class DataStack extends Stack {
         {
           // Direct browser upload to the presigned POST target.
           allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.PUT],
-          allowedOrigins: ['http://localhost:5173'],
-          allowedHeaders: ['*'],
+          allowedOrigins: config.webOrigins,
+          allowedHeaders: ['Content-Type'],
           exposedHeaders: ['ETag'],
           maxAge: 300,
         },

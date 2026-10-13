@@ -169,12 +169,18 @@ class S3SourceStore:
         self, user_id: str, *, capture_id: str, content_type: str, max_bytes: int, ttl_seconds: int
     ) -> tuple[ObjectRef, dict[str, Any]]:
         key = build_key(user_id, capture_id, extension_for(content_type))
+        # The bucket's expiry rule filters on this tag; an untagged recording
+        # would never be deleted.
+        tagging = (
+            "<Tagging><TagSet><Tag><Key>metis_kind</Key><Value>recording</Value></Tag></TagSet></Tagging>"
+        )
         post = self._s3.generate_presigned_post(
             Bucket=self.bucket,
             Key=key,
-            Fields={"Content-Type": content_type},
+            Fields={"Content-Type": content_type, "tagging": tagging},
             Conditions=[
                 {"Content-Type": content_type},
+                {"tagging": tagging},
                 ["content-length-range", 1, max_bytes],
             ],
             ExpiresIn=ttl_seconds,
