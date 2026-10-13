@@ -4,9 +4,11 @@
 #   PROJECT=<gcp-project-id> ops/gcp/deploy.sh
 #
 # What runs there: METIS_MODE=local (SQLite, filesystem objects, fixture
-# inference) with the real faster-whisper transcriber. Fixture identity means
-# there is NO login, so the VM has no external IP and every service binds to
-# loopback; the only way in is SSH through IAP. Do not open a public port.
+# inference) with the real faster-whisper transcriber. Every service binds to
+# loopback. The only public surface is Caddy on :443 (<ip>.sslip.io, automatic
+# TLS) in front of the API, which rejects any request without the single-user
+# access key in /etc/metis-api.env. SSH stays IAP-only. The dictation (:8787)
+# and static web (:5173) ports are never exposed.
 #
 # Ships committed HEAD (git archive), not the working tree.
 set -euo pipefail
@@ -32,7 +34,13 @@ ensure compute networks describe metis -- \
   compute networks create metis --subnet-mode=custom
 ensure compute networks subnets describe metis --region "$REGION" -- \
   compute networks subnets create metis --network metis --region "$REGION" --range 10.10.0.0/24
-# Only Google's IAP TCP-forwarding range may reach SSH. Nothing else ingresses.
+ensure compute addresses describe metis --region "$REGION" -- \
+  compute addresses create metis --region "$REGION"
+# 80 is only for the ACME HTTP-01 challenge; Caddy redirects the rest to 443.
+ensure compute firewall-rules describe metis-https -- \
+  compute firewall-rules create metis-https --network metis \
+  --allow tcp:80,tcp:443 --source-ranges 0.0.0.0/0 --target-tags metis-https
+# Only Google's IAP TCP-forwarding range may reach SSH.
 ensure compute firewall-rules describe metis-iap-ssh -- \
   compute firewall-rules create metis-iap-ssh --network metis \
   --allow tcp:22 --source-ranges 35.235.240.0/20
@@ -46,8 +54,16 @@ ensure compute instances describe "$VM" --zone "$ZONE" -- \
   compute instances create "$VM" --zone "$ZONE" --machine-type "$MACHINE" \
   --image-family ubuntu-2404-lts-amd64 --image-project ubuntu-os-cloud \
   --boot-disk-size 30GB --boot-disk-type pd-balanced \
-  --subnet metis --no-address --no-service-account --no-scopes \
+  --subnet metis --no-address --no-service-account --no-scopes --tags metis-https \
   --shielded-secure-boot --metadata enable-oslogin=TRUE
+
+g compute instances add-tags "$VM" --zone "$ZONE" --tags metis-https >/dev/null
+IP="$(g compute addresses describe metis --region "$REGION" --format='value(address)')"
+if [ -z "$(g compute instances describe "$VM" --zone "$ZONE" --format='value(networkInterfaces[0].accessConfigs[0].natIP)')" ]; then
+  g compute instances add-access-config "$VM" --zone "$ZONE" --access-config-name external-nat --address "$IP"
+fi
+HOST="${IP//./-}.sslip.io"
+export VITE_METIS_API="https://$HOST" VITE_METIS_ACCESS_KEY=required
 
 # Build the web client from the same commit, in a clean export.
 stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
@@ -61,15 +77,13 @@ for _ in $(seq 20); do ssh_ready && break; sleep 6; done
 g compute scp --zone "$ZONE" --tunnel-through-iap "$stage.tar.gz" "$VM:/tmp/metis.tar.gz"
 g compute scp --zone "$ZONE" --tunnel-through-iap ops/gcp/vm-setup.sh "$VM:/tmp/vm-setup.sh"
 rm -f "$stage.tar.gz"
-g compute ssh "$VM" --zone "$ZONE" --tunnel-through-iap --command 'sudo bash /tmp/vm-setup.sh'
+g compute ssh "$VM" --zone "$ZONE" --tunnel-through-iap --command "sudo env HOST=$HOST bash /tmp/vm-setup.sh"
 
 cat <<EOF
 
-Deployed. Open a tunnel, then browse http://localhost:5173 :
-
-  gcloud --project $PROJECT compute ssh $VM --zone $ZONE --tunnel-through-iap -- \\
-    -N -L 5173:localhost:5173 -L 8000:localhost:8000 -L 8787:localhost:8787
-
-Dictation secret (needed as the bearer for :8787), read it once over SSH:
+Deployed: https://$HOST  (API; the UI is ops/vercel/deploy.sh)
+Access key (paste it into the UI once; never commit or share it):
+  gcloud --project $PROJECT compute ssh $VM --zone $ZONE --tunnel-through-iap --command 'sudo cat /etc/metis-api.env'
+Dictation secret (loopback :8787, reached only through an IAP tunnel):
   gcloud --project $PROJECT compute ssh $VM --zone $ZONE --tunnel-through-iap --command 'sudo cat /etc/metis-speech.env'
 EOF

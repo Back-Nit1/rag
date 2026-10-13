@@ -118,9 +118,107 @@ function CognitoGate({ config, children }: { config: AuthConfig; children: React
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+const KEY_STORAGE = "metis.accessKey";
+const readKey = (): string | null => {
+  try {
+    return window.sessionStorage.getItem(KEY_STORAGE);
+  } catch {
+    return null; // storage can be blocked; the key then lives only in memory
+  }
+};
+const writeKey = (value: string | null): void => {
+  try {
+    if (value) window.sessionStorage.setItem(KEY_STORAGE, value);
+    else window.sessionStorage.removeItem(KEY_STORAGE);
+  } catch {
+    /* in-memory only */
+  }
+};
+
+/**
+ * Single-user deployment gate: the API is public HTTPS and only accepts the
+ * access key the operator set on the server. The key stays in this tab's
+ * sessionStorage and is sent as the bearer; the server decides, so a wrong key
+ * simply fails closed on the first request.
+ */
+function AccessKeyGate({ children }: { children: ReactNode }) {
+  const [key, setKey] = useState<string | null>(() => {
+    const stored = readKey();
+    setAuthToken(stored); // before children mount, so their first request carries it
+    return stored;
+  });
+  const [draft, setDraft] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+
+  const drop = useCallback((why: string | null) => {
+    writeKey(null);
+    setAuthToken(null);
+    setKey(null);
+    setMessage(why);
+  }, []);
+
+  useEffect(() => {
+    if (!key) return;
+    setUnauthenticatedHandler(() => drop("That access key was not accepted."));
+    return () => setUnauthenticatedHandler(null);
+  }, [key, drop]);
+
+  const signOut = useCallback(() => {
+    resetClientData();
+    drop(null);
+  }, [drop]);
+  const value = useMemo(() => ({ signedIn: !!key, signOut }), [key, signOut]);
+
+  if (!key)
+    return (
+      <Panel>
+        {message && (
+          <p role="alert" className="mt-2 text-sm text-bad">
+            {message}
+          </p>
+        )}
+        <form
+          className="mt-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const next = draft.trim();
+            if (!next) return;
+            writeKey(next);
+            setAuthToken(next);
+            setMessage(null);
+            setDraft("");
+            setKey(next);
+          }}
+        >
+          <label className="block text-sm text-muted" htmlFor="access-key">
+            Enter your access key to open your notebook.
+          </label>
+          <input
+            id="access-key"
+            type="password"
+            autoComplete="current-password"
+            className="mt-3 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          <Button variant="primary" className="mt-4" type="submit">
+            Open
+          </Button>
+        </form>
+      </Panel>
+    );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
 export function AuthGate({ children }: { children: ReactNode }) {
-  const mode = authMode(import.meta.env as Record<string, string | undefined>, isDesktop());
-  if (mode.kind === "none") return <>{children}</>;
+  const env = import.meta.env as Record<string, string | undefined>;
+  const mode = authMode(env, isDesktop());
+  if (mode.kind === "none")
+    return env.VITE_METIS_ACCESS_KEY === "required" && !isDesktop() ? (
+      <AccessKeyGate>{children}</AccessKeyGate>
+    ) : (
+      <>{children}</>
+    );
   if (mode.kind === "misconfigured")
     return (
       <Panel>
