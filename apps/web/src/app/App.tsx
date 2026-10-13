@@ -11,9 +11,11 @@
  */
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { connectDesktop, getDesktopState, subscribeDesktop } from "../lib/desktop";
+import { connectDesktop, getDesktopState, isDesktop, subscribeDesktop } from "../lib/desktop";
 import { Icon, type IconName } from "../components/Icon";
 import { Notice } from "../components/Card";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { Landing } from "./Landing";
 import { CaptureScreen } from "../screens/CaptureScreen";
 import { InboxScreen } from "../screens/InboxScreen";
 import { NotificationsScreen } from "../screens/NotificationsScreen";
@@ -171,9 +173,9 @@ function Shell() {
           type="button"
           aria-current={surface === "capture" ? "page" : undefined}
           onClick={() => go("capture")}
-          className="flex min-h-12 items-center gap-3 rounded-lg bg-rail-accent px-3.5 text-sm font-semibold text-[#04130f] shadow-lift transition-[filter] hover:brightness-110 active:brightness-95"
+          className="flex min-h-12 items-center gap-3 rounded-lg bg-rail-accent px-3.5 text-sm font-semibold text-rail-on-accent shadow-lift transition-[filter] hover:brightness-110 active:brightness-95"
         >
-          <span className="grid size-7 place-items-center rounded-full bg-[#04130f]/15">
+          <span className="grid size-7 place-items-center rounded-full bg-rail-on-accent/15">
             <Icon name="mic" size={16} />
           </span>
           Capture a thought
@@ -192,6 +194,10 @@ function Shell() {
         </nav>
         <div className="mt-auto flex flex-col gap-3">
           <div className="border-t border-rail-line pt-3">{link("settings", "rail")}</div>
+          <ThemeToggle
+            label
+            className="min-h-10 w-full px-3 text-sm font-medium text-rail-muted transition-colors hover:bg-rail-raised/60 hover:text-rail-ink"
+          />
           <div className="flex flex-col gap-2 px-3 text-xs text-rail-muted">
             <p className="flex items-center gap-2">
               <span
@@ -238,6 +244,7 @@ function Shell() {
                   <Icon name={ICON[item]} />
                 </button>
               ))}
+              <ThemeToggle className="grid size-11 place-items-center text-muted" />
               <button
                 type="button"
                 aria-label="Settings"
@@ -323,7 +330,20 @@ function DesktopGate({ children }: { children: ReactNode }) {
   );
 }
 
+/** Browser visitors at the bare URL see the landing page; the desktop shell and
+ *  any deep link or sign-in redirect go straight to the app. */
+function wantsLanding(): boolean {
+  return !isDesktop() && window.location.hash === "" && !window.location.search.includes("code=");
+}
+
 export function App() {
+  const [landing, setLanding] = useState(wantsLanding);
+  useEffect(() => {
+    const sync = () => setLanding(wantsLanding());
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  if (landing) return <Landing onOpen={() => (window.location.hash = "#/today")} />;
   return (
     <DesktopGate>
       <AuthGate>

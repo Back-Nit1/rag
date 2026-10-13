@@ -3,8 +3,8 @@
 /*
  * DESIGN NOTE — Metis as a dispatch desk: a dark ink rail, a bright work sheet.
  *
- * Direction
- *   A permanently dark rail holds navigation, Capture and system status; the
+ * Direction (restyled after roma.app: white canvas, black pill CTAs, Inter)
+ *   A quiet rail holds navigation, Capture and system status; the
  *   work sheet is white on a cool grey desk with one soft card shadow. ONE
  *   deep-teal accent for "your action", and a separate record-red used only
  *   for the live mic. Radii 3/6/10px.
@@ -28,26 +28,28 @@
  * Motion only responds to an action and is off under prefers-reduced-motion.
  */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-serif: Charter, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --color-canvas: #eef0ee;
-  --color-rail: #11201c;
-  --color-rail-raised: #1a2d28;
-  --color-rail-line: #2a3f39;
-  --color-rail-ink: #eaf2ee;
-  --color-rail-muted: #9db3aa;
-  --color-rail-accent: #5fe0c4;
+  /* roma.app palette: white canvas, near-black ink, pure-black pill CTAs. */
+  --color-canvas: #ffffff;
+  --color-rail: #fafafa;
+  --color-rail-raised: #f0f0f0;
+  --color-rail-line: #e5e5e5;
+  --color-rail-ink: #0a0a0a;
+  --color-rail-muted: #595959;
+  --color-rail-accent: #000000;
+  --color-rail-on-accent: #ffffff;
   --color-surface: #ffffff;
-  --color-raised: #e7ebe8;
-  --color-line: #d5dad6;
-  --color-line-strong: #8f9c95;
-  --color-ink: #101614;
-  --color-muted: #4b5853;
-  --color-accent: #0a6b5f;
-  --color-accent-soft: #d3ece6;
-  --color-accent-ink: #064b42;
+  --color-raised: #f7f7f7;
+  --color-line: #e5e5e5;
+  --color-line-strong: #8a8a8a;
+  --color-ink: #0a0a0a;
+  --color-muted: #595959;
+  --color-accent: #000000;
+  --color-accent-soft: #f0f0f0;
+  --color-accent-ink: #000000;
   --color-on-accent: #ffffff;
   --color-good: #2a6414;
   --color-good-soft: #e1efd9;
@@ -66,9 +68,9 @@
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
 
-  --radius-sm: 3px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
   --shadow-lift: 0 1px 2px rgb(20 24 31 / 0.12), 0 8px 24px -8px rgb(20 24 31 / 0.28);
 
   --shadow-card: 0 1px 2px rgb(16 22 20 / 0.06), 0 2px 8px -4px rgb(16 22 20 / 0.12);
@@ -78,22 +80,28 @@
 
 /* @theme variables sit on :root; the dark ramp overrides the same properties,
    which is what the utilities read. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-canvas: #0c100f;
-    --color-rail: #070a09;
-    --color-rail-raised: #141c19;
-    --color-rail-line: #222d29;
-    --color-surface: #151b19;
-    --color-raised: #1e2623;
-    --color-line: #2a3430;
-    --color-line-strong: #53625b;
-    --color-ink: #eaf0ec;
-    --color-muted: #9aaaa2;
-    --color-accent: #4fd1b5;
-    --color-accent-soft: #11302a;
-    --color-accent-ink: #9be6d3;
-    --color-on-accent: #04130f;
+/* Roma is a white product; dark is opt-in via <html data-theme="dark">. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  & {
+    --color-canvas: #0a0a0a;
+    --color-rail: #0a0a0a;
+    --color-rail-raised: #141414;
+    --color-rail-line: #ffffff1a;
+    --color-rail-ink: #fafafa;
+    --color-rail-muted: #a3a3a3;
+    --color-rail-accent: #ffffff;
+    --color-rail-on-accent: #000000;
+    --color-surface: #111111;
+    --color-raised: #1a1a1a;
+    --color-line: #ffffff1f;
+    --color-line-strong: #6b6b6b;
+    --color-ink: #fafafa;
+    --color-muted: #a3a3a3;
+    --color-accent: #ffffff;
+    --color-accent-soft: #1f1f1f;
+    --color-accent-ink: #ffffff;
+    --color-on-accent: #000000;
     --color-good: #9bd47a;
     --color-good-soft: #1a2914;
     --color-warn: #ecb766;
@@ -108,7 +116,7 @@
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: light;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -139,6 +147,12 @@ h1,
 h2,
 h3 {
   text-wrap: balance;
+  letter-spacing: -0.03em;
+  font-weight: 500;
+}
+
+aside {
+  border-right: 1px solid var(--color-rail-line);
 }
 
 /* Visible focus everywhere, never removed. Two rings so it reads on both the
