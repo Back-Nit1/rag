@@ -8,8 +8,10 @@
  */
 import {
   type AcceptPlanRequest,
+  type AttachCaptureProjectRequest,
   type AvailabilityBlock,
   type CaptureDetail,
+  type ChooseTargetRequest,
   type CompleteCaptureRequest,
   type CompleteCaptureResponse,
   type CreateCaptureRequest,
@@ -30,13 +32,17 @@ import {
   type Notification,
   type NotificationPage,
   type PatchPlanRequest,
+  type PatchProjectRequest,
   type PatchTaskRequest,
   type PatchTranscriptRequest,
   type Plan,
   type Preferences,
+  type Project,
   type ProjectDetail,
   type ProjectPage,
   type Reminder,
+  type RescheduleReminderRequest,
+  type SourceArtifact,
   type SearchRequest,
   type SearchResponse,
   type ResolveProposalRequest,
@@ -212,6 +218,17 @@ export const api = {
       idempotencyKey,
     }),
 
+  /** Answer an ambiguous status_update: `target_id` must be a recorded candidate. */
+  chooseTarget: (proposalId: string, body: ChooseTargetRequest, idempotencyKey: string) =>
+    request<ResolveProposalResponse>(`/v1/proposals/${proposalId}/target`, {
+      method: "POST",
+      body,
+      idempotencyKey,
+    }),
+
+  attachCaptureProject: (captureId: string, body: AttachCaptureProjectRequest, idempotencyKey: string) =>
+    request<SourceArtifact>(`/v1/captures/${captureId}/project`, { method: "POST", body, idempotencyKey }),
+
   getJob: (jobId: string) => request<Job>(`/v1/jobs/${jobId}`),
 
   /** Local mode only: the cloud path PUTs the same bytes to a presigned URL. */
@@ -275,6 +292,9 @@ export const api = {
       method: "POST",
       body: { expected_revision: expectedRevision, snooze_minutes: minutes },
     }),
+  /** Returns `pending_schedule` until the scheduler confirms; read the reminder again for the outcome. */
+  rescheduleReminder: (reminderId: string, body: RescheduleReminderRequest, idempotencyKey: string) =>
+    request<Reminder>(`/v1/reminders/${reminderId}/reschedule`, { method: "POST", body, idempotencyKey }),
   listNotifications: () => request<NotificationPage>("/v1/notifications?limit=50"),
   markNotificationRead: (notificationId: string) =>
     request<Notification>(`/v1/notifications/${notificationId}/read`, { method: "POST" }),
@@ -290,6 +310,8 @@ export const api = {
   // ----- projects and memory -------------------------------------------- //
   listProjects: () => request<ProjectPage>("/v1/projects?limit=100"),
   getProject: (projectId: string) => request<ProjectDetail>(`/v1/projects/${projectId}`),
+  patchProject: (projectId: string, body: PatchProjectRequest) =>
+    request<Project>(`/v1/projects/${projectId}`, { method: "PATCH", body }),
   resumeProject: (projectId: string, minutes: number) =>
     request<ResumePacket>(`/v1/projects/${projectId}/resume`, { method: "POST", body: { minutes } }),
   search: (body: SearchRequest) => request<SearchResponse>("/v1/search", { method: "POST", body }),

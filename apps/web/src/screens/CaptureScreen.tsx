@@ -22,6 +22,9 @@ import { Card, Notice, PageHeader, SectionHeading } from "../components/Card";
 import { Icon } from "../components/Icon";
 import { ClarificationPrompt } from "../components/ClarificationPrompt";
 import { CreatedRecords } from "../components/CreatedRecords";
+import { AttachProject } from "../components/AttachProject";
+import { TargetChoicePrompt } from "../components/TargetChoicePrompt";
+import { openTargetChoices } from "../lib/statusUpdate";
 import { ProposalReview } from "../components/ProposalReview";
 import { StatusPill, LiveStatus } from "../components/StatusPill";
 import { TranscriptPanel } from "../components/TranscriptPanel";
@@ -238,6 +241,10 @@ export function CaptureScreen() {
     }
   };
 
+  const reloadCapture = () => {
+    if (capture) void api.getCapture(capture.source.id).then(setCapture, () => undefined);
+  };
+
   const refreshReminders = async () => {
     setReminders(await Promise.all(reminders.map((r) => api.getReminder(r.id))));
   };
@@ -266,6 +273,21 @@ export function CaptureScreen() {
           onResolve={(decisions) => void resolve(decisions)}
           onShowEvidence={(span) => setHighlightSpan(span ?? null)}
         />
+      )}
+
+      {(capture?.proposals ?? []).flatMap((p) =>
+        openTargetChoices(p).map((choice) => (
+          <TargetChoicePrompt
+            key={`${p.id}:${p.revision}:${choice.item_index}`}
+            proposal={p}
+            choice={choice}
+            onChanged={reloadCapture}
+          />
+        )),
+      )}
+
+      {capture && !proposal && (capture.proposals ?? []).length > 0 && (
+        <AttachProject key={`${capture.source.id}:${capture.source.revision}`} capture={capture} onChanged={reloadCapture} />
       )}
 
       {clarifications.map((clarification) => (

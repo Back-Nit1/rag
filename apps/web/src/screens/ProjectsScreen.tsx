@@ -2,7 +2,7 @@
  * Projects: list, detail with a source-backed timeline, and a "resume" work
  * packet. The packet is assembled by the server from recorded sources and is
  * labelled as such; suggested next actions are never presented as verified.
- * There is no project edit route yet, so updates happen by capturing a note.
+ * Title, aliases, objective, pinned context and archive are edited here.
  */
 import { useCallback, useEffect, useState } from "react";
 import type { Project, ProjectDetail } from "../contracts/metis";
@@ -12,7 +12,63 @@ import { EvidenceLink } from "../components/EvidenceLink";
 import { Field, inputClass } from "../components/Field";
 import { useSession } from "../app/session";
 import { api, type ResumePacket } from "../lib/api";
+import { mutationError } from "../lib/mutationError";
+import { formFromProject, projectPatch, type ProjectForm } from "../lib/projectEdit";
 import { timeLabel } from "../lib/format";
+
+function EditProject({ project, onSaved }: { project: Project; onSaved: () => void }) {
+  const [form, setForm] = useState<ProjectForm>(() => formFromProject(project));
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const patch = projectPatch(project, form);
+  const set = (v: Partial<ProjectForm>) => setForm((f) => ({ ...f, ...v }));
+
+  const save = async () => {
+    if (!patch) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await api.patchProject(project.id, patch);
+      onSaved();
+    } catch (cause) {
+      const e = mutationError("This project", cause);
+      setMessage(e.text);
+      if (e.conflict) onSaved();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <details className="rounded-lg border border-line bg-surface p-4">
+      <summary className="min-h-8 cursor-pointer text-sm font-medium">Edit project</summary>
+      <div className="mt-3 flex flex-col gap-3">
+        <Field label="Title">
+          <input className={inputClass} value={form.title} onChange={(e) => set({ title: e.target.value })} />
+        </Field>
+        <Field label="Aliases" hint="Comma separated; used to match your notes to this project.">
+          <input className={inputClass} value={form.aliases} onChange={(e) => set({ aliases: e.target.value })} />
+        </Field>
+        <Field label="Objective">
+          <textarea className={inputClass} rows={2} value={form.objective} onChange={(e) => set({ objective: e.target.value })} />
+        </Field>
+        <Field label="Pinned context" hint="Always carried into plans and work packets.">
+          <textarea className={inputClass} rows={3} value={form.pinned_context} onChange={(e) => set({ pinned_context: e.target.value })} />
+        </Field>
+        <label className="flex min-h-8 items-center gap-2.5 text-sm">
+          <input className="size-5" type="checkbox" checked={form.archived} onChange={(e) => set({ archived: e.target.checked })} />
+          Archived (hidden from the project list)
+        </label>
+        <div className="flex items-center gap-2">
+          <Button variant="primary" disabled={busy || !patch} onClick={() => void save()}>
+            {busy ? "Saving…" : "Save changes"}
+          </Button>
+        </div>
+        {message && <Notice tone="bad" live>{message}</Notice>}
+      </div>
+    </details>
+  );
+}
 
 function Detail({ id, onBack }: { id: string; onBack: () => void }) {
   const { timezone } = useSession();
@@ -51,6 +107,8 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
         action={<Button onClick={onBack}>All projects</Button>}
       />
       {error && <Notice tone="warn" live>{error}</Notice>}
+
+      <EditProject key={`${p.id}:${p.revision}`} project={p} onSaved={load} />
 
       <section aria-labelledby="h-resume" className="rounded-lg border border-line bg-surface p-4">
         <SectionHeading id="h-resume" hint="assembled from your sources">Pick this back up</SectionHeading>
