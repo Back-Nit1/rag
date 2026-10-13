@@ -267,6 +267,11 @@ export interface AsrTaskOutcome {
   error_message?: string | null;
 }
 
+export interface AttachCaptureProjectRequest {
+  expected_revision: number;
+  project_id: string;
+}
+
 /** A tried-and-failed approach. Preserved so it is not re-suggested. */
 export interface Attempt {
   summary: string;
@@ -340,6 +345,13 @@ export interface CapturePage {
   items: SourceArtifact[];
   next_cursor?: string | null;
   complete?: boolean;
+}
+
+/** Answer an ambiguous status_update: pick one of the recorded candidates. */
+export interface ChooseTargetRequest {
+  expected_revision: number;
+  item_index: number;
+  target_id: string;
 }
 
 /** At most one active thread per captured item, with batched fields. */
@@ -602,6 +614,7 @@ export interface ExtractionProposal {
   range_count?: number;
   created_entity_ids?: string[];
   unresolved_reason?: string | null;
+  target_choices?: TargetChoice[];
 }
 
 export interface ExtractionRequestedPayload {
@@ -799,6 +812,16 @@ export interface PatchPreferencesRequest {
   budgets?: Budgets | null;
   source_retention_days?: number | null;
   delete_commitments_with_source?: boolean | null;
+}
+
+/** Omitted key = unchanged. Explicit null clears objective/pinned_context. */
+export interface PatchProjectRequest {
+  expected_revision: number;
+  title?: string | null;
+  aliases?: string[] | null;
+  objective?: string | null;
+  pinned_context?: string | null;
+  archived?: boolean | null;
 }
 
 /** Omitted key = unchanged. Explicit null = clear. */
@@ -1018,6 +1041,14 @@ export interface ReminderSyncPayload {
   scheduler_ref?: string | null;
 }
 
+/** Move a reminder. The result is `pending_schedule` until the sync confirms. */
+export interface RescheduleReminderRequest {
+  expected_revision: number;
+  trigger_at?: string | null;
+  local_date?: string | null;
+  local_time?: string | null;
+}
+
 export interface ResolveProposalRequest {
   expected_revision: number;
   decisions: ItemDecision[];
@@ -1090,6 +1121,7 @@ export interface SourceArtifact {
   client_capture_id?: string | null;
   failure?: FailureCategory | null;
   error_message?: string | null;
+  project_id?: string | null;
 }
 
 /** Pointer to an immutable source revision, optionally a span within it. */
@@ -1125,6 +1157,14 @@ export interface SpeechMetadata {
   decode_seconds: number;
   audio_seconds: number;
   cold_start?: boolean | null;
+}
+
+/** An ambiguous status update awaiting an explicit target. */
+export interface TargetChoice {
+  item_index: number;
+  update_action: StatusUpdateAction;
+  candidate_ids?: string[];
+  chosen_id?: string | null;
 }
 
 export interface Task {
