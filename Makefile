@@ -76,6 +76,10 @@ fmt: ## autoformat python and web sources
 synth: ## cdk synth every stack (no AWS calls beyond lookups, no deploy)
 	$(PNPM) --filter @metis/infra synth
 
+.PHONY: desktop-test
+desktop-test: ## cargo + sidecar backend tests for the Tauri shell (needs rust toolchain)
+	$(PNPM) --filter @metis/desktop test
+
 .PHONY: speech-image
 speech-image: ## build the owned ASR worker container
 	docker build -t metis-speech:dev services/speech
