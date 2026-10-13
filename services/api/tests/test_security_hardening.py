@@ -228,7 +228,12 @@ def test_project_ids_are_plain_tokens(client):
     assert client.post("/v1/projects", json={**base, "id": "proj_ok_1"}).status_code == 201
 
 
-def test_search_has_its_own_ceiling(client):
-    codes = [client.post("/v1/search", json={"query": "q"}).status_code for _ in range(22)]
-    assert codes[:20] == [200] * 20
-    assert codes[20] == 429
+def test_search_has_its_own_ceiling(client, monkeypatch):
+    import metis_api.deps as deps
+
+    monkeypatch.setattr(deps, "_limiter", deps.RateLimiter())
+    monkeypatch.setenv("METIS_RATE_PER_MINUTE", "60")  # search gets a sixth of it
+    reset_settings_cache()
+    codes = [client.post("/v1/search", json={"query": "q"}).status_code for _ in range(12)]
+    assert codes[:10] == [200] * 10
+    assert codes[10] == 429

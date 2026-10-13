@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 from fastapi import APIRouter, Query, status
-from metis_contracts import ErrorCode, MetisError, Project, new_id
+from metis_contracts import ErrorCode, MetisError, Project, new_id, settings
 from metis_contracts.api import (
     PatchProjectRequest,
     ProjectDetail,
@@ -142,7 +142,7 @@ def search(body: SearchRequest, ctx: Context) -> SearchResponse:
     """
     # Each search embeds the query (a paid call in cloud mode) outside the
     # reserve/settle gate, so it gets its own small ceiling.
-    ctx.throttle("search", per_minute=20)
+    ctx.throttle("search", per_minute=max(1, settings().limits.api_rate_per_minute // 6))
     retrieval = ctx.adapters.retrieval
     memories, degraded = retrieval.retrieve_supporting_memories(
         ctx.user_id,
