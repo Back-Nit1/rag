@@ -32,7 +32,7 @@ export class DataStack extends Stack {
       alias: resourceName(this, config, 'cmk'),
       description: 'Metis data at rest: table, sources, logs',
       enableKeyRotation: true,
-      removalPolicy: isProd(config) ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      removalPolicy: config.envName === 'dev' ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
     });
 
     this.table = new dynamodb.Table(this, 'Table', {
@@ -46,7 +46,7 @@ export class DataStack extends Stack {
       // TTL is cleanup for idempotency and claim rows only. It is never the
       // timer for a reminder or a budget release: deletion is eventual.
       timeToLiveAttribute: 'ttl',
-      removalPolicy: isProd(config) ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      removalPolicy: config.envName === 'dev' ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
       deletionProtection: isProd(config),
     });
 
@@ -75,8 +75,8 @@ export class DataStack extends Stack {
       encryptionKey: this.key,
       enforceSSL: true,
       versioned: isProd(config),
-      removalPolicy: isProd(config) ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
-      autoDeleteObjects: !isProd(config),
+      removalPolicy: config.envName === 'dev' ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
+      autoDeleteObjects: config.envName === 'dev',
       lifecycleRules: [
         {
           // Raw recordings expire; the TRANSCRIPT is a separate prefix and is

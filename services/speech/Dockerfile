@@ -75,7 +75,7 @@ RUN pip install --no-cache-dir \
       "ctranslate2==4.4.0" \
       "av==12.3.0" \
       "numpy<2" \
-      "boto3>=1.35" \
+      "boto3>=1.35,<2" \
       "pydantic>=2.9,<3" \
  && pip install --no-cache-dir --no-deps \
       /app/packages/contracts /app/services/state /app/services/speech

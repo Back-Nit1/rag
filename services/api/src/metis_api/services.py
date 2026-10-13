@@ -584,6 +584,7 @@ def patch_task(ctx: RequestContext, task_id: str, request: PatchTaskRequest) -> 
         elif task.state is TaskState.CANCELED:
             patch["canceled_at"] = None
 
+    require_owned_refs(ctx, project_id=patch.get("project_id"))
     if patch.get("depends_on"):
         _reject_cycles(ctx, task_id, list(patch["depends_on"]))
 
@@ -607,6 +608,21 @@ def patch_task(ctx: RequestContext, task_id: str, request: PatchTaskRequest) -> 
         )
     _reconcile_reminders_for_target(ctx, stored, kind="task")
     return stored
+
+
+def require_owned_refs(
+    ctx: RequestContext, *, project_id: str | None = None, source_refs: list[Any] | None = None
+) -> None:
+    """A project or source a record points at must exist and be the caller's.
+
+    Lookups are owner-scoped, so another user's id is indistinguishable from a
+    missing one. Nothing is invented: a dangling reference is rejected, not stored.
+    """
+    if project_id and ctx.state.get(ctx.user_id, "project", project_id) is None:
+        raise MetisError(ErrorCode.VALIDATION_FAILED, f"project {project_id} not found")
+    for ref in source_refs or []:
+        if ctx.state.get(ctx.user_id, "source", ref.source_id) is None:
+            raise MetisError(ErrorCode.VALIDATION_FAILED, f"source {ref.source_id} not found")
 
 
 def _reject_cycles(ctx: RequestContext, task_id: str, dependencies: list[str]) -> None:

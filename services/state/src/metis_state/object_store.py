@@ -133,7 +133,8 @@ class LocalSourceStore:
     def delete_prefix(self, prefix: str) -> int:
         """Used by the purge job; returns the number of objects removed."""
         target = (self._root / prefix).resolve()
-        if not str(target).startswith(str(self._root.resolve())):
+        root = self._root.resolve()
+        if target == root or not str(target).startswith(str(root) + "/"):
             raise MetisError(ErrorCode.FORBIDDEN, "prefix escapes the store root")
         if not target.is_dir():
             return 0

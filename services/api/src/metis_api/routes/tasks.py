@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Any
 
@@ -56,6 +57,7 @@ def list_tasks(
 def create_task(body: CreateTaskRequest, ctx: Context) -> Task:
     if replayed := ctx.replay():
         return Task.model_validate(replayed)
+    services.require_owned_refs(ctx, project_id=body.project_id, source_refs=body.source_refs)
     now = ctx.adapters.clock.now()
     task = Task(
         id=new_id("task"),
@@ -101,6 +103,7 @@ def list_events(
 def create_event(body: CreateEventRequest, ctx: Context) -> Event:
     if replayed := ctx.replay():
         return Event.model_validate(replayed)
+    services.require_owned_refs(ctx, source_refs=body.source_refs)
     now = ctx.adapters.clock.now()
     event = Event(
         id=new_id("event"),
@@ -137,6 +140,8 @@ def create_availability(body: AvailabilityBlock, ctx: Context) -> AvailabilityBl
     The client never supplies ownership: whatever user_id arrives is replaced
     with the authenticated subject.
     """
+    if body.id and not re.fullmatch(r"[A-Za-z0-9_-]{3,128}", body.id):
+        raise MetisError(ErrorCode.VALIDATION_FAILED, "id may contain only letters, digits, '_' and '-'")
     now = ctx.adapters.clock.now()
     block = body.model_copy(
         update={

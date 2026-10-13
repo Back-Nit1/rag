@@ -58,6 +58,27 @@ def _jwks() -> Any:
     return client
 
 
+_KNOWN_KIDS: set[str] = set()
+_LAST_MISS = 0.0
+_MISS_INTERVAL_SECONDS = 30
+
+
+def _refuse_unknown_kid_flood(token: str) -> None:
+    """PyJWKClient refetches the JWKS over the network on every unknown ``kid``,
+    so unauthenticated garbage tokens would become outbound requests. Allow one
+    refresh per interval; everything else is refused locally."""
+    import jwt
+
+    global _LAST_MISS
+    kid = jwt.get_unverified_header(token).get("kid")
+    if kid is None or kid in _KNOWN_KIDS:
+        return
+    now = time.monotonic()
+    if _KNOWN_KIDS and now - _LAST_MISS < _MISS_INTERVAL_SECONDS:
+        raise MetisError(ErrorCode.UNAUTHENTICATED, "the token could not be verified")
+    _LAST_MISS = now
+
+
 def verify_cognito_token(token: str) -> Principal:
     """Validate signature, expiry, issuer and audience, then take the subject."""
     import jwt
@@ -68,6 +89,7 @@ def verify_cognito_token(token: str) -> Principal:
 
     issuer = f"https://cognito-idp.{cfg.region}.amazonaws.com/{cfg.cognito_user_pool_id}"
     try:
+        _refuse_unknown_kid_flood(token)
         # Cognito access tokens carry no ``aud`` (the app client is ``client_id``),
         # id tokens carry ``aud``. Signature, issuer and expiry are verified here;
         # the client binding is checked explicitly below, per token type.
@@ -83,6 +105,8 @@ def verify_cognito_token(token: str) -> Principal:
     except Exception as exc:
         raise MetisError(ErrorCode.UNAUTHENTICATED, "the token could not be verified") from exc
 
+    if kid := jwt.get_unverified_header(token).get("kid"):
+        _KNOWN_KIDS.add(kid)
     token_use = claims.get("token_use")
     bound_client = claims.get("client_id") if token_use == "access" else claims.get("aud")
     if token_use not in ("access", "id") or bound_client != cfg.cognito_client_id:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from fastapi import APIRouter, Query, status
@@ -31,6 +32,8 @@ def list_projects(
 
 @router.post("/projects", response_model=Project, status_code=status.HTTP_201_CREATED)
 def create_project(body: Project, ctx: Context) -> Project:
+    if body.id and not re.fullmatch(r"[A-Za-z0-9_-]{3,128}", body.id):
+        raise MetisError(ErrorCode.VALIDATION_FAILED, "id may contain only letters, digits, '_' and '-'")
     now = ctx.adapters.clock.now()
     project = body.model_copy(
         update={
