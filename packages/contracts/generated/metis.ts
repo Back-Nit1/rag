@@ -481,6 +481,12 @@ export interface DeleteCaptureResponse {
   purge_job_id: string;
 }
 
+/** Preferred spelling plus the spoken/misheard forms that map to it. */
+export interface DictionaryEntry {
+  term: string;
+  aliases?: string[];
+}
+
 /** One shape for every failure. `current_revision` lets the client reload. */
 export interface ErrorBody {
   code: ErrorCode;
@@ -624,6 +630,15 @@ export interface ExtractionRequestedPayload {
   range_count?: number;
   char_start?: number;
   char_end?: number | null;
+}
+
+/** Dictation ("Flow") behaviour. Cleanup is deterministic: no model call, */
+export interface FlowSettings {
+  dictionary?: DictionaryEntry[];
+  snippets?: Snippet[];
+  app_styles?: { [key: string]: "standard" | "casual" | "literal" };
+  remove_fillers?: boolean;
+  keep_history?: boolean;
 }
 
 export interface HealthResponse {
@@ -812,6 +827,7 @@ export interface PatchPreferencesRequest {
   budgets?: Budgets | null;
   source_retention_days?: number | null;
   delete_commitments_with_source?: boolean | null;
+  flow?: FlowSettings | null;
 }
 
 /** Omitted key = unchanged. Explicit null clears objective/pinned_context. */
@@ -924,6 +940,7 @@ export interface Preferences {
   budgets?: Budgets;
   source_retention_days?: number;
   delete_commitments_with_source?: boolean;
+  flow?: FlowSettings;
 }
 
 export interface Project {
@@ -1092,6 +1109,12 @@ export interface SearchResult {
   score: number;
   evidence: Evidence;
   project_id?: string | null;
+}
+
+/** Spoken trigger phrase that is replaced verbatim by ``expansion``. */
+export interface Snippet {
+  trigger: string;
+  expansion: string;
 }
 
 export interface SnoozeReminderRequest {

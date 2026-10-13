@@ -3745,6 +3745,35 @@
       "type": "object",
       "x-contract-version": 1
     },
+    "DictionaryEntry": {
+      "$id": "https://metis.local/schemas/v1/DictionaryEntry.json",
+      "additionalProperties": false,
+      "description": "Preferred spelling plus the spoken/misheard forms that map to it.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Aliases",
+          "type": "array"
+        },
+        "term": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Term",
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "title": "DictionaryEntry",
+      "type": "object",
+      "x-contract-version": 1
+    },
     "ErrorBody": {
       "$defs": {
         "ErrorCode": {
@@ -5822,6 +5851,108 @@
         "source_version"
       ],
       "title": "ExtractionRequestedPayload",
+      "type": "object",
+      "x-contract-version": 1
+    },
+    "FlowSettings": {
+      "$defs": {
+        "DictionaryEntry": {
+          "additionalProperties": false,
+          "description": "Preferred spelling plus the spoken/misheard forms that map to it.",
+          "properties": {
+            "aliases": {
+              "items": {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 8,
+              "title": "Aliases",
+              "type": "array"
+            },
+            "term": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Term",
+              "type": "string"
+            }
+          },
+          "required": [
+            "term"
+          ],
+          "title": "DictionaryEntry",
+          "type": "object"
+        },
+        "Snippet": {
+          "additionalProperties": false,
+          "description": "Spoken trigger phrase that is replaced verbatim by ``expansion``.",
+          "properties": {
+            "expansion": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Expansion",
+              "type": "string"
+            },
+            "trigger": {
+              "maxLength": 64,
+              "minLength": 2,
+              "title": "Trigger",
+              "type": "string"
+            }
+          },
+          "required": [
+            "trigger",
+            "expansion"
+          ],
+          "title": "Snippet",
+          "type": "object"
+        }
+      },
+      "$id": "https://metis.local/schemas/v1/FlowSettings.json",
+      "additionalProperties": false,
+      "description": "Dictation (\"Flow\") behaviour. Cleanup is deterministic: no model call,\nso dictation has no spend path.",
+      "properties": {
+        "app_styles": {
+          "additionalProperties": {
+            "enum": [
+              "standard",
+              "casual",
+              "literal"
+            ],
+            "type": "string"
+          },
+          "maxProperties": 50,
+          "title": "App Styles",
+          "type": "object"
+        },
+        "dictionary": {
+          "items": {
+            "$ref": "#/$defs/DictionaryEntry"
+          },
+          "maxItems": 200,
+          "title": "Dictionary",
+          "type": "array"
+        },
+        "keep_history": {
+          "default": false,
+          "title": "Keep History",
+          "type": "boolean"
+        },
+        "remove_fillers": {
+          "default": true,
+          "title": "Remove Fillers",
+          "type": "boolean"
+        },
+        "snippets": {
+          "items": {
+            "$ref": "#/$defs/Snippet"
+          },
+          "maxItems": 100,
+          "title": "Snippets",
+          "type": "array"
+        }
+      },
+      "title": "FlowSettings",
       "type": "object",
       "x-contract-version": 1
     },
@@ -8217,6 +8348,104 @@
           "title": "DeliveryChannel",
           "type": "string"
         },
+        "DictionaryEntry": {
+          "additionalProperties": false,
+          "description": "Preferred spelling plus the spoken/misheard forms that map to it.",
+          "properties": {
+            "aliases": {
+              "items": {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 8,
+              "title": "Aliases",
+              "type": "array"
+            },
+            "term": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Term",
+              "type": "string"
+            }
+          },
+          "required": [
+            "term"
+          ],
+          "title": "DictionaryEntry",
+          "type": "object"
+        },
+        "FlowSettings": {
+          "additionalProperties": false,
+          "description": "Dictation (\"Flow\") behaviour. Cleanup is deterministic: no model call,\nso dictation has no spend path.",
+          "properties": {
+            "app_styles": {
+              "additionalProperties": {
+                "enum": [
+                  "standard",
+                  "casual",
+                  "literal"
+                ],
+                "type": "string"
+              },
+              "maxProperties": 50,
+              "title": "App Styles",
+              "type": "object"
+            },
+            "dictionary": {
+              "items": {
+                "$ref": "#/$defs/DictionaryEntry"
+              },
+              "maxItems": 200,
+              "title": "Dictionary",
+              "type": "array"
+            },
+            "keep_history": {
+              "default": false,
+              "title": "Keep History",
+              "type": "boolean"
+            },
+            "remove_fillers": {
+              "default": true,
+              "title": "Remove Fillers",
+              "type": "boolean"
+            },
+            "snippets": {
+              "items": {
+                "$ref": "#/$defs/Snippet"
+              },
+              "maxItems": 100,
+              "title": "Snippets",
+              "type": "array"
+            }
+          },
+          "title": "FlowSettings",
+          "type": "object"
+        },
+        "Snippet": {
+          "additionalProperties": false,
+          "description": "Spoken trigger phrase that is replaced verbatim by ``expansion``.",
+          "properties": {
+            "expansion": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Expansion",
+              "type": "string"
+            },
+            "trigger": {
+              "maxLength": 64,
+              "minLength": 2,
+              "title": "Trigger",
+              "type": "string"
+            }
+          },
+          "required": [
+            "trigger",
+            "expansion"
+          ],
+          "title": "Snippet",
+          "type": "object"
+        },
         "TimeWindow": {
           "additionalProperties": false,
           "description": "Local wall-clock window, e.g. 09:00-17:00. Not an instant.",
@@ -8324,6 +8553,17 @@
           "minimum": 1,
           "title": "Expected Revision",
           "type": "integer"
+        },
+        "flow": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlowSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "max_focus_tasks": {
           "anyOf": [
@@ -9738,6 +9978,104 @@
           "title": "DeliveryChannel",
           "type": "string"
         },
+        "DictionaryEntry": {
+          "additionalProperties": false,
+          "description": "Preferred spelling plus the spoken/misheard forms that map to it.",
+          "properties": {
+            "aliases": {
+              "items": {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 8,
+              "title": "Aliases",
+              "type": "array"
+            },
+            "term": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Term",
+              "type": "string"
+            }
+          },
+          "required": [
+            "term"
+          ],
+          "title": "DictionaryEntry",
+          "type": "object"
+        },
+        "FlowSettings": {
+          "additionalProperties": false,
+          "description": "Dictation (\"Flow\") behaviour. Cleanup is deterministic: no model call,\nso dictation has no spend path.",
+          "properties": {
+            "app_styles": {
+              "additionalProperties": {
+                "enum": [
+                  "standard",
+                  "casual",
+                  "literal"
+                ],
+                "type": "string"
+              },
+              "maxProperties": 50,
+              "title": "App Styles",
+              "type": "object"
+            },
+            "dictionary": {
+              "items": {
+                "$ref": "#/$defs/DictionaryEntry"
+              },
+              "maxItems": 200,
+              "title": "Dictionary",
+              "type": "array"
+            },
+            "keep_history": {
+              "default": false,
+              "title": "Keep History",
+              "type": "boolean"
+            },
+            "remove_fillers": {
+              "default": true,
+              "title": "Remove Fillers",
+              "type": "boolean"
+            },
+            "snippets": {
+              "items": {
+                "$ref": "#/$defs/Snippet"
+              },
+              "maxItems": 100,
+              "title": "Snippets",
+              "type": "array"
+            }
+          },
+          "title": "FlowSettings",
+          "type": "object"
+        },
+        "Snippet": {
+          "additionalProperties": false,
+          "description": "Spoken trigger phrase that is replaced verbatim by ``expansion``.",
+          "properties": {
+            "expansion": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Expansion",
+              "type": "string"
+            },
+            "trigger": {
+              "maxLength": 64,
+              "minLength": 2,
+              "title": "Trigger",
+              "type": "string"
+            }
+          },
+          "required": [
+            "trigger",
+            "expansion"
+          ],
+          "title": "Snippet",
+          "type": "object"
+        },
         "TimeWindow": {
           "additionalProperties": false,
           "description": "Local wall-clock window, e.g. 09:00-17:00. Not an instant.",
@@ -9812,6 +10150,9 @@
           "default": false,
           "title": "Delete Commitments With Source",
           "type": "boolean"
+        },
+        "flow": {
+          "$ref": "#/$defs/FlowSettings"
         },
         "id": {
           "maxLength": 128,
@@ -13569,6 +13910,32 @@
         "evidence"
       ],
       "title": "SearchResult",
+      "type": "object",
+      "x-contract-version": 1
+    },
+    "Snippet": {
+      "$id": "https://metis.local/schemas/v1/Snippet.json",
+      "additionalProperties": false,
+      "description": "Spoken trigger phrase that is replaced verbatim by ``expansion``.",
+      "properties": {
+        "expansion": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Expansion",
+          "type": "string"
+        },
+        "trigger": {
+          "maxLength": 64,
+          "minLength": 2,
+          "title": "Trigger",
+          "type": "string"
+        }
+      },
+      "required": [
+        "trigger",
+        "expansion"
+      ],
+      "title": "Snippet",
       "type": "object",
       "x-contract-version": 1
     },

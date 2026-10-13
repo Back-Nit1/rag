@@ -803,7 +803,8 @@ def patch_preferences(ctx: RequestContext, request: PatchPreferencesRequest) -> 
             f"preferences are at revision {current.revision}",
             current_revision=current.revision,
         )
-    patch = request.model_dump(exclude_unset=True, exclude={"expected_revision"})
+    # Attribute access, not model_dump: nested fields (budgets, flow) must stay models.
+    patch = {k: getattr(request, k) for k in request.model_fields_set - {"expected_revision"}}
     if patch.get("timezone"):
         from metis_contracts import resolve_timezone
 

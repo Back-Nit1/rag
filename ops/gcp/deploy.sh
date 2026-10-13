@@ -68,5 +68,8 @@ cat <<EOF
 Deployed. Open a tunnel, then browse http://localhost:5173 :
 
   gcloud --project $PROJECT compute ssh $VM --zone $ZONE --tunnel-through-iap -- \\
-    -N -L 5173:localhost:5173 -L 8000:localhost:8000
+    -N -L 5173:localhost:5173 -L 8000:localhost:8000 -L 8787:localhost:8787
+
+Dictation secret (needed as the bearer for :8787), read it once over SSH:
+  gcloud --project $PROJECT compute ssh $VM --zone $ZONE --tunnel-through-iap --command 'sudo cat /etc/metis-speech.env'
 EOF

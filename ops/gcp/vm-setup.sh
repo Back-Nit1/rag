@@ -55,6 +55,12 @@ METIS_SPEECH_ARTIFACT_REVISION=$(cat "$REV_FILE")
 HF_HUB_OFFLINE=1
 EOF
 
+# Dictation ("Flow") ASR server: loopback-only, bearer secret generated once.
+[ -f /etc/metis-speech.env ] || {
+  umask 077
+  echo "METIS_SPEECH_SECRET=$(head -c 32 /dev/urandom | base64 | tr -d '=+/\n')" >/etc/metis-speech.env
+}
+
 unit() { # name, ExecStart
   cat >"/etc/systemd/system/$1.service" <<EOF
 [Unit]
@@ -65,6 +71,7 @@ After=network.target
 User=metis
 WorkingDirectory=$APP
 EnvironmentFile=/etc/metis.env
+EnvironmentFile=-/etc/metis-speech.env
 ExecStart=$2
 Restart=on-failure
 NoNewPrivileges=true
@@ -78,13 +85,14 @@ EOF
 }
 unit metis-api "$APP/.venv/bin/uvicorn metis_api.main:app --host 127.0.0.1 --port 8000"
 unit metis-worker "$APP/.venv/bin/python -m metis_pipeline.local_worker"
+unit metis-speech "$APP/.venv/bin/python -m metis_speech.server --port 8787"
 unit metis-web "/usr/bin/python3 -m http.server 5173 --bind 127.0.0.1 --directory $APP/apps/web/dist"
 
 chown -R metis:metis "$DATA"
 chown -R root:root "$APP" "$MODELS" && chmod -R a+rX "$APP" "$MODELS"
 systemctl daemon-reload
-systemctl enable -q metis-api metis-worker metis-web
-systemctl restart metis-api metis-worker metis-web
+systemctl enable -q metis-api metis-worker metis-speech metis-web
+systemctl restart metis-api metis-worker metis-speech metis-web
 
 for _ in $(seq 30); do
   curl -fsS http://127.0.0.1:8000/v1/health && echo && exit 0

@@ -8,6 +8,13 @@ only: the surface is two endpoints.
     POST /v1/transcribe  -> body = raw audio bytes (never a path or URL)
                             headers: X-Metis-Language, X-Metis-Glossary (JSON list)
 
+Hold-to-dictate ("Flow"), PCM16 mono 16 kHz, in-memory only (see flow.py):
+
+    POST   /v1/flow/sessions            {language?, app?, settings?} -> {session_id}
+    POST   /v1/flow/sessions/{id}/audio raw PCM chunk -> {seconds, partial|null}
+    POST   /v1/flow/sessions/{id}/finish -> {text, raw_text, segments, speech, applied}
+    DELETE /v1/flow/sessions/{id}       discard the audio
+
 Every request needs ``Authorization: Bearer $METIS_SPEECH_SECRET``. Audio lives
 in memory only, so nothing is written to disk. Audio and transcripts are never
 logged.
@@ -28,10 +35,14 @@ import os
 import signal
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
-from metis_contracts import HTTP_STATUS, ErrorCode, MetisError, settings
+from metis_contracts import HTTP_STATUS, ErrorCode, FlowSettings, MetisError, settings
+
+from .flow import Sessions, wav_bytes
+from .polish import polish
 
 log = logging.getLogger("metis.speech.server")
 
@@ -40,21 +51,24 @@ MIN_SECRET_LEN = 32
 MAX_GLOSSARY_HEADER = 2048
 REQUEST_TIMEOUT_SECONDS = 30  # socket read bound: a stalled client cannot pin a thread
 MAX_ERROR_CHARS = 300
+MAX_JSON_BODY = 64 * 1024
+FINISH_WAIT_SECONDS = 30  # a partial decode may hold the lock when the key is released
 
 
 class SpeechServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, transcriber: Any, secret: str) -> None:
+    def __init__(self, transcriber: Any, secret: str, port: int = 0) -> None:
         if len(secret) < MIN_SECRET_LEN:
             raise ValueError(f"METIS_SPEECH_SECRET must be at least {MIN_SECRET_LEN} characters")
-        super().__init__(("127.0.0.1", 0), _Handler)  # loopback only, OS-assigned port
+        super().__init__(("127.0.0.1", port), _Handler)  # loopback only; 0 = OS-assigned
         self.transcriber = transcriber
         self.secret = secret.encode()
         self.state = "loading"
         self.load_error = ""
         self.busy = threading.Lock()  # one decode at a time
         self.ready_event = threading.Event()
+        self.flow = Sessions(settings().limits.max_audio_seconds)
 
     def load_model(self) -> None:
         try:
@@ -134,6 +148,10 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._authorized():
             return
+        if self.path.startswith("/v1/flow/sessions"):
+            if self._not_ready():
+                return
+            return self._flow_post(self.path.split("/")[4:])
         if self.path != "/v1/transcribe":
             return self._error(ErrorCode.NOT_FOUND, "not found")
         if self._not_ready():
@@ -179,6 +197,110 @@ class _Handler(BaseHTTPRequestHandler):
             200,
             {"text": text, "segments": [s.model_dump(mode="json") for s in segments], "speech": meta},
         )
+
+    def do_DELETE(self) -> None:
+        if not self._authorized():
+            return
+        parts = self.path.split("/")
+        if len(parts) != 5 or parts[:4] != ["", "v1", "flow", "sessions"]:
+            return self._error(ErrorCode.NOT_FOUND, "not found")
+        self.server.flow.end(parts[4])
+        self._send(200, {"ok": True})
+
+    def _body(self, limit: int) -> bytes | None:
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            self._error(ErrorCode.VALIDATION_FAILED, "Content-Length is required")
+            return None
+        if length > limit:
+            self._error(ErrorCode.UPLOAD_TOO_LARGE, f"body is over the {limit} byte limit")
+            return None
+        body = self.rfile.read(length)
+        if len(body) != length:
+            self._error(ErrorCode.VALIDATION_FAILED, "request body was truncated")
+            return None
+        return body
+
+    def _decode(self, pcm: bytes, language: str | None, glossary: tuple[str, ...], *, wait: float) -> Any:
+        """Run one decode under the single-decode lock; ``None`` if it stays busy."""
+        if not self.server.busy.acquire(timeout=wait):
+            return None
+        try:
+            return self.server.transcriber.transcribe(
+                wav_bytes(pcm),
+                language=language,
+                glossary=glossary,
+                max_seconds=settings().limits.max_audio_seconds,
+            )
+        finally:
+            self.server.busy.release()
+
+    def _flow_post(self, rest: list[str]) -> None:
+        flow = self.server.flow
+        try:
+            if not rest:  # create
+                raw = self._body(MAX_JSON_BODY)
+                if raw is None:
+                    return
+                req = json.loads(raw or b"{}")
+                cfg = FlowSettings.model_validate(req.get("settings") or {})
+                s = flow.create(req.get("language"), req.get("app"), cfg)
+                return self._send(
+                    200, {"session_id": s.id, "max_seconds": settings().limits.max_audio_seconds}
+                )
+            if len(rest) != 2:
+                return self._error(ErrorCode.NOT_FOUND, "not found")
+            session_id, action = rest
+            if action == "audio":
+                chunk = self._body(settings().limits.max_upload_bytes)
+                if chunk is None:
+                    return
+                s = flow.append(session_id, chunk)
+                partial = None
+                if s.partial_due():
+                    s.partial_at = len(s.pcm)
+                    out = self._decode(bytes(s.pcm), s.language, self._terms(s.cfg), wait=0)
+                    if out is not None and out[0]:
+                        partial = {"text": out[0], "provisional": True, "at_seconds": round(s.seconds, 1)}
+                return self._send(200, {"seconds": round(s.seconds, 2), "partial": partial})
+            if action == "finish":
+                s = flow.get(session_id)
+                started = time.monotonic()
+                out = self._decode(bytes(s.pcm), s.language, self._terms(s.cfg), wait=FINISH_WAIT_SECONDS)
+                if out is None:
+                    return self._error(ErrorCode.RATE_LIMITED, "decoder is busy", retry_after_seconds=1)
+                flow.end(session_id)
+                text, segments, meta = out
+                meta["adapter_mode"] = (
+                    "local" if meta.get("adapter_mode") == "cloud" else meta["adapter_mode"]
+                )
+                result = polish(text, s.cfg, app=s.app)
+                return self._send(
+                    200,
+                    {
+                        "text": result.text,
+                        "raw_text": text,
+                        "style": result.style,
+                        "applied": result.applied,
+                        "no_speech": not text,
+                        "segments": [g.model_dump(mode="json") for g in segments],
+                        "speech": meta,
+                        "finish_ms": round((time.monotonic() - started) * 1000),
+                    },
+                )
+            return self._error(ErrorCode.NOT_FOUND, "not found")
+        except MetisError as exc:
+            return self._error(exc.code, exc.message)
+        except ValueError:  # bad JSON or an invalid FlowSettings body
+            return self._error(ErrorCode.VALIDATION_FAILED, "invalid dictation request")
+        except Exception:
+            log.exception("flow request failed")
+            return self._error(ErrorCode.INTERNAL, "dictation failed")
+
+    @staticmethod
+    def _terms(cfg: FlowSettings) -> tuple[str, ...]:
+        return tuple(e.term for e in cfg.dictionary)[:32]
 
     def _glossary(self) -> tuple[str, ...] | None:
         raw = self.headers.get("X-Metis-Glossary")
@@ -235,6 +357,7 @@ def serve(server: SpeechServer, *, exit_on_stdin_eof: bool = False) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Metis warm loopback speech server")
     parser.add_argument("--exit-on-stdin-eof", action="store_true")
+    parser.add_argument("--port", type=int, default=0, help="fixed loopback port (default: OS-assigned)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=settings().log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -245,7 +368,7 @@ def main(argv: list[str] | None = None) -> int:
     from .transcriber import FasterWhisperTranscriber
 
     try:
-        server = SpeechServer(FasterWhisperTranscriber(), secret)
+        server = SpeechServer(FasterWhisperTranscriber(), secret, args.port)
     except ValueError as exc:
         sys.stderr.write(f"{exc}\n")
         return 2

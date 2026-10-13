@@ -84,6 +84,104 @@
       "title": "DeliveryChannel",
       "type": "string"
     },
+    "DictionaryEntry": {
+      "additionalProperties": false,
+      "description": "Preferred spelling plus the spoken/misheard forms that map to it.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Aliases",
+          "type": "array"
+        },
+        "term": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Term",
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "title": "DictionaryEntry",
+      "type": "object"
+    },
+    "FlowSettings": {
+      "additionalProperties": false,
+      "description": "Dictation (\"Flow\") behaviour. Cleanup is deterministic: no model call,\nso dictation has no spend path.",
+      "properties": {
+        "app_styles": {
+          "additionalProperties": {
+            "enum": [
+              "standard",
+              "casual",
+              "literal"
+            ],
+            "type": "string"
+          },
+          "maxProperties": 50,
+          "title": "App Styles",
+          "type": "object"
+        },
+        "dictionary": {
+          "items": {
+            "$ref": "#/$defs/DictionaryEntry"
+          },
+          "maxItems": 200,
+          "title": "Dictionary",
+          "type": "array"
+        },
+        "keep_history": {
+          "default": false,
+          "title": "Keep History",
+          "type": "boolean"
+        },
+        "remove_fillers": {
+          "default": true,
+          "title": "Remove Fillers",
+          "type": "boolean"
+        },
+        "snippets": {
+          "items": {
+            "$ref": "#/$defs/Snippet"
+          },
+          "maxItems": 100,
+          "title": "Snippets",
+          "type": "array"
+        }
+      },
+      "title": "FlowSettings",
+      "type": "object"
+    },
+    "Snippet": {
+      "additionalProperties": false,
+      "description": "Spoken trigger phrase that is replaced verbatim by ``expansion``.",
+      "properties": {
+        "expansion": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Expansion",
+          "type": "string"
+        },
+        "trigger": {
+          "maxLength": 64,
+          "minLength": 2,
+          "title": "Trigger",
+          "type": "string"
+        }
+      },
+      "required": [
+        "trigger",
+        "expansion"
+      ],
+      "title": "Snippet",
+      "type": "object"
+    },
     "TimeWindow": {
       "additionalProperties": false,
       "description": "Local wall-clock window, e.g. 09:00-17:00. Not an instant.",
@@ -159,6 +257,9 @@
       "default": false,
       "title": "Delete Commitments With Source",
       "type": "boolean"
+    },
+    "flow": {
+      "$ref": "#/$defs/FlowSettings"
     },
     "id": {
       "maxLength": 128,

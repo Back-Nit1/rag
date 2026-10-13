@@ -454,6 +454,38 @@ class Budgets(StrictModel):
     allow_escalation_model: bool = False
 
 
+class DictionaryEntry(StrictModel):
+    """Preferred spelling plus the spoken/misheard forms that map to it."""
+
+    term: Annotated[str, Field(min_length=1, max_length=64)]
+    aliases: Annotated[list[Annotated[str, Field(min_length=1, max_length=64)]], Field(max_length=8)] = Field(
+        default_factory=list
+    )
+
+
+class Snippet(StrictModel):
+    """Spoken trigger phrase that is replaced verbatim by ``expansion``."""
+
+    trigger: Annotated[str, Field(min_length=2, max_length=64)]
+    expansion: Annotated[str, Field(min_length=1, max_length=2000)]
+
+
+class FlowSettings(StrictModel):
+    """Dictation ("Flow") behaviour. Cleanup is deterministic: no model call,
+    so dictation has no spend path."""
+
+    dictionary: Annotated[list[DictionaryEntry], Field(max_length=200)] = Field(default_factory=list)
+    snippets: Annotated[list[Snippet], Field(max_length=100)] = Field(default_factory=list)
+    #: app id/name substring (lowercase) -> style. Unmatched apps use ``standard``.
+    app_styles: Annotated[dict[str, Literal["standard", "casual", "literal"]], Field(max_length=50)] = Field(
+        default_factory=dict
+    )
+    remove_fillers: bool = True
+    #: Keep each dictation as a Metis source. Off by default: dictating into
+    #: another app is not the same as capturing a thought.
+    keep_history: bool = False
+
+
 class Preferences(Record):
     timezone: TimezoneName = "America/New_York"
     work_hours: list[TimeWindow] = Field(default_factory=lambda: [TimeWindow(start="09:00", end="18:00")])
@@ -474,6 +506,7 @@ class Preferences(Record):
     budgets: Budgets = Field(default_factory=Budgets)
     source_retention_days: Annotated[int, Field(ge=1, le=3650)] = 30
     delete_commitments_with_source: bool = False
+    flow: FlowSettings = Field(default_factory=FlowSettings)
 
 
 class AvailabilityBlock(Record):

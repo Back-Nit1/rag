@@ -1,0 +1,30 @@
+{
+  "$id": "https://metis.local/schemas/v1/DictionaryEntry.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Preferred spelling plus the spoken/misheard forms that map to it.",
+  "properties": {
+    "aliases": {
+      "items": {
+        "maxLength": 64,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Aliases",
+      "type": "array"
+    },
+    "term": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Term",
+      "type": "string"
+    }
+  },
+  "required": [
+    "term"
+  ],
+  "title": "DictionaryEntry",
+  "type": "object",
+  "x-contract-version": 1
+}

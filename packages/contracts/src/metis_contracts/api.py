@@ -28,6 +28,7 @@ from .entities import (
     Event,
     ExtractedItem,
     ExtractionProposal,
+    FlowSettings,
     Job,
     Notification,
     Plan,
@@ -437,6 +438,7 @@ class PatchPreferencesRequest(StrictModel):
     budgets: Budgets | None = None
     source_retention_days: Annotated[int | None, Field(default=None, ge=1, le=3650)] = None
     delete_commitments_with_source: bool | None = None
+    flow: FlowSettings | None = None
 
 
 class UsageResponse(StrictModel):
